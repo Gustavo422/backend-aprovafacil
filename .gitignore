@@ -1,0 +1,261 @@
+# ===================================================================
+# APROVA FÁCIL - BACKEND GITIGNORE
+# ===================================================================
+
+# ===================================================================
+# Dependencies
+# ===================================================================
+
+# Dependencies
+node_modules/
+/.pnp
+.pnp.js
+pnpm-lock.yaml
+yarn.lock
+
+# ===================================================================
+# Build & Output
+# ===================================================================
+
+# Build directories
+dist/
+build/
+out/
+
+# ===================================================================
+# Environment Variables
+# ===================================================================
+
+# Local Environment Variables
+.env
+.env.*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Keep example files
+!.env.example
+
+# ===================================================================
+# Testing
+# ===================================================================
+
+# Coverage
+/coverage/
+.nyc_output/
+*.lcov
+
+# Test results
+test-results.*
+test-results.json
+test-results.html
+
+# ===================================================================
+# Logs
+# ===================================================================
+
+# Logs
+/logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ===================================================================
+# TypeScript
+# ===================================================================
+
+# TypeScript build info
+*.tsbuildinfo
+
+# TypeScript reports
+tsc-*.txt
+tsc-*.json
+ts-files.txt
+
+# ===================================================================
+# Cache & Temporary Files
+# ===================================================================
+
+# Cache
+.cache/
+.temp/
+.tmp/
+.parcel-cache/
+.rpt2_cache*/
+.rts2_cache*/
+
+# Temporary files
+*-temp/
+*.tmp
+*.temp
+*~
+*.bak
+*.patch
+*.diff
+*.err
+*.orig
+*.rej
+*.swo
+*.swp
+*.vi
+
+# ===================================================================
+# IDE & Editor
+# ===================================================================
+
+# VSCode
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+
+# IntelliJ IDEA
+.idea/
+
+# Other editors
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ===================================================================
+# OS Generated Files
+# ===================================================================
+
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+.AppleDouble
+.LSOverride
+Icon
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# ===================================================================
+# Development Tools
+# ===================================================================
+
+# ESLint
+eslint_output.json
+eslint_fix_report.md
+eslint-*.txt
+
+# Prettier
+.prettierrc.local
+
+# ===================================================================
+# Package Managers
+# ===================================================================
+
+# npm
+package-lock.json
+
+# yarn
+yarn.lock
+
+# pnpm
+pnpm-lock.yaml
+
+# ===================================================================
+# Database & Migration Files
+# ===================================================================
+
+# Temporary migration files
+temp_migration.sql
+migration_*.sql
+validate_*.sql
+
+# Database logs
+*.db
+*.sqlite
+*.sqlite3
+
+# ===================================================================
+# Security & Sensitive Files
+# ===================================================================
+
+# Certificates
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# SSH
+.ssh/
+id_rsa
+id_rsa.pub
+
+# ===================================================================
+# Archives & Backups
+# ===================================================================
+
+# Archives
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# ===================================================================
+# Project Specific
+# ===================================================================
+
+# Node version files
+node_version.txt
+
+# Test files
+test.js
+
+# Report files
+arquivos_tsx_sem_jsx.txt
+
+# ===================================================================
+# Supabase
+# ===================================================================
+
+# Supabase local development
+.supabase/
+
+# ===================================================================
+# Server & Process Files
+# ===================================================================
+
+# PM2
+.pm2/
+
+# Process files
+*.pid
+*.sock
+
+# ===================================================================
+# Configuration Files
+# ===================================================================
+
+# Local configuration files
+*.local
+.eslintrc.local
+.prettierrc.local

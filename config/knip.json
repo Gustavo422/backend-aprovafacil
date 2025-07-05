@@ -1,0 +1,10 @@
+{
+  "$schema": "https://unpkg.com/knip@3/schema.json",
+  "entry": ["app/**/*.tsx", "app/**/*.ts"],
+  "project": ["**/*.{ts,tsx}", "!**/*.d.ts", "!**/*.test.*", "!**/*.spec.*"],
+  "ignore": ["**/*.d.ts", "**/*.test.*", "**/*.spec.*"],
+  "ignoreDependencies": [
+    "@sentry/nextjs"
+  ],
+  "ignoreExportsUsedInFile": true
+}
