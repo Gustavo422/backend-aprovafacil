@@ -1,5 +1,5 @@
 // Repository de Simulados - refatoração SOLID
-import { SimuladoDTO } from '../../types/simulados.dto';
+import { SimuladoDTO } from '../../types/simulados.dto.js';
 
 export class SimuladosRepository {
   async findAll(): Promise<SimuladoDTO[]> {

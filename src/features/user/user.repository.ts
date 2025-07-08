@@ -1,5 +1,5 @@
 // Repository de User - refatoração SOLID
-import { UserDTO } from '../../types/user.dto';
+import { UserDTO } from '../../types/user.dto.js';
 
 export class UserRepository {
   async findAll(): Promise<UserDTO[]> {

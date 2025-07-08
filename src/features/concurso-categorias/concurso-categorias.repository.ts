@@ -1,5 +1,5 @@
 // Repository de Concurso Categorias - refatoração SOLID
-import { ConcursoCategoriaDTO } from '../../types/concurso-categorias.dto';
+import { ConcursoCategoriaDTO } from '../../types/concurso-categorias.dto.js';
 
 export class ConcursoCategoriasRepository {
   async findAll(): Promise<ConcursoCategoriaDTO[]> {

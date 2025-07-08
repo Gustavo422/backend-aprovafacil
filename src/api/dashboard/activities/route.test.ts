@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-// import { handler } from './route';
+// import { handler } from './route.js';
 
 describe('Dashboard Activities API', () => {
   it('deve retornar atividades do dashboard', async () => {

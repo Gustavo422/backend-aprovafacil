@@ -28,6 +28,7 @@
     "Request": "readonly",
     "Response": "readonly",
     "URL": "readonly",
-    "console": "readonly"
+    "console": "readonly",
+    "process": "readonly"
   }
 }

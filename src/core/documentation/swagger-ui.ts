@@ -1,4 +1,5 @@
-import { generateOpenAPISpec } from './openapi';
+/* global Response */
+import { generateOpenAPISpec } from './openapi.js';
 
 const SWAGGER_UI_HTML = `
 <!DOCTYPE html>
@@ -70,11 +71,19 @@ const SWAGGER_UI_HTML = `
 </html>
 `;
 
-export function serveSwaggerUI(): string {
-    return SWAGGER_UI_HTML;
+export function serveSwaggerUI(): Response {
+    return new Response(SWAGGER_UI_HTML, {
+        headers: {
+            'Content-Type': 'text/html; charset=utf-8',
+        },
+    });
 }
 
-export function serveOpenAPISpec(): string {
+export function serveOpenAPISpec(): Response {
     const spec = generateOpenAPISpec();
-    return JSON.stringify(spec, null, 2);
+    return new Response(JSON.stringify(spec, null, 2), {
+        headers: {
+            'Content-Type': 'application/json; charset=utf-8',
+        },
+    });
 } 

@@ -124,7 +124,13 @@ export class Validator {
    * Valida ID (UUID ou string simples)
    */
   static validateId(id: string): boolean {
-    return typeof id === 'string' && id.length > 0 && id.length <= 50;
+    if (typeof id !== 'string' || id.length === 0 || id.length > 50) {
+      return false;
+    }
+    
+    // Permite apenas letras, números, hífens e underscores
+    const validIdRegex = /^[a-zA-Z0-9_-]+$/;
+    return validIdRegex.test(id);
   }
 
   /**

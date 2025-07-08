@@ -1,376 +1,412 @@
-// TODO: Refatorar para backend puro. Arquivo inteiro comentado por depender de variáveis/recursos de frontend/SSR/Next.js ou imports quebrados.
-/*
-// TODO: Corrigir import de '@/lib/supabase' para caminho relativo ou remover se não for usado.
-// import { createRouteHandlerClient } from '@/lib/supabase';
-// TODO: Corrigir import de '@/lib/logger' para caminho relativo ou remover se não for usado.
-// import { logger } from '@/lib/logger';
-import { NextResponse } from 'next/server';
+import express from 'express';
+import { z } from 'zod';
+import { supabase } from '../../config/supabase.js';
+import { requireAuth } from '../../middleware/auth.js';
+import { validateRequest } from '../../middleware/validation.js';
+import { logger } from '../../utils/logger.js';
 
-export async function GET(_request: Request) {
+const router = express.Router();
+
+// Schemas de validação
+const createQuestaoSemanalSchema = z.object({
+  titulo: z.string().min(1, 'Título é obrigatório').max(255),
+  descricao: z.string().optional(),
+  enunciado: z.string().min(1, 'Enunciado é obrigatório'),
+  alternativas: z.record(z.unknown()),
+  resposta_correta: z.string().min(1, 'Resposta correta é obrigatória'),
+  explicacao: z.string().optional(),
+  disciplina: z.string().min(1, 'Disciplina é obrigatória').max(100),
+  assunto: z.string().optional(),
+  dificuldade: z.enum(['facil', 'medio', 'dificil']).default('medio'),
+  concurso_id: z.string().uuid().optional(),
+  categoria_id: z.string().uuid().optional(),
+  data_publicacao: z.string().datetime(),
+  data_expiracao: z.string().datetime().optional(),
+  is_active: z.boolean().default(true),
+  pontos: z.number().min(0).default(10)
+});
+
+const updateQuestaoSemanalSchema = z.object({
+  titulo: z.string().min(1).max(255).optional(),
+  descricao: z.string().optional(),
+  enunciado: z.string().min(1).optional(),
+  alternativas: z.record(z.unknown()).optional(),
+  resposta_correta: z.string().min(1).optional(),
+  explicacao: z.string().optional(),
+  disciplina: z.string().min(1).max(100).optional(),
+  assunto: z.string().optional(),
+  dificuldade: z.enum(['facil', 'medio', 'dificil']).optional(),
+  concurso_id: z.string().uuid().optional(),
+  categoria_id: z.string().uuid().optional(),
+  data_publicacao: z.string().datetime().optional(),
+  data_expiracao: z.string().datetime().optional(),
+  is_active: z.boolean().optional(),
+  pontos: z.number().min(0).optional()
+});
+
+const createRespostaSchema = z.object({
+  user_id: z.string().uuid(),
+  questao_semanal_id: z.string().uuid(),
+  resposta_escolhida: z.string().min(1, 'Resposta é obrigatória'),
+  tempo_gasto_segundos: z.number().min(0).optional(),
+  is_correta: z.boolean().optional(),
+  pontos_ganhos: z.number().min(0).optional()
+});
+
+// GET /api/questoes-semanais - Listar questões semanais
+router.get('/', requireAuth, async (req, res) => {
   try {
-    // TODO: Corrigir import de '@/lib/supabase' para caminho relativo ou remover se não for usado.
-    // const supabase = await createRouteHandlerClient();
+    const { page = 1, limit = 10, is_active, disciplina, dificuldade, concurso_id, categoria_id } = req.query;
 
-    // Verificar se o usuário está autenticado
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
+    const offset = (Number(page) - 1) * Number(limit);
 
-    if (userError) {
-      // TODO: Corrigir import de '@/lib/logger' para caminho relativo ou remover se não for usado.
-      // logger.error('Erro ao verificar usuário:', {
-      //   error: userError.message || String(userError),
-      //   code: userError.code,
-      // });
-      return NextResponse.json({ error: 'Erro de autenticação' }, { status: 401 });
-    }
-
-    if (!user) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
-
-    // Obter a semana atual
-    const now = new Date();
-    const startOfYear = new Date(now.getFullYear(), 0, 1);
-    const weekNumber = Math.ceil(
-      ((now.getTime() - startOfYear.getTime()) / 86400000 +
-        startOfYear.getDay() +
-        1) /
-        7
-    );
-
-    // TODO: Corrigir import de '@/lib/logger' para caminho relativo ou remover se não for usado.
-    // logger.info('Buscando questões semanais:', {
-    //   weekNumber,
-    //   year: now.getFullYear(),
-    //   userId: user.id,
-    //   currentDate: now.toISOString(),
-    // });
-
-    // Primeiro, vamos verificar se existem questões semanais no banco
-    const { data: todasQuestoesSemanais, error: todasError } = await supabase
+    let query = supabase
       .from('questoes_semanais')
-      .select('*')
-      .order('year', { ascending: false })
-      .order('week_number', { ascending: false })
-      .limit(5);
-
-    if (todasError) {
-      // TODO: Corrigir import de '@/lib/logger' para caminho relativo ou remover se não for usado.
-      // logger.error('Erro ao buscar todas as questões semanais:', {
-      //   error: todasError.message || String(todasError),
-      //   code: todasError.code,
-      // });
-    } else {
-      // TODO: Corrigir import de '@/lib/logger' para caminho relativo ou remover se não for usado.
-      // logger.info('Questões semanais existentes no banco:', {
-      //   total: todasQuestoesSemanais?.length || 0,
-      //   questoes: todasQuestoesSemanais?.map(qs => ({
-      //     id: qs.id,
-      //     title: qs.title,
-      //     week_number: qs.week_number,
-      //     year: qs.year,
-      //   })) || [],
-      // });
-    }
-
-    // Buscar as questões semanais para a semana atual
-    const { data: questoesSemanais, error } = await supabase
-      .from('questoes_semanais')
-      .select('*')
-      .eq('week_number', weekNumber)
-      .eq('year', now.getFullYear())
-      .single();
-
-    if (error && error.code !== 'PGRST116') {
-      // PGRST116 é o código para "no rows returned"
-      // TODO: Corrigir import de '@/lib/logger' para caminho relativo ou remover se não for usado.
-      // logger.error('Erro ao buscar questões semanais:', {
-      //   error: error.message || String(error),
-      //   code: error.code,
-      //   weekNumber,
-      //   year: now.getFullYear(),
-      // });
-      return NextResponse.json(
-        { error: 'Erro ao buscar questões semanais' },
-        { status: 500 }
-      );
-    }
-
-    // Se não houver questões para a semana atual, vamos buscar a questão semanal mais recente
-    if (!questoesSemanais) {
-      // TODO: Corrigir import de '@/lib/logger' para caminho relativo ou remover se não for usado.
-      // logger.info('Nenhuma questão semanal encontrada para a semana atual:', {
-      //   weekNumber,
-      //   year: now.getFullYear(),
-      // });
-
-      // Buscar a questão semanal mais recente
-      const { data: questaoRecente, error: recenteError } = await supabase
-        .from('questoes_semanais')
-        .select('*')
-        .order('year', { ascending: false })
-        .order('week_number', { ascending: false })
-        .limit(1)
-        .single();
-
-      if (recenteError && recenteError.code !== 'PGRST116') {
-        // TODO: Corrigir import de '@/lib/logger' para caminho relativo ou remover se não for usado.
-        // logger.error('Erro ao buscar questão semanal recente:', {
-        //   error: recenteError.message || String(recenteError),
-        //   code: recenteError.code,
-        // });
-      }
-
-      if (questaoRecente) {
-        // TODO: Corrigir import de '@/lib/logger' para caminho relativo ou remover se não for usado.
-        // logger.info('Usando questão semanal mais recente:', {
-        //   id: questaoRecente.id,
-        //   title: questaoRecente.title,
-        //   week_number: questaoRecente.week_number,
-        //   year: questaoRecente.year,
-        // });
-
-        // Usar a questão mais recente
-        const questoesSemanais = questaoRecente;
-        
-        // Buscar as questões associadas ao concurso da questão semanal
-        let questoes = [];
-        if (questoesSemanais.concurso_id) {
-          const { data: questoesData, error: questoesError } = await supabase
-            .from('simulado_questions')
-            .select('*')
-            .eq('concurso_id', questoesSemanais.concurso_id)
-            .eq('deleted_at', null)
-            .order('question_number', { ascending: true })
-            .limit(10);
-
-          if (questoesError) {
-            // TODO: Corrigir import de '@/lib/logger' para caminho relativo ou remover se não for usado.
-            // logger.error('Erro ao buscar questões:', {
-            //   error: questoesError.message || String(questoesError),
-            //   code: questoesError.code,
-            //   concursoId: questoesSemanais.concurso_id,
-            // });
-          } else {
-            questoes = questoesData || [];
-            // TODO: Corrigir import de '@/lib/logger' para caminho relativo ou remover se não for usado.
-            // logger.info('Questões encontradas para questão semanal recente:', {
-            //   count: questoes.length,
-            //   concursoId: questoesSemanais.concurso_id,
-            // });
-          }
-        }
-
-        // Buscar histórico do usuário
-        const { data: historico, error: historicoError } = await supabase
-          .from('user_questoes_semanais_progress')
-          .select(`
-            id,
-            questoes_semanais_id,
-            score,
-            total_questions,
-            completed_at
-          `)
-          .eq('user_id', user.id)
-          .order('completed_at', { ascending: false })
-          .limit(10);
-
-        if (historicoError) {
-          // TODO: Corrigir import de '@/lib/logger' para caminho relativo ou remover se não for usado.
-          // logger.error('Erro ao buscar histórico:', {
-          //   error: historicoError.message || String(historicoError),
-          //   code: historicoError.code,
-          //   userId: user.id,
-          // });
-        }
-
-        // Buscar detalhes das questões semanais do histórico
-        const historicoFormatted = [];
-        if (historico && historico.length > 0) {
-          const questoesSemanaisIds = historico.map(item => item.questoes_semanais_id);
-          
-          const { data: questoesSemanaisHistorico, error: historicoDetalhesError } = await supabase
-            .from('questoes_semanais')
-            .select('id, title, description, week_number, year')
-            .in('id', questoesSemanaisIds);
-
-          if (historicoDetalhesError) {
-            // TODO: Corrigir import de '@/lib/logger' para caminho relativo ou remover se não for usado.
-            // logger.error('Erro ao buscar detalhes do histórico:', {
-            //   error: historicoDetalhesError.message || String(historicoDetalhesError),
-            //   code: historicoDetalhesError.code,
-            // });
-          }
-
-          const questoesSemanaisMap = new Map();
-          questoesSemanaisHistorico?.forEach(qs => {
-            questoesSemanaisMap.set(qs.id, qs);
-          });
-
-          historicoFormatted.push(...historico.map(item => {
-            const questoesSemanal = questoesSemanaisMap.get(item.questoes_semanais_id);
-            return {
-              id: item.id,
-              title: questoesSemanal?.title || 'Questão Semanal',
-              description: questoesSemanal?.description || '',
-              week_number: questoesSemanal?.week_number || 0,
-              year: questoesSemanal?.year || 0,
-              score: item.score,
-              total_questions: item.total_questions,
-              completed_at: item.completed_at,
-            };
-          }));
-        }
-
-        return NextResponse.json({
-          questoesSemanal: questoesSemanais,
-          questoes,
-          alreadyCompleted: false,
-          progress: null,
-          historico: historicoFormatted,
-          isRecentQuestion: true,
-        });
-      }
-
-      // Se não há nenhuma questão semanal no banco
-      return NextResponse.json({
-        message: 'Não há questões disponíveis para esta semana',
-        weekNumber,
-        year: now.getFullYear(),
-        questoesSemanal: null,
-        questoes: [],
-        historico: [],
-        isRecentQuestion: false,
-      });
-    }
-
-    // Verificar se o usuário já respondeu as questões desta semana
-    const { data: progress, error: progressError } = await supabase
-      .from('user_questoes_semanais_progress')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('questoes_semanais_id', questoesSemanais.id)
-      .maybeSingle();
-
-    if (progressError) {
-      // TODO: Corrigir import de '@/lib/logger' para caminho relativo ou remover se não for usado.
-      // logger.error('Erro ao verificar progresso:', {
-      //   error: progressError.message || String(progressError),
-      //   code: progressError.code,
-      //   userId: user.id,
-      //   questoesSemanaisId: questoesSemanais.id,
-      // });
-    }
-
-    // Buscar as questões associadas ao concurso da questão semanal
-    let questoes = [];
-    if (questoesSemanais.concurso_id) {
-      const { data: questoesData, error: questoesError } = await supabase
-        .from('simulado_questions')
-        .select('*')
-        .eq('concurso_id', questoesSemanais.concurso_id)
-        .eq('deleted_at', null)
-        .order('question_number', { ascending: true })
-        .limit(10); // Limitar a 10 questões por semana
-
-      if (questoesError) {
-        // TODO: Corrigir import de '@/lib/logger' para caminho relativo ou remover se não for usado.
-        // logger.error('Erro ao buscar questões:', {
-        //   error: questoesError.message || String(questoesError),
-        //   code: questoesError.code,
-        //   concursoId: questoesSemanais.concurso_id,
-        // });
-      } else {
-        questoes = questoesData || [];
-        // TODO: Corrigir import de '@/lib/logger' para caminho relativo ou remover se não for usado.
-        // logger.info('Questões encontradas:', {
-        //   count: questoes.length,
-        //   concursoId: questoesSemanais.concurso_id,
-        // });
-      }
-    }
-
-    // Buscar histórico do usuário
-    const { data: historico, error: historicoError } = await supabase
-      .from('user_questoes_semanais_progress')
       .select(`
-        id,
-        questoes_semanais_id,
-        score,
-        total_questions,
-        completed_at
-      `)
-      .eq('user_id', user.id)
-      .order('completed_at', { ascending: false })
-      .limit(10);
+        *,
+        concursos (
+          id,
+          nome,
+          descricao,
+          ano,
+          banca
+        ),
+        categoria_disciplinas (
+          id,
+          nome,
+          descricao,
+          cor_primaria,
+          cor_secundaria
+        )
+      `, { count: 'exact' });
 
-    if (historicoError) {
-      // TODO: Corrigir import de '@/lib/logger' para caminho relativo ou remover se não for usado.
-      // logger.error('Erro ao buscar histórico:', {
-      //   error: historicoError.message || String(historicoError),
-      //   code: historicoError.code,
-      //   userId: user.id,
-      // });
+    // Aplicar filtros
+    if (is_active !== undefined) {
+      query = query.eq('is_active', is_active);
+    }
+    if (disciplina) {
+      query = query.ilike('disciplina', `%${disciplina}%`);
+    }
+    if (dificuldade) {
+      query = query.eq('dificuldade', dificuldade);
+    }
+    if (concurso_id) {
+      query = query.eq('concurso_id', concurso_id);
+    }
+    if (categoria_id) {
+      query = query.eq('categoria_id', categoria_id);
     }
 
-    // Buscar detalhes das questões semanais do histórico
-    const historicoFormatted = [];
-    if (historico && historico.length > 0) {
-      const questoesSemanaisIds = historico.map(item => item.questoes_semanais_id);
-      
-      const { data: questoesSemanaisHistorico, error: historicoDetalhesError } = await supabase
-        .from('questoes_semanais')
-        .select('id, title, description, week_number, year')
-        .in('id', questoesSemanaisIds);
+    const { data: questoes, error, count } = await query
+      .order('data_publicacao', { ascending: false })
+      .range(offset, offset + Number(limit) - 1);
 
-      if (historicoDetalhesError) {
-        // TODO: Corrigir import de '@/lib/logger' para caminho relativo ou remover se não for usado.
-        // logger.error('Erro ao buscar detalhes do histórico:', {
-        //   error: historicoDetalhesError.message || String(historicoDetalhesError),
-        //   code: historicoDetalhesError.code,
-        // });
+    if (error) {
+      logger.error('Erro ao buscar questões semanais:', undefined, { error: error.message });
+      res.status(500).json({ error: 'Erro interno do servidor' });
+      return;
+    }
+
+    const totalPages = Math.ceil((count || 0) / Number(limit));
+
+    res.json({
+      success: true,
+      data: questoes,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total: count || 0,
+        totalPages
       }
-
-      const questoesSemanaisMap = new Map();
-      questoesSemanaisHistorico?.forEach(qs => {
-        questoesSemanaisMap.set(qs.id, qs);
-      });
-
-      historicoFormatted.push(...historico.map(item => {
-        const questoesSemanal = questoesSemanaisMap.get(item.questoes_semanais_id);
-        return {
-          id: item.id,
-          title: questoesSemanal?.title || 'Questão Semanal',
-          description: questoesSemanal?.description || '',
-          week_number: questoesSemanal?.week_number || 0,
-          year: questoesSemanal?.year || 0,
-          score: item.score,
-          total_questions: item.total_questions,
-          completed_at: item.completed_at,
-        };
-      }));
-    }
-
-    return NextResponse.json({
-      questoesSemanal: questoesSemanais,
-      questoes,
-      alreadyCompleted: !!progress,
-      progress,
-      historico: historicoFormatted,
-      isRecentQuestion: false,
     });
   } catch (error) {
-    // TODO: Corrigir import de '@/lib/logger' para caminho relativo ou remover se não for usado.
-    // logger.error('Erro ao processar requisição:', {
-    //   error: error instanceof Error ? error.message : String(error),
-    //   stack: error instanceof Error ? error.stack : undefined,
-    // });
-    return NextResponse.json(
-      { error: 'Erro interno do servidor' },
-      { status: 500 }
-    );
+    logger.error('Erro na rota GET /questoes-semanais:', undefined, { error: error instanceof Error ? error.message : 'Erro desconhecido' });
+    res.status(500).json({ error: 'Erro interno do servidor' });
   }
-}
-*/
+});
+
+// GET /api/questoes-semanais/:id - Buscar questão específica
+router.get('/:id', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { data: questao, error } = await supabase
+      .from('questoes_semanais')
+      .select(`
+        *,
+        concursos (
+          id,
+          nome,
+          descricao,
+          ano,
+          banca
+        ),
+        categoria_disciplinas (
+          id,
+          nome,
+          descricao,
+          cor_primaria,
+          cor_secundaria
+        )
+      `)
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        res.status(404).json({ error: 'Questão não encontrada' });
+        return;
+      }
+      logger.error('Erro ao buscar questão semanal:', undefined, { error: error.message });
+      res.status(500).json({ error: 'Erro interno do servidor' });
+      return;
+    }
+
+    res.json({ success: true, data: questao });
+  } catch (error) {
+    logger.error('Erro na rota GET /questoes-semanais/:id:', undefined, { error: error instanceof Error ? error.message : 'Erro desconhecido' });
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// POST /api/questoes-semanais - Criar nova questão
+router.post('/', requireAuth, validateRequest(createQuestaoSemanalSchema), async (req, res) => {
+  try {
+    const questaoData = req.body;
+
+    const { data: questao, error } = await supabase
+      .from('questoes_semanais')
+      .insert([questaoData])
+      .select()
+      .single();
+
+    if (error) {
+      logger.error('Erro ao criar questão semanal:', undefined, { error: error.message });
+      res.status(500).json({ error: 'Erro interno do servidor' });
+      return;
+    }
+
+    res.status(201).json({ success: true, data: questao });
+  } catch (error) {
+    logger.error('Erro na rota POST /questoes-semanais:', undefined, { error: error instanceof Error ? error.message : 'Erro desconhecido' });
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// PUT /api/questoes-semanais/:id - Atualizar questão
+router.put('/:id', requireAuth, validateRequest(updateQuestaoSemanalSchema), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    const { data: questao, error } = await supabase
+      .from('questoes_semanais')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        res.status(404).json({ error: 'Questão não encontrada' });
+        return;
+      }
+      logger.error('Erro ao atualizar questão semanal:', undefined, { error: error.message });
+      res.status(500).json({ error: 'Erro interno do servidor' });
+      return;
+    }
+
+    res.json({ success: true, data: questao });
+  } catch (error) {
+    logger.error('Erro na rota PUT /questoes-semanais/:id:', undefined, { error: error instanceof Error ? error.message : 'Erro desconhecido' });
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// DELETE /api/questoes-semanais/:id - Deletar questão
+router.delete('/:id', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { error } = await supabase
+      .from('questoes_semanais')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      logger.error('Erro ao deletar questão semanal:', undefined, { error: error.message });
+      res.status(500).json({ error: 'Erro interno do servidor' });
+      return;
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    logger.error('Erro na rota DELETE /questoes-semanais/:id:', undefined, { error: error instanceof Error ? error.message : 'Erro desconhecido' });
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// POST /api/questoes-semanais/:id/respostas - Criar resposta para questão
+router.post('/:id/respostas', requireAuth, validateRequest(createRespostaSchema), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id;
+    const respostaData = { ...req.body, user_id: userId };
+
+    if (!userId) {
+      res.status(401).json({ error: 'Usuário não autenticado' });
+      return;
+    }
+
+    // Verificar se a questão existe
+    const { data: questao, error: questaoError } = await supabase
+      .from('questoes_semanais')
+      .select('id, resposta_correta, pontos')
+      .eq('id', id)
+      .single();
+
+    if (questaoError || !questao) {
+      res.status(404).json({ error: 'Questão não encontrada' });
+      return;
+    }
+
+    // Calcular se a resposta está correta e pontos ganhos
+    const isCorreta = respostaData.resposta_escolhida === questao.resposta_correta;
+    const pontosGanhos = isCorreta ? questao.pontos : 0;
+
+    const respostaFinal = {
+      ...respostaData,
+      questao_semanal_id: id,
+      is_correta: isCorreta,
+      pontos_ganhos: pontosGanhos
+    };
+
+    const { data: resposta, error } = await supabase
+      .from('respostas_questoes_semanais')
+      .insert([respostaFinal])
+      .select()
+      .single();
+
+    if (error) {
+      logger.error('Erro ao criar resposta:', undefined, { error: error.message });
+      res.status(500).json({ error: 'Erro interno do servidor' });
+      return;
+    }
+
+    res.status(201).json({ 
+      success: true, 
+      data: resposta,
+      is_correta: isCorreta,
+      pontos_ganhos: pontosGanhos
+    });
+  } catch (error) {
+    logger.error('Erro na rota POST /questoes-semanais/:id/respostas:', undefined, { error: error instanceof Error ? error.message : 'Erro desconhecido' });
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// GET /api/questoes-semanais/:id/respostas - Listar respostas de uma questão
+router.get('/:id/respostas', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { page = 1, limit = 10 } = req.query;
+
+    const offset = (Number(page) - 1) * Number(limit);
+
+    const { data: respostas, error, count } = await supabase
+      .from('respostas_questoes_semanais')
+      .select(`
+        *,
+        users (
+          id,
+          nome,
+          email
+        )
+      `, { count: 'exact' })
+      .eq('questao_semanal_id', id)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + Number(limit) - 1);
+
+    if (error) {
+      logger.error('Erro ao buscar respostas:', undefined, { error: error.message });
+      res.status(500).json({ error: 'Erro interno do servidor' });
+      return;
+    }
+
+    const totalPages = Math.ceil((count || 0) / Number(limit));
+
+    res.json({
+      success: true,
+      data: respostas,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total: count || 0,
+        totalPages
+      }
+    });
+  } catch (error) {
+    logger.error('Erro na rota GET /questoes-semanais/:id/respostas:', undefined, { error: error instanceof Error ? error.message : 'Erro desconhecido' });
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// GET /api/questoes-semanais/stats/ranking - Ranking de usuários
+router.get('/stats/ranking', requireAuth, async (req, res) => {
+  try {
+    const { limit = 10 } = req.query;
+
+    const { data: ranking, error } = await supabase
+      .from('respostas_questoes_semanais')
+      .select(`
+        user_id,
+        users (
+          id,
+          nome,
+          email
+        )
+      `)
+      .eq('is_correta', true)
+      .order('created_at', { ascending: false })
+      .limit(Number(limit));
+
+    if (error) {
+      logger.error('Erro ao buscar ranking:', undefined, { error: error.message });
+      res.status(500).json({ error: 'Erro interno do servidor' });
+      return;
+    }
+
+    // Agrupar por usuário e contar pontos
+    const rankingMap = new Map();
+    ranking?.forEach(resposta => {
+      const userId = resposta.user_id;
+      const user = resposta.users;
+      
+      if (!rankingMap.has(userId)) {
+        rankingMap.set(userId, {
+          user_id: userId,
+          user: user,
+          total_pontos: 0,
+          total_respostas_corretas: 0
+        });
+      }
+      
+      const userRanking = rankingMap.get(userId);
+      userRanking.total_respostas_corretas += 1;
+    });
+
+    const rankingFinal = Array.from(rankingMap.values())
+      .sort((a, b) => b.total_respostas_corretas - a.total_respostas_corretas)
+      .slice(0, Number(limit));
+
+    res.json({
+      success: true,
+      data: rankingFinal
+    });
+  } catch (error) {
+    logger.error('Erro na rota GET /questoes-semanais/stats/ranking:', undefined, { error: error instanceof Error ? error.message : 'Erro desconhecido' });
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+export default router;

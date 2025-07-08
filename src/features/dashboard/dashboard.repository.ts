@@ -1,5 +1,5 @@
 // Repository de Dashboard - refatoração SOLID
-import { DashboardDTO } from '../../types/dashboard.dto';
+import { DashboardDTO } from '../../types/dashboard.dto.js';
 
 export class DashboardRepository {
   async fetchStats(): Promise<DashboardDTO> {

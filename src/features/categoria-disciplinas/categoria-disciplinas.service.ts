@@ -1,5 +1,5 @@
 // Service de Categoria de Disciplinas - refatoração SOLID
-import { CategoriaDisciplinasDTO } from '../../types/categoria-disciplinas.dto';
+import { CategoriaDisciplinasDTO } from '../../types/categoria-disciplinas.dto.js';
 
 export class CategoriaDisciplinasService {
   async getAll(): Promise<CategoriaDisciplinasDTO[]> {

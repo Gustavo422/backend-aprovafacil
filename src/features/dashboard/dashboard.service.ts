@@ -1,5 +1,5 @@
 // Service de Dashboard - refatoração SOLID
-import { DashboardDTO } from '../../types/dashboard.dto';
+import { DashboardDTO } from '../../types/dashboard.dto.js';
 
 export class DashboardService {
   async getStats(): Promise<DashboardDTO> {

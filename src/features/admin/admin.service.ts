@@ -1,5 +1,5 @@
 // Service de Admin - refatoração SOLID
-import { AdminDTO } from '../../types/admin.dto';
+import { AdminDTO } from '../../types/admin.dto.js';
 
 export class AdminService {
   async getAll(): Promise<AdminDTO[]> {

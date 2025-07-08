@@ -1,145 +1,188 @@
-// TODO: Refatorar para backend puro. Arquivo inteiro comentado por depender de variáveis/recursos de frontend/SSR/Next.js ou imports quebrados.
-/*
-// TODO: Corrigir import de '@/lib/supabase' para caminho relativo ou remover se não for usado.
-// import { createRouteHandlerClient } from '@/lib/supabase';
-import { NextResponse } from 'next/server';
+import express from 'express';
+import { Request, Response } from 'express';
+import { supabase } from '../../config/supabase.js';
+import { requestLogger } from '../../middleware/logger.js';
+import { rateLimit } from '../../middleware/rateLimit.js';
+import { requireAuth } from '../../middleware/auth.js';
+import { 
+  validateCreateConcurso, 
+  validateUpdateConcurso, 
+  validateConcursoFilters, 
+  validateConcursoId 
+} from '../../validation/concursos.validation.js';
+import { logger } from '../../utils/logger.js';
+import { ConcursosController } from './concursos.controller.js';
 
-export async function GET(_request: Request) {
-  const { searchParams } = new URL(_request.url);
-  const categoriaId = searchParams.get('categoria_id');
-  const ano = searchParams.get('ano');
-  const banca = searchParams.get('banca');
-  const isActive = searchParams.get('is_active');
+const router = express.Router();
 
+// Aplicar middlewares globais
+router.use(requestLogger);
+router.use(rateLimit); // 100 requests por 15 minutos
+
+// GET /api/concursos - Listar concursos com filtros e paginação
+router.get('/', validateConcursoFilters, ConcursosController.listar);
+
+// GET /api/concursos/:id - Buscar concurso por ID
+router.get('/:id', validateConcursoId, ConcursosController.buscarPorId);
+
+// POST /api/concursos - Criar novo concurso (requer autenticação)
+router.post('/', requireAuth, validateCreateConcurso, ConcursosController.criar);
+
+// PUT /api/concursos/:id - Atualizar concurso (requer autenticação)
+router.put('/:id', requireAuth, validateConcursoId, validateUpdateConcurso, async (req: Request, res: Response) => {
   try {
-    // TODO: Corrigir import de '@/lib/supabase' para caminho relativo ou remover se não for usado.
-    // const supabase = await createRouteHandlerClient();
+    const { id } = req.params;
+    const updateData = req.body;
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    // Remover o ID dos dados de atualização
+    delete updateData.id;
 
-    if (!user) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
-
-    let query = supabase
+    const { data: concurso, error } = await supabase
       .from('concursos')
-      .select('*, concurso_categorias(*)');
-
-    if (categoriaId) {
-      query = query.eq('categoria_id', categoriaId);
-    }
-
-    if (ano) {
-      query = query.eq('ano', parseInt(ano));
-    }
-
-    if (banca) {
-      query = query.eq('banca', banca);
-    }
-
-    if (isActive !== null) {
-      query = query.eq('is_active', isActive === 'true');
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      // TODO: Corrigir import de '@/lib/logger' para caminho relativo ou remover se não for usado.
-      // logger.error('Erro ao buscar concursos:', {
-      //   error: error instanceof Error ? error.message : String(error),
-      // });
-      return NextResponse.json(
-        { error: 'Erro interno ao buscar concursos.' },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({ data });
-  } catch (error) {
-    // TODO: Corrigir import de '@/lib/logger' para caminho relativo ou remover se não for usado.
-    // logger.error('Erro ao processar requisição GET /api/concursos:', {
-    //   error: error instanceof Error ? error.message : String(error),
-    // });
-    return NextResponse.json(
-      { error: 'Erro interno no servidor.' },
-      { status: 500 }
-    );
-  }
-}
-
-export async function POST(_request: Request) {
-  try {
-    // TODO: Corrigir import de '@/lib/supabase' para caminho relativo ou remover se não for usado.
-    // const supabase = await createRouteHandlerClient();
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
-
-    const body = await _request.json();
-    const { nome, descricao, categoria_id, ano, banca, is_active, edital_url, data_prova, vagas, salario } = body;
-
-    if (!nome || !categoria_id) {
-      return NextResponse.json(
-        { error: 'Nome e categoria_id são obrigatórios' },
-        { status: 400 }
-      );
-    }
-
-    const { data, error } = await supabase
-      .from('concursos')
-      .insert({
-        nome,
-        descricao,
-        categoria_id,
-        ano: ano ? parseInt(ano) : null,
-        banca,
-        is_active: is_active !== undefined ? is_active : true,
-        edital_url,
-        data_prova,
-        vagas,
-        salario
-      })
+      .update(updateData)
+      .eq('id', id)
       .select(`
         *,
         concurso_categorias (
           id,
           nome,
-          slug
+          slug,
+          descricao,
+          cor_primaria,
+          cor_secundaria
         )
       `)
       .single();
 
     if (error) {
-      // TODO: Corrigir import de '@/lib/logger' para caminho relativo ou remover se não for usado.
-      // logger.error('Erro ao criar concurso:', {
-      //   error: error instanceof Error ? error.message : String(error),
-      // });
-      return NextResponse.json(
-        { error: 'Erro interno ao criar concurso.' },
-        { status: 500 }
-      );
+      logger.error('Erro ao atualizar concurso:', undefined, { error });
+      
+      if (error.code === 'PGRST116') {
+        res.status(404).json({
+          success: false,
+          error: 'Concurso não encontrado'
+        });
+        return;
+      }
+      
+      res.status(500).json({
+        success: false,
+        error: 'Erro interno ao atualizar concurso'
+      });
+      return;
     }
 
-    return NextResponse.json({
-      message: 'Concurso criado com sucesso',
-      data,
+    res.json({
+      success: true,
+      message: 'Concurso atualizado com sucesso',
+      data: concurso
     });
+
   } catch (error) {
-    // TODO: Corrigir import de '@/lib/logger' para caminho relativo ou remover se não for usado.
-    // logger.error('Erro ao processar requisição POST /api/concursos:', {
-    //   error: error instanceof Error ? error.message : String(error),
-    // });
-    return NextResponse.json(
-      { error: 'Erro interno no servidor.' },
-      { status: 500 }
-    );
+    logger.error('Erro ao processar requisição PUT /api/concursos/:id:', undefined, { error });
+    res.status(500).json({
+      success: false,
+      error: 'Erro interno no servidor'
+    });
   }
-}
-*/
+});
+
+// DELETE /api/concursos/:id - Deletar concurso (requer autenticação)
+router.delete('/:id', requireAuth, validateConcursoId, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const { error } = await supabase
+      .from('concursos')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      logger.error('Erro ao deletar concurso:', undefined, { error });
+      
+      if (error.code === 'PGRST116') {
+        res.status(404).json({
+          success: false,
+          error: 'Concurso não encontrado'
+        });
+        return;
+      }
+      
+      res.status(500).json({
+        success: false,
+        error: 'Erro interno ao deletar concurso'
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      message: 'Concurso deletado com sucesso'
+    });
+
+  } catch (error) {
+    logger.error('Erro ao processar requisição DELETE /api/concursos/:id:', undefined, { error });
+    res.status(500).json({
+      success: false,
+      error: 'Erro interno no servidor'
+    });
+  }
+});
+
+// PATCH /api/concursos/:id/activate - Ativar/desativar concurso (requer autenticação)
+router.patch('/:id/activate', requireAuth, validateConcursoId, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { is_active } = req.body;
+
+    if (typeof is_active !== 'boolean') {
+      res.status(400).json({
+        success: false,
+        error: 'Campo is_active deve ser um boolean'
+      });
+      return;
+    }
+
+    const { data: concurso, error } = await supabase
+      .from('concursos')
+      .update({
+        is_active,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        res.status(404).json({
+          success: false,
+          error: 'Concurso não encontrado'
+        });
+        return;
+      }
+      
+      logger.error('Erro ao ativar/desativar concurso:', undefined, { error });
+      res.status(500).json({
+        success: false,
+        error: 'Erro interno ao ativar/desativar concurso'
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      message: `Concurso ${is_active ? 'ativado' : 'desativado'} com sucesso`,
+      data: concurso
+    });
+
+  } catch (error) {
+    logger.error('Erro ao processar requisição PATCH /api/concursos/:id/activate:', undefined, { error });
+    res.status(500).json({
+      success: false,
+      error: 'Erro interno no servidor'
+    });
+  }
+});
+
+export default router;

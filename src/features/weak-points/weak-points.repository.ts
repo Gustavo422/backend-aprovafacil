@@ -1,5 +1,5 @@
 // Repository de Weak Points - refatoração SOLID
-import { WeakPointDTO } from '../../types/weak-points.dto';
+import { WeakPointDTO } from '../../types/weak-points.dto.js';
 
 export class WeakPointsRepository {
   async findAll(): Promise<WeakPointDTO[]> {

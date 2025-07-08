@@ -2771,6 +2771,560 @@ export const openApiConfig: OpenAPIV3.Document = {
           }
         }
       }
+    },
+    '/concursos': {
+      get: {
+        summary: 'Listar concursos',
+        description: 'Lista todos os concursos com filtros e paginação',
+        tags: ['Concursos'],
+        parameters: [
+          {
+            name: 'page',
+            in: 'query',
+            description: 'Número da página',
+            schema: { type: 'integer', default: 1 }
+          },
+          {
+            name: 'limit',
+            in: 'query',
+            description: 'Itens por página',
+            schema: { type: 'integer', default: 10 }
+          },
+          {
+            name: 'search',
+            in: 'query',
+            description: 'Termo de busca',
+            schema: { type: 'string' }
+          }
+        ],
+        responses: {
+          '200': {
+            description: 'Lista de concursos',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: {
+                      type: 'array',
+                      items: { $ref: '#/components/schemas/Concurso' }
+                    },
+                    pagination: {
+                      type: 'object',
+                      properties: {
+                        page: { type: 'integer', example: 1 },
+                        limit: { type: 'integer', example: 10 },
+                        total: { type: 'integer', example: 50 },
+                        pages: { type: 'integer', example: 5 }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      post: {
+        summary: 'Criar concurso',
+        description: 'Cria um novo concurso (requer autenticação)',
+        tags: ['Concursos'],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/ConcursoInput' }
+            }
+          }
+        },
+        responses: {
+          '201': {
+            description: 'Concurso criado com sucesso',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Concurso' }
+              }
+            }
+          },
+          '400': {
+            description: 'Dados inválidos',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' }
+              }
+            }
+          },
+          '401': {
+            description: 'Não autorizado',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/concursos/{id}': {
+      get: {
+        summary: 'Obter concurso por ID',
+        description: 'Retorna os detalhes de um concurso específico',
+        tags: ['Concursos'],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            description: 'ID do concurso',
+            schema: { type: 'string' }
+          }
+        ],
+        responses: {
+          '200': {
+            description: 'Detalhes do concurso',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Concurso' }
+              }
+            }
+          },
+          '404': {
+            description: 'Concurso não encontrado',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' }
+              }
+            }
+          }
+        }
+      },
+      put: {
+        summary: 'Atualizar concurso',
+        description: 'Atualiza um concurso existente (requer autenticação)',
+        tags: ['Concursos'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            description: 'ID do concurso',
+            schema: { type: 'string' }
+          }
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/ConcursoInput' }
+            }
+          }
+        },
+        responses: {
+          '200': {
+            description: 'Concurso atualizado com sucesso',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Concurso' }
+              }
+            }
+          },
+          '400': {
+            description: 'Dados inválidos',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' }
+              }
+            }
+          },
+          '401': {
+            description: 'Não autorizado',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' }
+              }
+            }
+          },
+          '404': {
+            description: 'Concurso não encontrado',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' }
+              }
+            }
+          }
+        }
+      },
+      delete: {
+        summary: 'Excluir concurso',
+        description: 'Exclui um concurso (requer autenticação)',
+        tags: ['Concursos'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            description: 'ID do concurso',
+            schema: { type: 'string' }
+          }
+        ],
+        responses: {
+          '200': {
+            description: 'Concurso excluído com sucesso',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Concurso excluído com sucesso' }
+                  }
+                }
+              }
+            }
+          },
+          '401': {
+            description: 'Não autorizado',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' }
+              }
+            }
+          },
+          '404': {
+            description: 'Concurso não encontrado',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/user': {
+      get: {
+        summary: 'Obter dados do usuário',
+        description: 'Retorna os dados do usuário autenticado',
+        tags: ['Usuário'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'Dados do usuário',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/User' }
+              }
+            }
+          },
+          '401': {
+            description: 'Não autorizado',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/user/concurso-preference': {
+      get: {
+        summary: 'Obter preferência de concurso',
+        description: 'Retorna a preferência de concurso do usuário',
+        tags: ['Usuário'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'Preferência de concurso',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        concursoId: { type: 'string', example: 'concurso-123' },
+                        nome: { type: 'string', example: 'Concurso Exemplo' }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          '401': {
+            description: 'Não autorizado',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' }
+              }
+            }
+          }
+        }
+      },
+      post: {
+        summary: 'Criar preferência de concurso',
+        description: 'Cria uma preferência de concurso para o usuário',
+        tags: ['Usuário'],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['concursoId'],
+                properties: {
+                  concursoId: {
+                    type: 'string',
+                    description: 'ID do concurso'
+                  }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          '201': {
+            description: 'Preferência criada com sucesso',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Preferência criada com sucesso' }
+                  }
+                }
+              }
+            }
+          },
+          '400': {
+            description: 'Dados inválidos',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' }
+              }
+            }
+          },
+          '401': {
+            description: 'Não autorizado',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' }
+              }
+            }
+          }
+        }
+      },
+      put: {
+        summary: 'Atualizar preferência de concurso',
+        description: 'Atualiza a preferência de concurso do usuário',
+        tags: ['Usuário'],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['concursoId'],
+                properties: {
+                  concursoId: {
+                    type: 'string',
+                    description: 'ID do concurso'
+                  }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          '200': {
+            description: 'Preferência atualizada com sucesso',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Preferência atualizada com sucesso' }
+                  }
+                }
+              }
+            }
+          },
+          '400': {
+            description: 'Dados inválidos',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' }
+              }
+            }
+          },
+          '401': {
+            description: 'Não autorizado',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/conteudo/filtrado': {
+      get: {
+        summary: 'Obter conteúdo filtrado',
+        description: 'Retorna conteúdo filtrado por parâmetros',
+        tags: ['Conteúdo'],
+        parameters: [
+          {
+            name: 'tipo',
+            in: 'query',
+            description: 'Tipo de conteúdo',
+            schema: { type: 'string', enum: ['apostila', 'flashcard', 'questao'] }
+          },
+          {
+            name: 'concursoId',
+            in: 'query',
+            description: 'ID do concurso',
+            schema: { type: 'string' }
+          }
+        ],
+        responses: {
+          '200': {
+            description: 'Conteúdo filtrado',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: {
+                      type: 'array',
+                      items: { type: 'object' }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/weak-points': {
+      get: {
+        summary: 'Obter pontos fracos',
+        description: 'Retorna os pontos fracos do usuário',
+        tags: ['Pontos Fracos'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'Pontos fracos do usuário',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          disciplina: { type: 'string', example: 'Matemática' },
+                          percentual: { type: 'number', example: 65.5 }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          '401': {
+            description: 'Não autorizado',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/categoria-disciplinas': {
+      get: {
+        summary: 'Listar categorias de disciplinas',
+        description: 'Retorna todas as categorias de disciplinas',
+        tags: ['Categorias'],
+        responses: {
+          '200': {
+            description: 'Lista de categorias',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          id: { type: 'string', example: 'cat-123' },
+                          nome: { type: 'string', example: 'Exatas' },
+                          descricao: { type: 'string', example: 'Disciplinas exatas' }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/concurso-categorias': {
+      get: {
+        summary: 'Listar categorias de concurso',
+        description: 'Retorna todas as categorias de concurso',
+        tags: ['Categorias'],
+        responses: {
+          '200': {
+            description: 'Lista de categorias',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          id: { type: 'string', example: 'cat-123' },
+                          nome: { type: 'string', example: 'Federal' },
+                          descricao: { type: 'string', example: 'Concursos federais' }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   components: {
@@ -2800,6 +3354,111 @@ export const openApiConfig: OpenAPIV3.Document = {
             }
           }
         }
+      },
+      Concurso: {
+        type: 'object',
+        properties: {
+          id: {
+            type: 'string',
+            example: 'concurso-123'
+          },
+          nome: {
+            type: 'string',
+            example: 'Concurso Exemplo'
+          },
+          descricao: {
+            type: 'string',
+            example: 'Descrição do concurso'
+          },
+          dataInicio: {
+            type: 'string',
+            format: 'date',
+            example: '2024-01-01'
+          },
+          dataFim: {
+            type: 'string',
+            format: 'date',
+            example: '2024-12-31'
+          },
+          ativo: {
+            type: 'boolean',
+            example: true
+          },
+          createdAt: {
+            type: 'string',
+            format: 'date-time',
+            example: '2024-01-01T00:00:00Z'
+          },
+          updatedAt: {
+            type: 'string',
+            format: 'date-time',
+            example: '2024-01-01T00:00:00Z'
+          }
+        }
+      },
+      ConcursoInput: {
+        type: 'object',
+        required: ['nome'],
+        properties: {
+          nome: {
+            type: 'string',
+            minLength: 1,
+            maxLength: 255,
+            example: 'Concurso Exemplo'
+          },
+          descricao: {
+            type: 'string',
+            maxLength: 1000,
+            example: 'Descrição do concurso'
+          },
+          dataInicio: {
+            type: 'string',
+            format: 'date',
+            example: '2024-01-01'
+          },
+          dataFim: {
+            type: 'string',
+            format: 'date',
+            example: '2024-12-31'
+          },
+          ativo: {
+            type: 'boolean',
+            example: true
+          }
+        }
+      },
+      User: {
+        type: 'object',
+        properties: {
+          id: {
+            type: 'string',
+            example: 'user-123'
+          },
+          email: {
+            type: 'string',
+            format: 'email',
+            example: 'usuario@exemplo.com'
+          },
+          nome: {
+            type: 'string',
+            example: 'João Silva'
+          },
+          role: {
+            type: 'string',
+            enum: ['user', 'admin'],
+            example: 'user'
+          },
+          createdAt: {
+            type: 'string',
+            format: 'date-time',
+            example: '2024-01-01T00:00:00Z'
+          },
+          updatedAt: {
+            type: 'string',
+            format: 'date-time',
+            example: '2024-01-01T00:00:00Z'
+          }
+        }
       }
     },
     securitySchemes: {
@@ -2814,6 +3473,26 @@ export const openApiConfig: OpenAPIV3.Document = {
     {
       name: 'Autenticação',
       description: 'Endpoints relacionados à autenticação de usuários'
+    },
+    {
+      name: 'Concursos',
+      description: 'Endpoints relacionados ao gerenciamento de concursos'
+    },
+    {
+      name: 'Usuário',
+      description: 'Endpoints relacionados aos dados do usuário'
+    },
+    {
+      name: 'Conteúdo',
+      description: 'Endpoints relacionados ao conteúdo filtrado'
+    },
+    {
+      name: 'Pontos Fracos',
+      description: 'Endpoints relacionados aos pontos fracos do usuário'
+    },
+    {
+      name: 'Categorias',
+      description: 'Endpoints relacionados às categorias'
     },
     {
       name: 'Apostilas',

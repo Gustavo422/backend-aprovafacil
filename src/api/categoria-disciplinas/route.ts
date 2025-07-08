@@ -1,220 +1,302 @@
-// TODO: Refatorar para backend puro. Arquivo inteiro comentado por depender de variáveis/recursos de frontend/SSR/Next.js ou imports quebrados.
-/*
-// TODO: Corrigir import de '@/lib/supabase' para caminho relativo ou remover se não for usado.
-// import { createRouteHandlerClient } from '@/lib/supabase';
-// TODO: Corrigir import de '@/lib/logger' para caminho relativo ou remover se não for usado.
-// import { logger } from '@/lib/logger';
-import { NextResponse } from 'next/server';
+import express, { Request, Response } from 'express';
+import { supabase } from '../../config/supabase.js';
+import { requestLogger } from '../../middleware/logger.js';
+import { rateLimit } from '../../middleware/rateLimit.js';
+import { requireAuth, requireAdmin } from '../../middleware/auth.js';
+
+const router = express.Router();
+
+// Aplicar middlewares globais
+router.use(requestLogger);
+router.use(rateLimit);
 
 // ========================================
 // GET - Buscar disciplinas
 // ========================================
 
-export async function GET(_request: Request) {
-  const { searchParams } = new URL(_request.url);
-  const categoriaId = searchParams.get('categoria_id');
-  const isActive = searchParams.get('is_active');
+router.get('/', async (req: Request, res: Response) => {
+    try {
+        const { categoria_id, is_active } = req.query;
 
-  try {
-    // TODO: Corrigir import de '@/lib/supabase' para caminho relativo ou remover se não for usado.
-    // const supabase = await createRouteHandlerClient();
+        // Construir query base
+        let query = supabase.from('categoria_disciplinas').select('*');
 
-    // Verificar se o usuário está autenticado
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+        // Aplicar filtros
+        if (categoria_id) {
+            query = query.eq('categoria_id', categoria_id);
+        }
 
-    if (!user) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+        if (is_active !== undefined) {
+            query = query.eq('is_active', is_active === 'true');
+        }
+
+        // Executar query
+        const { data: disciplinas, error } = await query.order('ordem', { ascending: true });
+
+        if (error) {
+            console.error('Erro ao buscar disciplinas:', error);
+            res.status(500).json({
+                success: false,
+                error: 'Erro ao buscar disciplinas'
+            });
+            return;
+        }
+
+        res.json({
+            success: true,
+            data: disciplinas || []
+        });
+    } catch (error) {
+        console.error('Erro interno:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erro interno do servidor'
+        });
     }
-
-    // Construir query base
-    let query = supabase.from('categoria_disciplinas').select('*');
-
-    // Aplicar filtros
-    if (categoriaId) {
-      query = query.eq('categoria_id', categoriaId);
-    }
-
-    if (isActive !== null) {
-      query = query.eq('is_active', isActive === 'true');
-    }
-
-    // Executar query
-    const { data: disciplinas, error } = await query.order('ordem', { ascending: true });
-
-    if (error) {
-      // TODO: Corrigir import de '@/lib/logger' para caminho relativo ou remover se não for usado.
-      // logger.error('Erro ao buscar disciplinas:', {
-      //   error: error.message,
-      //   userId: user.id,
-      //   categoriaId,
-      // });
-      return NextResponse.json(
-        { error: 'Erro ao buscar disciplinas' },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({
-      data: disciplinas || [],
-    });
-  } catch (error) {
-    // TODO: Corrigir import de '@/lib/logger' para caminho relativo ou remover se não for usado.
-    // logger.error('Erro interno:', {
-    //   error: error instanceof Error ? error.message : String(error),
-    // });
-    return NextResponse.json(
-      { error: 'Erro interno do servidor' },
-      { status: 500 }
-    );
-  }
-}
+});
 
 // ========================================
 // POST - Criar disciplina (apenas admin)
 // ========================================
 
-export async function POST(request: Request) {
-  try {
-    // TODO: Corrigir import de '@/lib/supabase' para caminho relativo ou remover se não for usado.
-    // const supabase = await createRouteHandlerClient();
+router.post('/', requireAuth, requireAdmin, async (req: Request, res: Response) => {
+    try {
+        const { categoria_id, nome, peso, horas_semanais, ordem } = req.body;
 
-    // Verificar se o usuário está autenticado
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+        // Validar dados obrigatórios
+        if (!categoria_id || !nome || !peso || !horas_semanais || !ordem) {
+            res.status(400).json({
+                success: false,
+                error: 'Todos os campos são obrigatórios'
+            });
+            return;
+        }
 
-    if (!user) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+        // Validar peso (1-100)
+        if (peso < 1 || peso > 100) {
+            res.status(400).json({
+                success: false,
+                error: 'Peso deve estar entre 1 e 100'
+            });
+            return;
+        }
+
+        // Validar horas semanais
+        if (horas_semanais < 1) {
+            res.status(400).json({
+                success: false,
+                error: 'Horas semanais deve ser maior que 0'
+            });
+            return;
+        }
+
+        // Verificar se a categoria existe
+        const { data: categoria, error: categoriaError } = await supabase
+            .from('concurso_categorias')
+            .select('id')
+            .eq('id', categoria_id)
+            .eq('is_active', true)
+            .single();
+
+        if (categoriaError || !categoria) {
+            res.status(404).json({
+                success: false,
+                error: 'Categoria não encontrada ou inativa'
+            });
+            return;
+        }
+
+        // Verificar se já existe disciplina com o mesmo nome na categoria
+        const { data: existingDisciplina, error: existingError } = await supabase
+            .from('categoria_disciplinas')
+            .select('id')
+            .eq('categoria_id', categoria_id)
+            .eq('nome', nome)
+            .single();
+
+        if (existingError && existingError.code !== 'PGRST116') {
+            console.error('Erro ao verificar disciplina existente:', existingError);
+            res.status(500).json({
+                success: false,
+                error: 'Erro ao verificar disciplina existente'
+            });
+            return;
+        }
+
+        if (existingDisciplina) {
+            res.status(409).json({
+                success: false,
+                error: 'Disciplina já existe nesta categoria'
+            });
+            return;
+        }
+
+        // Criar disciplina
+        const { data: disciplina, error } = await supabase
+            .from('categoria_disciplinas')
+            .insert({
+                categoria_id,
+                nome,
+                peso,
+                horas_semanais,
+                ordem,
+                is_active: true
+            })
+            .select()
+            .single();
+
+        if (error) {
+            console.error('Erro ao criar disciplina:', error);
+            res.status(500).json({
+                success: false,
+                error: 'Erro ao criar disciplina'
+            });
+            return;
+        }
+
+        res.status(201).json({
+            success: true,
+            message: 'Disciplina criada com sucesso',
+            data: disciplina
+        });
+    } catch (error) {
+        console.error('Erro interno:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erro interno do servidor'
+        });
     }
+});
 
-    // TODO: Verificar se o usuário é admin
-    // Por enquanto, permitir criação para qualquer usuário autenticado
+// ========================================
+// PUT - Atualizar disciplina
+// ========================================
 
-    // Obter dados da requisição
-    const body = await request.json();
-    const { categoria_id, nome, peso, horas_semanais, ordem } = body;
+router.put('/:id', requireAuth, requireAdmin, async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const { categoria_id, nome, peso, horas_semanais, ordem, is_active } = req.body;
 
-    // Validar dados obrigatórios
-    if (!categoria_id || !nome || !peso || !horas_semanais || !ordem) {
-      return NextResponse.json(
-        { error: 'Todos os campos são obrigatórios' },
-        { status: 400 }
-      );
+        // Verificar se a disciplina existe
+        const { data: existingDisciplina, error: existingError } = await supabase
+            .from('categoria_disciplinas')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (existingError || !existingDisciplina) {
+            res.status(404).json({
+                success: false,
+                error: 'Disciplina não encontrada'
+            });
+            return;
+        }
+
+        // Validar dados se fornecidos
+        if (peso !== undefined && (peso < 1 || peso > 100)) {
+            res.status(400).json({
+                success: false,
+                error: 'Peso deve estar entre 1 e 100'
+            });
+            return;
+        }
+
+        if (horas_semanais !== undefined && horas_semanais < 1) {
+            res.status(400).json({
+                success: false,
+                error: 'Horas semanais deve ser maior que 0'
+            });
+            return;
+        }
+
+        // Atualizar disciplina
+        const { data: disciplina, error } = await supabase
+            .from('categoria_disciplinas')
+            .update({
+                categoria_id,
+                nome,
+                peso,
+                horas_semanais,
+                ordem,
+                is_active,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) {
+            console.error('Erro ao atualizar disciplina:', error);
+            res.status(500).json({
+                success: false,
+                error: 'Erro ao atualizar disciplina'
+            });
+            return;
+        }
+
+        res.json({
+            success: true,
+            message: 'Disciplina atualizada com sucesso',
+            data: disciplina
+        });
+    } catch (error) {
+        console.error('Erro interno:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erro interno do servidor'
+        });
     }
+});
 
-    // Validar peso (1-100)
-    if (peso < 1 || peso > 100) {
-      return NextResponse.json(
-        { error: 'Peso deve estar entre 1 e 100' },
-        { status: 400 }
-      );
+// ========================================
+// DELETE - Deletar disciplina
+// ========================================
+
+router.delete('/:id', requireAuth, requireAdmin, async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+
+        // Verificar se a disciplina existe
+        const { data: existingDisciplina, error: existingError } = await supabase
+            .from('categoria_disciplinas')
+            .select('id')
+            .eq('id', id)
+            .single();
+
+        if (existingError || !existingDisciplina) {
+            res.status(404).json({
+                success: false,
+                error: 'Disciplina não encontrada'
+            });
+            return;
+        }
+
+        // Deletar disciplina
+        const { error } = await supabase
+            .from('categoria_disciplinas')
+            .delete()
+            .eq('id', id);
+
+        if (error) {
+            console.error('Erro ao deletar disciplina:', error);
+            res.status(500).json({
+                success: false,
+                error: 'Erro ao deletar disciplina'
+            });
+            return;
+        }
+
+        res.json({
+            success: true,
+            message: 'Disciplina deletada com sucesso'
+        });
+    } catch (error) {
+        console.error('Erro interno:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erro interno do servidor'
+        });
     }
+});
 
-    // Validar horas semanais
-    if (horas_semanais < 1) {
-      return NextResponse.json(
-        { error: 'Horas semanais deve ser maior que 0' },
-        { status: 400 }
-      );
-    }
-
-    // Verificar se a categoria existe
-    const { data: categoria, error: categoriaError } = await supabase
-      .from('concurso_categorias')
-      .select('id')
-      .eq('id', categoria_id)
-      .eq('is_active', true)
-      .single();
-
-    if (categoriaError || !categoria) {
-      return NextResponse.json(
-        { error: 'Categoria não encontrada ou inativa' },
-        { status: 404 }
-      );
-    }
-
-    // Verificar se já existe disciplina com o mesmo nome na categoria
-    const { data: existingDisciplina, error: existingError } = await supabase
-      .from('categoria_disciplinas')
-      .select('id')
-      .eq('categoria_id', categoria_id)
-      .eq('nome', nome)
-      .single();
-
-    if (existingError && existingError.code !== 'PGRST116') {
-      // TODO: Corrigir import de '@/lib/logger' para caminho relativo ou remover se não for usado.
-      // logger.error('Erro ao verificar disciplina existente:', {
-      //   error: existingError.message,
-      //   categoriaId: categoria_id,
-      //   nome,
-      // });
-      return NextResponse.json(
-        { error: 'Erro ao verificar disciplina existente' },
-        { status: 500 }
-      );
-    }
-
-    if (existingDisciplina) {
-      return NextResponse.json(
-        { error: 'Disciplina já existe nesta categoria' },
-        { status: 409 }
-      );
-    }
-
-    // Criar disciplina
-    const { data: disciplina, error } = await supabase
-      .from('categoria_disciplinas')
-      .insert({
-        categoria_id,
-        nome,
-        peso,
-        horas_semanais,
-        ordem,
-        is_active: true,
-      })
-      .select()
-      .single();
-
-    if (error) {
-      // TODO: Corrigir import de '@/lib/logger' para caminho relativo ou remover se não for usado.
-      // logger.error('Erro ao criar disciplina:', {
-      //   error: error.message,
-      //   userId: user.id,
-      //   categoriaId: categoria_id,
-      //   nome,
-      // });
-      return NextResponse.json(
-        { error: 'Erro ao criar disciplina' },
-        { status: 500 }
-      );
-    }
-
-    // Log da ação
-    // TODO: Corrigir import de '@/lib/logger' para caminho relativo ou remover se não for usado.
-    // logger.info('Disciplina criada:', {
-    //   userId: user.id,
-    //   disciplinaId: disciplina.id,
-    //   categoriaId: categoria_id,
-    //   nome,
-    //   peso,
-    //   horas_semanais,
-    // });
-
-    return NextResponse.json({
-      message: 'Disciplina criada com sucesso',
-      disciplina,
-    });
-  } catch (error) {
-    // TODO: Corrigir import de '@/lib/logger' para caminho relativo ou remover se não for usado.
-    // logger.error('Erro interno:', {
-    //   error: error instanceof Error ? error.message : String(error),
-    // });
-    return NextResponse.json(
-      { error: 'Erro interno do servidor' },
-      { status: 500 }
-    );
-  }
-}
-*/
+export default router;

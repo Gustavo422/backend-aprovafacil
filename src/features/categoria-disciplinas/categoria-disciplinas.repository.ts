@@ -1,5 +1,5 @@
 // Repository de Categoria de Disciplinas - refatoração SOLID
-import { CategoriaDisciplinasDTO } from '../../types/categoria-disciplinas.dto';
+import { CategoriaDisciplinasDTO } from '../../types/categoria-disciplinas.dto.js';
 
 export class CategoriaDisciplinasRepository {
   async findAll(): Promise<CategoriaDisciplinasDTO[]> {

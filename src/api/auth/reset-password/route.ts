@@ -1,157 +1,135 @@
-// TODO: Refatorar para backend puro. Arquivo inteiro comentado por depender de variáveis/recursos de frontend/SSR/Next.js ou imports quebrados.
-/*
-// TODO: Corrigir import de '@/lib/supabase' para caminho relativo ou remover se não for usado.
-// import { createRouteHandlerClient } from '@/lib/supabase';
-import { NextResponse } from 'next/server';
-// TODO: Corrigir import de '@/lib/logger' para caminho relativo ou remover se não for usado.
-// import { logger } from '@/lib/logger';
+import express, { Request, Response } from 'express';
+import { supabase } from '../../../config/supabase.js';
+import { requestLogger } from '../../../middleware/logger.js';
+import { rateLimit } from '../../../middleware/rateLimit.js';
 
-export async function POST(request: Request) {
-  try {
-    // TODO: Corrigir import de '@/lib/supabase' para caminho relativo ou remover se não for usado.
-    // const supabase = await createRouteHandlerClient();
-    
-    const body = await request.json();
-    const { password, accessToken, refreshToken } = body;
+const router = express.Router();
 
-    // Validação básica
-    if (!password || !accessToken || !refreshToken) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: { 
-            code: 'MISSING_FIELDS', 
-            message: 'Senha e tokens são obrigatórios' 
-          } 
-        },
-        { status: 400 }
-      );
-    }
+// Aplicar middlewares globais
+router.use(requestLogger);
+router.use(rateLimit);
 
-    if (password.length < 6) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: { 
-            code: 'WEAK_PASSWORD', 
-            message: 'A senha deve ter pelo menos 6 caracteres' 
-          } 
-        },
-        { status: 400 }
-      );
-    }
-
+// POST - Reset de senha
+router.post('/', async (req: Request, res: Response) => {
     try {
-      // Definir a sessão com os tokens fornecidos
-      // TODO: Corrigir import de '@/lib/supabase' para caminho relativo ou remover se não for usado.
-      // const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
-      //   access_token: accessToken,
-      //   refresh_token: refreshToken,
-      // });
+        const { password, accessToken, refreshToken } = req.body;
 
-      if (sessionError || !sessionData.user) {
-        // TODO: Corrigir import de '@/lib/logger' para caminho relativo ou remover se não for usado.
-        // logger.warn('Falha ao definir sessão para reset de senha', {
-        //   error: sessionError?.message
-        // });
+        // Validação básica
+        if (!password || !accessToken || !refreshToken) {
+            res.status(400).json({
+                success: false,
+                error: {
+                    code: 'MISSING_FIELDS',
+                    message: 'Senha e tokens são obrigatórios'
+                }
+            });
+            return;
+        }
 
-        return NextResponse.json(
-          { 
-            success: false, 
-            error: { 
-              code: 'INVALID_SESSION', 
-              message: 'Sessão inválida ou expirada. Solicite um novo link.' 
-            } 
-          },
-          { status: 401 }
-        );
-      }
+        if (password.length < 6) {
+            res.status(400).json({
+                success: false,
+                error: {
+                    code: 'WEAK_PASSWORD',
+                    message: 'A senha deve ter pelo menos 6 caracteres'
+                }
+            });
+            return;
+        }
 
-      // Atualizar a senha
-      // TODO: Corrigir import de '@/lib/supabase' para caminho relativo ou remover se não for usado.
-      // const { data, error } = await supabase.auth.updateUser({
-      //   password: password
-      // });
+        try {
+            // Definir a sessão com os tokens fornecidos
+            const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+                access_token: accessToken,
+                refresh_token: refreshToken,
+            });
 
-      if (error) {
-        // TODO: Corrigir import de '@/lib/logger' para caminho relativo ou remover se não for usado.
-        // logger.warn('Erro ao atualizar senha', {
-        //   userId: sessionData.user.id,
-        //   error: error.message
-        // });
+            if (sessionError || !sessionData.user) {
+                console.warn('Falha ao definir sessão para reset de senha', {
+                    error: sessionError?.message
+                });
 
-        return NextResponse.json(
-          { 
-            success: false, 
-            error: { 
-              code: 'PASSWORD_UPDATE_FAILED', 
-              message: 'Falha ao atualizar senha. Tente novamente.' 
-            } 
-          },
-          { status: 400 }
-        );
-      }
+                res.status(401).json({
+                    success: false,
+                    error: {
+                        code: 'INVALID_SESSION',
+                        message: 'Sessão inválida ou expirada. Solicite um novo link.'
+                    }
+                });
+                return;
+            }
 
-      if (data.user) {
-        // TODO: Corrigir import de '@/lib/logger' para caminho relativo ou remover se não for usado.
-        // logger.info('Senha redefinida com sucesso', {
-        //   userId: data.user.id,
-        //   email: data.user.email
-        // });
+            // Atualizar a senha
+            const { data, error } = await supabase.auth.updateUser({
+                password: password
+            });
 
-        return NextResponse.json({
-          success: true,
-          message: 'Senha redefinida com sucesso.',
-          user: {
-            id: data.user.id,
-            email: data.user.email
-          }
+            if (error) {
+                console.warn('Erro ao atualizar senha', {
+                    userId: sessionData.user.id,
+                    error: error.message
+                });
+
+                res.status(400).json({
+                    success: false,
+                    error: {
+                        code: 'PASSWORD_UPDATE_FAILED',
+                        message: 'Falha ao atualizar senha. Tente novamente.'
+                    }
+                });
+                return;
+            }
+
+            if (data.user) {
+                console.info('Senha redefinida com sucesso', {
+                    userId: data.user.id,
+                    email: data.user.email
+                });
+
+                res.json({
+                    success: true,
+                    message: 'Senha redefinida com sucesso.',
+                    user: {
+                        id: data.user.id,
+                        email: data.user.email
+                    }
+                });
+                return;
+            }
+
+            res.status(500).json({
+                success: false,
+                error: {
+                    code: 'RESET_FAILED',
+                    message: 'Falha ao redefinir senha. Tente novamente.'
+                }
+            });
+
+        } catch (resetError) {
+            console.error('Erro durante reset de senha', {
+                error: resetError
+            });
+
+            res.status(500).json({
+                success: false,
+                error: {
+                    code: 'RESET_ERROR',
+                    message: 'Erro durante redefinição de senha. Tente novamente.'
+                }
+            });
+        }
+
+    } catch (error) {
+        console.error('Erro inesperado no reset de senha', { error });
+        
+        res.status(500).json({
+            success: false,
+            error: {
+                code: 'INTERNAL_ERROR',
+                message: 'Erro interno do servidor. Tente novamente.'
+            }
         });
-      }
-
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: { 
-            code: 'RESET_FAILED', 
-            message: 'Falha ao redefinir senha. Tente novamente.' 
-          } 
-        },
-        { status: 500 }
-      );
-
-    } catch (resetError) {
-      // TODO: Corrigir import de '@/lib/logger' para caminho relativo ou remover se não for usado.
-      // logger.error('Erro durante reset de senha', {
-      //   error: resetError
-      // });
-
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: { 
-            code: 'RESET_ERROR', 
-            message: 'Erro durante redefinição de senha. Tente novamente.' 
-          } 
-        },
-        { status: 500 }
-      );
     }
+});
 
-  } catch (error) {
-    // TODO: Corrigir import de '@/lib/logger' para caminho relativo ou remover se não for usado.
-    // logger.error('Erro inesperado no reset de senha', { error });
-    
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: { 
-          code: 'INTERNAL_ERROR', 
-          message: 'Erro interno do servidor. Tente novamente.' 
-        } 
-      },
-      { status: 500 }
-    );
-  }
-}
-*/
+export default router;

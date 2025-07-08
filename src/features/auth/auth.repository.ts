@@ -1,6 +1,6 @@
 // Repository de Autenticação - refatoração SOLID
 import bcrypt from 'bcryptjs';
-import { AuthDTO } from '../../types/auth.dto';
+import { AuthDTO } from '../../types/auth.dto.js';
 
 export class AuthRepository {
   async findByEmail(email: string): Promise<AuthDTO | null> {

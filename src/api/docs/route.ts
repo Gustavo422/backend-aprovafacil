@@ -1,6 +1,5 @@
-/* global Request */
-import { serveSwaggerUI } from '../../core/documentation/swagger-ui';
+import { serveSwaggerUI } from '../../core/documentation/swagger-ui.js';
 
-export async function GET(request: Request) {
-  return serveSwaggerUI(request as any);
+export async function GET() {
+  return serveSwaggerUI();
 } 

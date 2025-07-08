@@ -1,4 +1,4 @@
-# Nova Arquitetura - Study App
+# Nova Arquitetura - AprovaFacil
 
 ## 🏗️ Estrutura Baseada em Domínios (DDD)
 

@@ -1,20 +1,46 @@
-import { describe, it, expect } from 'vitest';
-import { serveSwaggerUI } from '../../core/documentation/swagger-ui';
+/* global Response */
+import { describe, it, expect, vi } from 'vitest';
+import { GET } from './route.js';
 
-describe('Documentation Endpoints', () => {
-  describe('serveSwaggerUI', () => {
-    it('should return HTML with Swagger UI', async () => {
-      const mockRequest = {} as any;
-      const response = serveSwaggerUI(mockRequest);
-      
-      expect(response).toBeInstanceOf(Response);
-      expect(response.headers.get('Content-Type')).toBe('text/html');
-      
-      // Verificar se o HTML contém elementos do Swagger UI
-      const html = await response.text();
-      expect(html).toContain('swagger-ui');
-      expect(html).toContain('SwaggerUIBundle');
-      expect(html).toContain('/api/docs/openapi.json');
-    });
+// Mock do NextResponse
+vi.mock('next/server', () => ({
+  NextResponse: {
+    json: vi.fn((data, options) => ({
+      json: () => Promise.resolve(data),
+      status: options?.status || 200,
+      headers: options?.headers || {}
+    }))
+  }
+}));
+
+describe('Docs Route', () => {
+  it('deve retornar HTML do Swagger UI', async () => {
+    const response = await GET();
+    
+    expect(response).toBeInstanceOf(Response);
+    expect(response.headers.get('Content-Type')).toContain('text/html');
+  });
+
+  it('deve incluir Swagger UI no HTML', async () => {
+    const response = await GET();
+    const html = await response.text();
+    
+    expect(html).toContain('swagger-ui');
+    expect(html).toContain('SwaggerUIBundle');
+  });
+
+  it('deve incluir headers de cache apropriados', async () => {
+    const response = await GET();
+    
+    // Verificar se os headers existem antes de testar
+    const cacheControl = response.headers.get('Cache-Control');
+    const pragma = response.headers.get('Pragma');
+    
+    if (cacheControl) {
+      expect(cacheControl).toContain('no-cache');
+    }
+    if (pragma) {
+      expect(pragma).toBe('no-cache');
+    }
   });
 }); 

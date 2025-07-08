@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { generateOpenAPISpec } from '../src/core/documentation/openapi';
+import { generateOpenAPISpec } from '../src/core/documentation/openapi.js';
 
 describe('Documentação OpenAPI', () => {
   it('deve gerar especificação OpenAPI válida', () => {

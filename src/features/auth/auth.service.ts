@@ -1,8 +1,8 @@
 // Service de Autenticação - refatoração SOLID
-import { AuthDTO } from '../../types/auth.dto';
-import { AuthRepository } from './auth.repository';
+import { AuthDTO } from '../../types/auth.dto.js';
+import { AuthRepository } from './auth.repository.js';
 import bcrypt from 'bcryptjs';
-import { Validator, LoginSchema, RegisterSchema } from '../../core/validation';
+import { Validator, LoginSchema, RegisterSchema } from '../../core/validation/index.js';
 
 export class AuthService {
   private repository = new AuthRepository();

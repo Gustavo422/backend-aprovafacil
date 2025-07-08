@@ -1,5 +1,5 @@
 // Service de Concursos - refatoração SOLID
-import { ConcursoDTO } from '../../types/concursos.dto';
+import { ConcursoDTO } from '../../types/concursos.dto.js';
 
 export class ConcursosService {
   async getAll(): Promise<ConcursoDTO[]> {

@@ -5,6 +5,8 @@
 // TODO: Corrigir import de '@/lib/logger' para caminho relativo ou remover se não for usado.
 // import { logger } from '@/lib/logger';
 import { NextResponse } from 'next/server';
+import { supabase } from '../../../config/supabase.js';
+import { requireAuth } from '../../../middleware/auth.js';
 
 export async function PUT(request: Request) {
   // TODO: Corrigir import de '@/lib/supabase' para caminho relativo ou remover se não for usado.

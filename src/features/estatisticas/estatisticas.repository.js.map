@@ -1,0 +1,1 @@
+{"version":3,"file":"estatisticas.repository.js","sourceRoot":"","sources":["estatisticas.repository.ts"],"names":[],"mappings":"AAAA,iDAAiD;AAEjD,MAAM,OAAO,sBAAsB;IACjC,KAAK,CAAC,OAAO;QACX,oCAAoC;QACpC,OAAO,EAAE,CAAC;IACZ,CAAC;IAED,KAAK,CAAC,UAAU;QACd,oCAAoC;QACpC,OAAO,IAAI,CAAC;IACd,CAAC;IAED,KAAK,CAAC,WAAW;QACf,oCAAoC;QACpC,OAAO,EAAE,CAAC;IACZ,CAAC;CACF"}

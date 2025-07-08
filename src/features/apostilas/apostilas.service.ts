@@ -1,5 +1,5 @@
 // Service de Apostilas - refatoração SOLID
-import { ApostilaDTO } from '../../types/apostilas.dto';
+import { ApostilaDTO } from '../../types/apostilas.dto.js';
 
 export class ApostilasService {
   async getAll(): Promise<ApostilaDTO[]> {

@@ -1,0 +1,1 @@
+{"version":3,"file":"dashboard.repository.d.ts","sourceRoot":"","sources":["dashboard.repository.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,YAAY,EAAE,MAAM,2BAA2B,CAAC;AAEzD,qBAAa,mBAAmB;IACxB,UAAU,IAAI,OAAO,CAAC,YAAY,CAAC;IAKnC,cAAc,IAAI,OAAO,CAAC,YAAY,CAAC;IAKvC,WAAW,IAAI,OAAO,CAAC,MAAM,CAAC;CAIrC"}

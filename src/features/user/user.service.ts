@@ -1,5 +1,5 @@
 // Service de User - refatoração SOLID
-import { UserDTO } from '../../types/user.dto';
+import { UserDTO } from '../../types/user.dto.js';
 
 export class UserService {
   async getAll(): Promise<UserDTO[]> {

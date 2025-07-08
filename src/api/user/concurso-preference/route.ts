@@ -1,43 +1,66 @@
-// TODO: Refatorar para backend puro. Arquivo inteiro comentado por depender de variáveis/recursos de frontend/SSR/Next.js ou imports quebrados.
-/*
-// TODO: Corrigir import de '@/lib/supabase' para caminho relativo ou remover se não for usado.
-// import { createRouteHandlerClient } from '@/lib/supabase';
-// TODO: Corrigir import de '@/lib/logger' para caminho relativo ou remover se não for usado.
-// import { logger } from '@/lib/logger';
+/* global Request */
 import { NextResponse } from 'next/server';
+
+// Mock das dependências para testes
+let supabase: unknown;
+let logger: unknown;
+
+// Função para configurar as dependências (usada em testes)
+export function setupDependencies(supabaseClient: unknown, loggerClient: unknown) {
+  supabase = supabaseClient;
+  logger = loggerClient;
+}
 
 // ========================================
 // GET - Buscar preferência do usuário
 // ========================================
 
-export async function GET(_request: Request) {
+export async function GET() {
   try {
     // Verificar se o usuário está autenticado
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const supabaseAuth = supabase as unknown as {
+      auth: { getUser: () => Promise<{ data: { user: unknown } }> };
+    };
+    
+    const { data: { user } } = await supabaseAuth.auth.getUser();
 
     if (!user) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
     // Buscar preferência ativa do usuário
-    const { data: preference, error } = await supabase
+    const supabaseClient = supabase as unknown as {
+      from: (table: string) => {
+        select: (fields: string) => {
+          eq: (field: string, value: unknown) => {
+            eq: (field: string, value: unknown) => {
+              single: () => Promise<{ data: unknown, error: unknown }>;
+            };
+          };
+        };
+      };
+    };
+    
+    const { data: preference, error } = await supabaseClient
       .from('user_concurso_preferences')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', (user as { id: string }).id)
       .eq('is_active', true)
       .single();
 
     if (error) {
-      if (error.code === 'PGRST116') {
+      if ((error as { code: string }).code === 'PGRST116') {
         // Nenhuma preferência encontrada
         return NextResponse.json({ error: 'Preferência não encontrada' }, { status: 404 });
       }
       
-      logger.error('Erro ao buscar preferência do usuário:', {
-        error: error.message,
-        userId: user.id,
+      const loggerClient = logger as unknown as {
+        error: (message: string, data: unknown) => void;
+      };
+      
+      loggerClient.error('Erro ao buscar preferência do usuário:', {
+        error: (error as { message: string }).message,
+        userId: (user as { id: string }).id,
       });
       return NextResponse.json(
         { error: 'Erro ao buscar preferência' },
@@ -47,7 +70,7 @@ export async function GET(_request: Request) {
 
     // Calcular se pode trocar de concurso
     const now = new Date();
-    const canChangeUntil = new Date(preference.can_change_until);
+    const canChangeUntil = new Date((preference as { can_change_until: string }).can_change_until);
     const canChange = now >= canChangeUntil;
     const daysUntilChange = Math.max(0, Math.ceil((canChangeUntil.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
 
@@ -57,7 +80,11 @@ export async function GET(_request: Request) {
       daysUntilChange,
     });
   } catch (error) {
-    logger.error('Erro interno:', {
+    const loggerClient = logger as unknown as {
+      error: (message: string, data: unknown) => void;
+    };
+    
+    loggerClient.error('Erro interno:', {
       error: error instanceof Error ? error.message : String(error),
     });
     return NextResponse.json(
@@ -74,9 +101,11 @@ export async function GET(_request: Request) {
 export async function POST(request: Request) {
   try {
     // Verificar se o usuário está autenticado
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const supabaseAuth = supabase as unknown as {
+      auth: { getUser: () => Promise<{ data: { user: unknown } }> };
+    };
+    
+    const { data: { user } } = await supabaseAuth.auth.getUser();
 
     if (!user) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
@@ -84,7 +113,7 @@ export async function POST(request: Request) {
 
     // Obter dados da requisição
     const body = await request.json();
-    const { concurso_id } = body;
+    const { concurso_id } = body as { concurso_id: string };
 
     if (!concurso_id) {
       return NextResponse.json(
@@ -94,7 +123,19 @@ export async function POST(request: Request) {
     }
 
     // Verificar se o concurso existe e está ativo
-    const { data: concurso, error: concursoError } = await supabase
+    const supabaseClient = supabase as unknown as {
+      from: (table: string) => {
+        select: (fields: string) => {
+          eq: (field: string, value: unknown) => {
+            eq: (field: string, value: unknown) => {
+              single: () => Promise<{ data: unknown, error: unknown }>;
+            };
+          };
+        };
+      };
+    };
+    
+    const { data: concurso, error: concursoError } = await supabaseClient
       .from('concursos')
       .select('*')
       .eq('id', concurso_id)
@@ -109,17 +150,21 @@ export async function POST(request: Request) {
     }
 
     // Verificar se já existe uma preferência ativa
-    const { data: existingPreference, error: existingError } = await supabase
+    const { data: existingPreference, error: existingError } = await supabaseClient
       .from('user_concurso_preferences')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', (user as { id: string }).id)
       .eq('is_active', true)
       .single();
 
-    if (existingError && existingError.code !== 'PGRST116') {
-      logger.error('Erro ao verificar preferência existente:', {
-        error: existingError.message,
-        userId: user.id,
+    if (existingError && (existingError as { code: string }).code !== 'PGRST116') {
+      const loggerClient = logger as unknown as {
+        error: (message: string, data: unknown) => void;
+      };
+      
+      loggerClient.error('Erro ao verificar preferência existente:', {
+        error: (existingError as { message: string }).message,
+        userId: (user as { id: string }).id,
       });
       return NextResponse.json(
         { error: 'Erro ao verificar preferência existente' },
@@ -133,30 +178,42 @@ export async function POST(request: Request) {
 
     if (existingPreference) {
       // Verificar se pode trocar de concurso
-      const canChange = now >= new Date(existingPreference.can_change_until);
+      const canChange = now >= new Date((existingPreference as { can_change_until: string }).can_change_until);
       
       if (!canChange) {
         const daysUntilChange = Math.ceil(
-          (new Date(existingPreference.can_change_until).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+          (new Date((existingPreference as { can_change_until: string }).can_change_until).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
         );
         
         return NextResponse.json({
           error: 'Você só pode trocar de concurso após 4 meses',
           daysUntilChange,
-          canChangeUntil: existingPreference.can_change_until,
+          canChangeUntil: (existingPreference as { can_change_until: string }).can_change_until,
         }, { status: 403 });
       }
 
       // Desativar preferência atual
-      const { error: deactivateError } = await supabase
+      const supabaseUpdate = supabase as unknown as {
+        from: (table: string) => {
+          update: (data: unknown) => {
+            eq: (field: string, value: unknown) => Promise<{ error: unknown }>;
+          };
+        };
+      };
+      
+      const { error: deactivateError } = await supabaseUpdate
         .from('user_concurso_preferences')
         .update({ is_active: false })
-        .eq('id', existingPreference.id);
+        .eq('id', (existingPreference as { id: string }).id);
 
       if (deactivateError) {
-        logger.error('Erro ao desativar preferência existente:', {
-          error: deactivateError.message,
-          preferenceId: existingPreference.id,
+        const loggerClient = logger as unknown as {
+          error: (message: string, data: unknown) => void;
+        };
+        
+        loggerClient.error('Erro ao desativar preferência existente:', {
+          error: (deactivateError as { message: string }).message,
+          preferenceId: (existingPreference as { id: string }).id,
         });
         return NextResponse.json(
           { error: 'Erro ao atualizar preferência' },
@@ -166,10 +223,20 @@ export async function POST(request: Request) {
     }
 
     // Criar nova preferência
-    const { data: newPreference, error: createError } = await supabase
+    const supabaseInsert = supabase as unknown as {
+      from: (table: string) => {
+        insert: (data: unknown) => {
+          select: () => {
+            single: () => Promise<{ data: unknown, error: unknown }>;
+          };
+        };
+      };
+    };
+    
+    const { data: newPreference, error: createError } = await supabaseInsert
       .from('user_concurso_preferences')
       .insert({
-        user_id: user.id,
+        user_id: (user as { id: string }).id,
         concurso_id: concurso_id,
         can_change_until: canChangeUntil.toISOString(),
         is_active: true,
@@ -178,9 +245,13 @@ export async function POST(request: Request) {
       .single();
 
     if (createError) {
-      logger.error('Erro ao criar preferência:', {
-        error: createError.message,
-        userId: user.id,
+      const loggerClient = logger as unknown as {
+        error: (message: string, data: unknown) => void;
+      };
+      
+      loggerClient.error('Erro ao criar preferência:', {
+        error: (createError as { message: string }).message,
+        userId: (user as { id: string }).id,
         concursoId: concurso_id,
       });
       return NextResponse.json(
@@ -190,8 +261,12 @@ export async function POST(request: Request) {
     }
 
     // Log da ação
-    logger.info('Preferência de concurso criada/atualizada:', {
-      userId: user.id,
+    const loggerClient = logger as unknown as {
+      info: (message: string, data: unknown) => void;
+    };
+    
+    loggerClient.info('Preferência de concurso criada/atualizada:', {
+      userId: (user as { id: string }).id,
       concursoId: concurso_id,
       canChangeUntil: canChangeUntil.toISOString(),
     });
@@ -199,11 +274,14 @@ export async function POST(request: Request) {
     return NextResponse.json({
       message: 'Preferência de concurso definida com sucesso',
       data: newPreference,
-      canChange: false,
-      daysUntilChange: 120, // 4 meses
+      canChangeUntil: canChangeUntil.toISOString(),
     });
   } catch (error) {
-    logger.error('Erro interno:', {
+    const loggerClient = logger as unknown as {
+      error: (message: string, data: unknown) => void;
+    };
+    
+    loggerClient.error('Erro interno:', {
       error: error instanceof Error ? error.message : String(error),
     });
     return NextResponse.json(
@@ -214,15 +292,17 @@ export async function POST(request: Request) {
 }
 
 // ========================================
-// PUT - Atualizar preferência (para troca após 4 meses)
+// PUT - Atualizar preferência do usuário
 // ========================================
 
 export async function PUT(request: Request) {
   try {
     // Verificar se o usuário está autenticado
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const supabaseAuth = supabase as unknown as {
+      auth: { getUser: () => Promise<{ data: { user: unknown } }> };
+    };
+    
+    const { data: { user } } = await supabaseAuth.auth.getUser();
 
     if (!user) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
@@ -230,80 +310,77 @@ export async function PUT(request: Request) {
 
     // Obter dados da requisição
     const body = await request.json();
-    const { concurso_id } = body;
 
-    if (!concurso_id) {
-      return NextResponse.json(
-        { error: 'ID do concurso é obrigatório' },
-        { status: 400 }
-      );
-    }
-
-    // Verificar se o concurso existe e está ativo
-    const { data: concurso, error: concursoError } = await supabase
-      .from('concursos')
-      .select('*')
-      .eq('id', concurso_id)
-      .eq('is_active', true)
-      .single();
-
-    if (concursoError || !concurso) {
-      return NextResponse.json(
-        { error: 'Concurso não encontrado ou inativo' },
-        { status: 404 }
-      );
-    }
-
-    // Buscar preferência atual
-    const { data: currentPreference, error: currentError } = await supabase
+    // Buscar preferência ativa do usuário
+    const supabaseClient = supabase as unknown as {
+      from: (table: string) => {
+        select: (fields: string) => {
+          eq: (field: string, value: unknown) => {
+            eq: (field: string, value: unknown) => {
+              single: () => Promise<{ data: unknown, error: unknown }>;
+            };
+          };
+        };
+      };
+    };
+    
+    const { data: preference, error: fetchError } = await supabaseClient
       .from('user_concurso_preferences')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', (user as { id: string }).id)
       .eq('is_active', true)
       .single();
 
-    if (currentError || !currentPreference) {
-      return NextResponse.json(
-        { error: 'Nenhuma preferência ativa encontrada' },
-        { status: 404 }
-      );
-    }
-
-    // Verificar se pode trocar
-    const now = new Date();
-    const canChange = now >= new Date(currentPreference.can_change_until);
-
-    if (!canChange) {
-      const daysUntilChange = Math.ceil(
-        (new Date(currentPreference.can_change_until).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-      );
+    if (fetchError) {
+      if ((fetchError as { code: string }).code === 'PGRST116') {
+        return NextResponse.json({ error: 'Preferência não encontrada' }, { status: 404 });
+      }
       
-      return NextResponse.json({
-        error: 'Você só pode trocar de concurso após 4 meses',
-        daysUntilChange,
-        canChangeUntil: currentPreference.can_change_until,
-      }, { status: 403 });
+      const loggerClient = logger as unknown as {
+        error: (message: string, data: unknown) => void;
+      };
+      
+      loggerClient.error('Erro ao buscar preferência:', {
+        error: (fetchError as { message: string }).message,
+        userId: (user as { id: string }).id,
+      });
+      return NextResponse.json(
+        { error: 'Erro ao buscar preferência' },
+        { status: 500 }
+      );
     }
-
-    // Calcular nova data de troca permitida
-    const newCanChangeUntil = new Date(now.getTime() + (4 * 30 * 24 * 60 * 60 * 1000));
 
     // Atualizar preferência
-    const { data: updatedPreference, error: updateError } = await supabase
+    const supabaseUpdate = supabase as unknown as {
+      from: (table: string) => {
+        update: (data: unknown) => {
+          eq: (field: string, value: unknown) => {
+            select: () => {
+              single: () => Promise<{ data: unknown, error: unknown }>;
+            };
+          };
+        };
+      };
+    };
+    
+    const { data: updatedPreference, error: updateError } = await supabaseUpdate
       .from('user_concurso_preferences')
       .update({
-        concurso_id: concurso_id,
-        can_change_until: newCanChangeUntil.toISOString(),
-        updated_at: now.toISOString(),
+        ...body,
+        updated_at: new Date().toISOString(),
       })
-      .eq('id', currentPreference.id)
+      .eq('id', (preference as { id: string }).id)
       .select()
       .single();
 
     if (updateError) {
-      logger.error('Erro ao atualizar preferência:', {
-        error: updateError.message,
-        preferenceId: currentPreference.id,
+      const loggerClient = logger as unknown as {
+        error: (message: string, data: unknown) => void;
+      };
+      
+      loggerClient.error('Erro ao atualizar preferência:', {
+        error: (updateError as { message: string }).message,
+        preferenceId: (preference as { id: string }).id,
       });
       return NextResponse.json(
         { error: 'Erro ao atualizar preferência' },
@@ -312,21 +389,26 @@ export async function PUT(request: Request) {
     }
 
     // Log da ação
-    logger.info('Preferência de concurso atualizada:', {
-      userId: user.id,
-      oldConcursoId: currentPreference.concurso_id,
-      newConcursoId: concurso_id,
-      newCanChangeUntil: newCanChangeUntil.toISOString(),
+    const loggerClient = logger as unknown as {
+      info: (message: string, data: unknown) => void;
+    };
+    
+    loggerClient.info('Preferência atualizada:', {
+      userId: (user as { id: string }).id,
+      preferenceId: (preference as { id: string }).id,
+      updates: body,
     });
 
     return NextResponse.json({
-      message: 'Preferência de concurso atualizada com sucesso',
+      message: 'Preferência atualizada com sucesso',
       data: updatedPreference,
-      canChange: false,
-      daysUntilChange: 120, // 4 meses
     });
   } catch (error) {
-    logger.error('Erro interno:', {
+    const loggerClient = logger as unknown as {
+      error: (message: string, data: unknown) => void;
+    };
+    
+    loggerClient.error('Erro interno:', {
       error: error instanceof Error ? error.message : String(error),
     });
     return NextResponse.json(
@@ -335,4 +417,3 @@ export async function PUT(request: Request) {
     );
   }
 }
-*/

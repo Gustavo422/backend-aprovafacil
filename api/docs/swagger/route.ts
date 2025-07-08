@@ -3,7 +3,8 @@ import { serveSwaggerUI } from '../../../src/core/documentation/swagger-ui';
 
 export async function GET(request: NextRequest) {
   try {
-    const html = serveSwaggerUI();
+    const response = serveSwaggerUI();
+    const html = await response.text();
     
     return new NextResponse(html, {
       headers: {

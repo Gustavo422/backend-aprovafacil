@@ -4,5 +4,6 @@ export interface AuthDTO {
   email: string;
   senha: string;
   token?: string;
+  nome?: string;
   // Adicione outros campos relevantes
 } 

@@ -1,5 +1,5 @@
 // Service de Flashcards - refatoração SOLID
-import { FlashcardDTO } from '../../types/flashcards.dto';
+import { FlashcardDTO } from '../../types/flashcards.dto.js';
 
 export class FlashcardsService {
   async getAll(): Promise<FlashcardDTO[]> {
