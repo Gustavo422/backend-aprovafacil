@@ -20,8 +20,6 @@ const createQuestaoSemanalSchema = z.object({
   dificuldade: z.enum(['facil', 'medio', 'dificil']).default('medio'),
   concurso_id: z.string().uuid().optional(),
   categoria_id: z.string().uuid().optional(),
-  data_publicacao: z.string().datetime(),
-  data_expiracao: z.string().datetime().optional(),
   is_active: z.boolean().default(true),
   pontos: z.number().min(0).default(10)
 });
@@ -38,8 +36,6 @@ const updateQuestaoSemanalSchema = z.object({
   dificuldade: z.enum(['facil', 'medio', 'dificil']).optional(),
   concurso_id: z.string().uuid().optional(),
   categoria_id: z.string().uuid().optional(),
-  data_publicacao: z.string().datetime().optional(),
-  data_expiracao: z.string().datetime().optional(),
   is_active: z.boolean().optional(),
   pontos: z.number().min(0).optional()
 });
@@ -98,7 +94,7 @@ router.get('/', requireAuth, async (req, res) => {
     }
 
     const { data: questoes, error, count } = await query
-      .order('data_publicacao', { ascending: false })
+      .order('created_at', { ascending: false })
       .range(offset, offset + Number(limit) - 1);
 
     if (error) {

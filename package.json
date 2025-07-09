@@ -22,7 +22,6 @@
     "test:debug": "vitest --reporter=verbose",
     "lint": "eslint src --ext .ts,.tsx",
     "typecheck": "tsc --noEmit",
-    "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx}\"",
     "swagger": "node -e \"console.log('Acesse: http://localhost:5000/api/docs')\"",
     "test:run": "vitest run",
     "fix:imports": "node scripts/fix-imports.js",
@@ -70,7 +69,6 @@
     "eslint": "^9.30.1",
     "eslint-plugin-import": "^2.32.0",
     "nodemon": "^3.0.1",
-    "prettier": "^3.6.2",
     "tsup": "^8.5.0",
     "typescript": "^5.8.3",
     "vitest": "^3.2.4"

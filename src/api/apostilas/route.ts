@@ -4,6 +4,7 @@ import { supabase } from '../../config/supabase.js';
 import { requestLogger } from '../../middleware/logger.js';
 import { rateLimit } from '../../middleware/rateLimit.js';
 import { requireAuth, requireAdmin } from '../../middleware/auth.js';
+import { applyConcursoFilterToQuery, checkConcursoAccess } from '../../utils/concurso-filter.js';
 import { 
   validateApostilaFilters,
   validateApostilaId,
@@ -25,16 +26,25 @@ router.use(rateLimit); // 100 requests por 15 minutos
 // =====================================================
 
 // GET /api/apostilas - Listar apostilas com filtros e paginação
-router.get('/', validateApostilaFilters, async (req: Request, res: Response) => {
+router.get('/', validateApostilaFilters, requireAuth, async (req: Request, res: Response) => {
   try {
     const { 
-      concurso_id, 
       categoria_id, 
       is_active, 
       search, 
       page = 1, 
       limit = 20 
     } = req.query;
+
+    // Obter o usuário autenticado
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      res.status(401).json({
+        success: false,
+        error: 'Usuário não autenticado'
+      });
+      return;
+    }
 
     let query = supabase
       .from('apostilas')
@@ -57,11 +67,10 @@ router.get('/', validateApostilaFilters, async (req: Request, res: Response) => 
         )
       `);
 
-    // Aplicar filtros
-    if (concurso_id) {
-      query = query.eq('concurso_id', concurso_id);
-    }
+    // Aplicar filtro automático por concurso do usuário
+    query = await applyConcursoFilterToQuery(supabase, userId, query, 'apostilas');
 
+    // Aplicar filtros adicionais
     if (categoria_id) {
       query = query.eq('categoria_id', categoria_id);
     }
@@ -127,9 +136,29 @@ router.get('/', validateApostilaFilters, async (req: Request, res: Response) => 
 });
 
 // GET /api/apostilas/:id - Buscar apostila por ID
-router.get('/:id', validateApostilaId, async (req: Request, res: Response) => {
+router.get('/:id', validateApostilaId, requireAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    
+    // Obter o usuário autenticado
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      res.status(401).json({
+        success: false,
+        error: 'Usuário não autenticado'
+      });
+      return;
+    }
+
+    // Verificar se o usuário tem acesso a esta apostila
+    const hasAccess = await checkConcursoAccess(supabase, userId, id, 'apostilas');
+    if (!hasAccess) {
+      res.status(403).json({
+        success: false,
+        error: 'Acesso negado a esta apostila'
+      });
+      return;
+    }
 
     const { data: apostila, error } = await supabase
       .from('apostilas')

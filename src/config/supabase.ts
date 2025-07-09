@@ -45,27 +45,39 @@ export type Database = {
       users: {
         Row: {
           id: string;
+          name: string;
           email: string;
-          nome: string | null;
-          role: string | null;
+          last_login: string | null;
           created_at: string;
           updated_at: string;
+          total_questions_answered: number;
+          total_correct_answers: number;
+          study_time_minutes: number;
+          average_score: number;
         };
         Insert: {
-          id: string;
+          id?: string;
+          name: string;
           email: string;
-          nome?: string | null;
-          role?: string | null;
+          last_login?: string | null;
           created_at?: string;
           updated_at?: string;
+          total_questions_answered?: number;
+          total_correct_answers?: number;
+          study_time_minutes?: number;
+          average_score?: number;
         };
         Update: {
           id?: string;
+          name?: string;
           email?: string;
-          nome?: string | null;
-          role?: string | null;
+          last_login?: string | null;
           created_at?: string;
           updated_at?: string;
+          total_questions_answered?: number;
+          total_correct_answers?: number;
+          study_time_minutes?: number;
+          average_score?: number;
         };
       };
       concursos: {

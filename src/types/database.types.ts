@@ -1,49 +1,18 @@
 // Tipos gerados automaticamente baseados no schema do banco de dados
 // Última atualização: 2025-07-06T21:18:33.623Z
-// Baseado no schema atual do banco (incluindo colunas do Supabase Auth)
+// Baseado no schema atual do banco (tabela users real)
 
 export interface Users {
   id?: string;
-  email?: string;
   name: string;
+  email: string;
+  last_login?: Date;
   created_at?: Date;
   updated_at?: Date;
   total_questions_answered?: number;
   total_correct_answers?: number;
   study_time_minutes?: number;
   average_score?: number;
-  last_login?: Date;
-  instance_id?: string;
-  aud?: string;
-  role?: string;
-  encrypted_password?: string;
-  email_confirmed_at?: Date;
-  invited_at?: Date;
-  confirmation_token?: string;
-  confirmation_sent_at?: Date;
-  recovery_token?: string;
-  recovery_sent_at?: Date;
-  email_change_token_new?: string;
-  email_change?: string;
-  email_change_sent_at?: Date;
-  last_sign_in_at?: Date;
-  raw_app_meta_data?: unknown;
-  raw_user_meta_data?: unknown;
-  is_super_admin?: boolean;
-  phone?: string;
-  phone_confirmed_at?: Date;
-  phone_change?: string;
-  phone_change_token?: string;
-  phone_change_sent_at?: Date;
-  confirmed_at?: Date;
-  email_change_token_current?: string;
-  email_change_confirm_status?: number;
-  banned_until?: Date;
-  reauthentication_token?: string;
-  reauthentication_sent_at?: Date;
-  is_sso_user?: boolean;
-  deleted_at?: Date;
-  is_anonymous?: boolean;
 }
 
 export type UsersInsert = Omit<Users, 'id' | 'created_at' | 'updated_at'> & {
@@ -693,46 +662,18 @@ export interface Concurso {
   is_active?: boolean;
 }
 
-// Tipos para usuários (incluindo colunas do Supabase Auth)
+// Tipos para usuários (baseado no schema real do banco)
 export interface User {
-  email?: string;
+  id?: string;
   name: string;
+  email: string;
+  last_login?: Date;
+  created_at?: Date;
+  updated_at?: Date;
   total_questions_answered?: number;
   total_correct_answers?: number;
   study_time_minutes?: number;
   average_score?: number;
-  last_login?: Date;
-  instance_id?: string;
-  aud?: string;
-  role?: string;
-  encrypted_password?: string;
-  email_confirmed_at?: Date;
-  invited_at?: Date;
-  confirmation_token?: string;
-  confirmation_sent_at?: Date;
-  recovery_token?: string;
-  recovery_sent_at?: Date;
-  email_change_token_new?: string;
-  email_change?: string;
-  email_change_sent_at?: Date;
-  last_sign_in_at?: Date;
-  raw_app_meta_data?: unknown;
-  raw_user_meta_data?: unknown;
-  is_super_admin?: boolean;
-  phone?: string;
-  phone_confirmed_at?: Date;
-  phone_change?: string;
-  phone_change_token?: string;
-  phone_change_sent_at?: Date;
-  confirmed_at?: Date;
-  email_change_token_current?: string;
-  email_change_confirm_status?: number;
-  banned_until?: Date;
-  reauthentication_token?: string;
-  reauthentication_sent_at?: Date;
-  is_sso_user?: boolean;
-  deleted_at?: Date;
-  is_anonymous?: boolean;
 }
 
 // Tipos para logs de auditoria (renomeado para evitar conflito)

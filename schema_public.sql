@@ -2,31 +2,31 @@
 -- Table order and constraints may not be valid for execution.
 
 CREATE TABLE public.apostila_content (
+  concurso_id uuid,
   apostila_id uuid NOT NULL,
   module_number integer NOT NULL,
   title character varying NOT NULL,
   content_json jsonb NOT NULL,
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
-  concurso_id uuid,
   CONSTRAINT apostila_content_pkey PRIMARY KEY (id),
-  CONSTRAINT apostila_content_apostila_id_fkey FOREIGN KEY (apostila_id) REFERENCES public.apostilas(id),
-  CONSTRAINT apostila_content_concurso_id_fkey FOREIGN KEY (concurso_id) REFERENCES public.concursos(id)
+  CONSTRAINT apostila_content_concurso_id_fkey FOREIGN KEY (concurso_id) REFERENCES public.concursos(id),
+  CONSTRAINT apostila_content_apostila_id_fkey FOREIGN KEY (apostila_id) REFERENCES public.apostilas(id)
 );
 CREATE TABLE public.apostila_inteligente (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
   concurso_id uuid,
   categoria_id uuid,
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
   created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
-  title character varying NOT NULL,
   description text,
   disciplinas jsonb,
   slug character varying,
   created_by uuid,
+  title character varying NOT NULL,
   CONSTRAINT apostila_inteligente_pkey PRIMARY KEY (id),
-  CONSTRAINT apostila_inteligente_concurso_id_fkey FOREIGN KEY (concurso_id) REFERENCES public.concursos(id),
+  CONSTRAINT apostila_inteligente_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id),
   CONSTRAINT apostila_inteligente_categoria_id_fkey FOREIGN KEY (categoria_id) REFERENCES public.concurso_categorias(id),
-  CONSTRAINT apostila_inteligente_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id)
+  CONSTRAINT apostila_inteligente_concurso_id_fkey FOREIGN KEY (concurso_id) REFERENCES public.concursos(id)
 );
 CREATE TABLE public.apostilas (
   title character varying NOT NULL,
@@ -39,17 +39,17 @@ CREATE TABLE public.apostilas (
   is_active boolean DEFAULT true,
   updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT apostilas_pkey PRIMARY KEY (id),
-  CONSTRAINT apostilas_categoria_id_fkey FOREIGN KEY (categoria_id) REFERENCES public.concurso_categorias(id),
-  CONSTRAINT apostilas_concurso_id_fkey FOREIGN KEY (concurso_id) REFERENCES public.concursos(id)
+  CONSTRAINT apostilas_concurso_id_fkey FOREIGN KEY (concurso_id) REFERENCES public.concursos(id),
+  CONSTRAINT apostilas_categoria_id_fkey FOREIGN KEY (categoria_id) REFERENCES public.concurso_categorias(id)
 );
 CREATE TABLE public.audit_logs (
-  user_id uuid,
   action character varying NOT NULL,
   table_name character varying NOT NULL,
   record_id uuid,
   old_values jsonb,
   new_values jsonb,
   ip_address inet,
+  user_id uuid,
   user_agent text,
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
@@ -58,15 +58,14 @@ CREATE TABLE public.audit_logs (
 );
 CREATE TABLE public.cache_config (
   cache_key character varying NOT NULL UNIQUE,
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
   ttl_minutes integer NOT NULL DEFAULT 60,
+  description text,
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
   created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
   updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
-  description text,
   CONSTRAINT cache_config_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.cartoes_memorizacao (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
   front text NOT NULL,
   back text NOT NULL,
   disciplina character varying NOT NULL,
@@ -75,10 +74,11 @@ CREATE TABLE public.cartoes_memorizacao (
   concurso_id uuid,
   categoria_id uuid,
   peso_disciplina integer,
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
   created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT cartoes_memorizacao_pkey PRIMARY KEY (id),
-  CONSTRAINT cartoes_memorizacao_concurso_id_fkey FOREIGN KEY (concurso_id) REFERENCES public.concursos(id),
-  CONSTRAINT cartoes_memorizacao_categoria_id_fkey FOREIGN KEY (categoria_id) REFERENCES public.concurso_categorias(id)
+  CONSTRAINT cartoes_memorizacao_categoria_id_fkey FOREIGN KEY (categoria_id) REFERENCES public.concurso_categorias(id),
+  CONSTRAINT cartoes_memorizacao_concurso_id_fkey FOREIGN KEY (concurso_id) REFERENCES public.concursos(id)
 );
 CREATE TABLE public.categoria_disciplinas (
   categoria_id uuid NOT NULL,
@@ -106,13 +106,13 @@ CREATE TABLE public.concurso_categorias (
   CONSTRAINT concurso_categorias_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.concurso_preferences (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
   user_id uuid,
   concurso_id uuid,
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT concurso_preferences_pkey PRIMARY KEY (id),
-  CONSTRAINT concurso_preferences_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
-  CONSTRAINT concurso_preferences_concurso_id_fkey FOREIGN KEY (concurso_id) REFERENCES public.concursos(id)
+  CONSTRAINT concurso_preferences_concurso_id_fkey FOREIGN KEY (concurso_id) REFERENCES public.concursos(id),
+  CONSTRAINT concurso_preferences_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
 CREATE TABLE public.concursos (
   nome character varying NOT NULL,
@@ -144,8 +144,19 @@ CREATE TABLE public.flashcards (
   updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
   is_active boolean DEFAULT true,
   CONSTRAINT flashcards_pkey PRIMARY KEY (id),
-  CONSTRAINT flashcards_categoria_id_fkey FOREIGN KEY (categoria_id) REFERENCES public.concurso_categorias(id),
-  CONSTRAINT flashcards_concurso_id_fkey FOREIGN KEY (concurso_id) REFERENCES public.concursos(id)
+  CONSTRAINT flashcards_concurso_id_fkey FOREIGN KEY (concurso_id) REFERENCES public.concursos(id),
+  CONSTRAINT flashcards_categoria_id_fkey FOREIGN KEY (categoria_id) REFERENCES public.concurso_categorias(id)
+);
+CREATE TABLE public.log_history (
+  user_id uuid,
+  user_email text,
+  level text NOT NULL,
+  service text,
+  message text NOT NULL,
+  details text,
+  id integer NOT NULL DEFAULT nextval('log_history_id_seq'::regclass),
+  created_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT log_history_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.mapa_assuntos (
   disciplina character varying NOT NULL,
@@ -157,8 +168,19 @@ CREATE TABLE public.mapa_assuntos (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT mapa_assuntos_pkey PRIMARY KEY (id),
-  CONSTRAINT mapa_assuntos_categoria_id_fkey FOREIGN KEY (categoria_id) REFERENCES public.concurso_categorias(id),
-  CONSTRAINT mapa_assuntos_concurso_id_fkey FOREIGN KEY (concurso_id) REFERENCES public.concursos(id)
+  CONSTRAINT mapa_assuntos_concurso_id_fkey FOREIGN KEY (concurso_id) REFERENCES public.concursos(id),
+  CONSTRAINT mapa_assuntos_categoria_id_fkey FOREIGN KEY (categoria_id) REFERENCES public.concurso_categorias(id)
+);
+CREATE TABLE public.metrics_history (
+  type text NOT NULL,
+  value double precision NOT NULL,
+  unit text,
+  details text,
+  collected_by uuid,
+  collected_by_email text,
+  id integer NOT NULL DEFAULT nextval('metrics_history_id_seq'::regclass),
+  collected_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT metrics_history_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.plano_estudo_itens (
   plano_estudo_id uuid NOT NULL,
@@ -176,30 +198,29 @@ CREATE TABLE public.plano_estudo_itens (
   CONSTRAINT plano_estudo_itens_plano_estudo_id_fkey FOREIGN KEY (plano_estudo_id) REFERENCES public.planos_estudo(id)
 );
 CREATE TABLE public.planos_estudo (
+  schedule jsonb NOT NULL,
   user_id uuid NOT NULL,
   start_date date NOT NULL,
   end_date date NOT NULL,
   concurso_id uuid,
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
-  schedule jsonb NOT NULL,
   CONSTRAINT planos_estudo_pkey PRIMARY KEY (id),
-  CONSTRAINT planos_estudo_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
-  CONSTRAINT planos_estudo_concurso_id_fkey FOREIGN KEY (concurso_id) REFERENCES public.concursos(id)
+  CONSTRAINT planos_estudo_concurso_id_fkey FOREIGN KEY (concurso_id) REFERENCES public.concursos(id),
+  CONSTRAINT planos_estudo_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
 CREATE TABLE public.questoes_semanais (
+  description text,
+  title character varying NOT NULL,
+  week_number integer NOT NULL,
+  year integer NOT NULL,
   concurso_id uuid,
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
-  title character varying NOT NULL,
-  description text,
-  week_number integer NOT NULL,
-  year integer NOT NULL,
   CONSTRAINT questoes_semanais_pkey PRIMARY KEY (id),
   CONSTRAINT questoes_semanais_concurso_id_fkey FOREIGN KEY (concurso_id) REFERENCES public.concursos(id)
 );
 CREATE TABLE public.simulado_questions (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
   simulado_id uuid NOT NULL,
   question_number integer NOT NULL,
   question_text text NOT NULL,
@@ -209,17 +230,18 @@ CREATE TABLE public.simulado_questions (
   discipline character varying,
   topic character varying,
   difficulty character varying,
-  created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
-  updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
   deleted_at timestamp with time zone,
   concurso_id uuid,
   categoria_id uuid,
   disciplina character varying,
   peso_disciplina integer,
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+  updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT simulado_questions_pkey PRIMARY KEY (id),
-  CONSTRAINT simulado_questions_categoria_id_fkey FOREIGN KEY (categoria_id) REFERENCES public.concurso_categorias(id),
+  CONSTRAINT simulado_questions_concurso_id_fkey FOREIGN KEY (concurso_id) REFERENCES public.concursos(id),
   CONSTRAINT simulado_questions_simulado_id_fkey FOREIGN KEY (simulado_id) REFERENCES public.simulados(id),
-  CONSTRAINT simulado_questions_concurso_id_fkey FOREIGN KEY (concurso_id) REFERENCES public.concursos(id)
+  CONSTRAINT simulado_questions_categoria_id_fkey FOREIGN KEY (categoria_id) REFERENCES public.concurso_categorias(id)
 );
 CREATE TABLE public.simulado_questoes (
   simulado_id uuid NOT NULL,
@@ -239,9 +261,9 @@ CREATE TABLE public.simulado_questoes (
   created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
   updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT simulado_questoes_pkey PRIMARY KEY (id),
-  CONSTRAINT simulado_questoes_categoria_id_fkey FOREIGN KEY (categoria_id) REFERENCES public.concurso_categorias(id),
+  CONSTRAINT simulado_questoes_simulado_id_fkey FOREIGN KEY (simulado_id) REFERENCES public.simulados(id),
   CONSTRAINT simulado_questoes_concurso_id_fkey FOREIGN KEY (concurso_id) REFERENCES public.concursos(id),
-  CONSTRAINT simulado_questoes_simulado_id_fkey FOREIGN KEY (simulado_id) REFERENCES public.simulados(id)
+  CONSTRAINT simulado_questoes_categoria_id_fkey FOREIGN KEY (categoria_id) REFERENCES public.concurso_categorias(id)
 );
 CREATE TABLE public.simulados (
   titulo character varying NOT NULL,
@@ -262,19 +284,15 @@ CREATE TABLE public.simulados (
   created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
   updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT simulados_pkey PRIMARY KEY (id),
-  CONSTRAINT simulados_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id),
+  CONSTRAINT simulados_concurso_id_fkey FOREIGN KEY (concurso_id) REFERENCES public.concursos(id),
   CONSTRAINT simulados_categoria_id_fkey FOREIGN KEY (categoria_id) REFERENCES public.concurso_categorias(id),
-  CONSTRAINT simulados_concurso_id_fkey FOREIGN KEY (concurso_id) REFERENCES public.concursos(id)
+  CONSTRAINT simulados_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id)
 );
 CREATE TABLE public.simulados_personalizados (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
   updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
-  title character varying NOT NULL,
   description text,
-  questions_count integer NOT NULL DEFAULT 0,
-  time_minutes integer NOT NULL DEFAULT 60,
-  difficulty character varying NOT NULL DEFAULT 'Médio'::character varying,
   deleted_at timestamp with time zone,
   concurso_id uuid,
   is_public boolean DEFAULT true,
@@ -282,10 +300,27 @@ CREATE TABLE public.simulados_personalizados (
   categoria_id uuid,
   disciplinas jsonb,
   slug character varying,
+  title character varying NOT NULL,
+  questions_count integer NOT NULL DEFAULT 0,
+  time_minutes integer NOT NULL DEFAULT 60,
+  difficulty character varying NOT NULL DEFAULT 'Médio'::character varying,
   CONSTRAINT simulados_personalizados_pkey PRIMARY KEY (id),
-  CONSTRAINT simulados_personalizados_concurso_id_fkey FOREIGN KEY (concurso_id) REFERENCES public.concursos(id),
+  CONSTRAINT simulados_personalizados_categoria_id_fkey FOREIGN KEY (categoria_id) REFERENCES public.concurso_categorias(id),
   CONSTRAINT simulados_personalizados_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id),
-  CONSTRAINT simulados_personalizados_categoria_id_fkey FOREIGN KEY (categoria_id) REFERENCES public.concurso_categorias(id)
+  CONSTRAINT simulados_personalizados_concurso_id_fkey FOREIGN KEY (concurso_id) REFERENCES public.concursos(id)
+);
+CREATE TABLE public.test_runs (
+  user_id uuid NOT NULL,
+  user_email text NOT NULL,
+  file text,
+  test_name text,
+  status text NOT NULL,
+  duration double precision,
+  output text,
+  error text,
+  id integer NOT NULL DEFAULT nextval('test_runs_id_seq'::regclass),
+  created_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT test_runs_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.user_apostila_progress (
   user_id uuid NOT NULL,
@@ -295,8 +330,8 @@ CREATE TABLE public.user_apostila_progress (
   progress_percentage numeric DEFAULT 0,
   updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT user_apostila_progress_pkey PRIMARY KEY (id),
-  CONSTRAINT user_apostila_progress_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
-  CONSTRAINT user_apostila_progress_apostila_content_id_fkey FOREIGN KEY (apostila_content_id) REFERENCES public.apostila_content(id)
+  CONSTRAINT user_apostila_progress_apostila_content_id_fkey FOREIGN KEY (apostila_content_id) REFERENCES public.apostila_content(id),
+  CONSTRAINT user_apostila_progress_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
 CREATE TABLE public.user_concurso_preferences (
   user_id uuid NOT NULL,
@@ -308,8 +343,8 @@ CREATE TABLE public.user_concurso_preferences (
   created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
   updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT user_concurso_preferences_pkey PRIMARY KEY (id),
-  CONSTRAINT user_concurso_preferences_concurso_id_fkey FOREIGN KEY (concurso_id) REFERENCES public.concursos(id),
-  CONSTRAINT user_concurso_preferences_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+  CONSTRAINT user_concurso_preferences_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
+  CONSTRAINT user_concurso_preferences_concurso_id_fkey FOREIGN KEY (concurso_id) REFERENCES public.concursos(id)
 );
 CREATE TABLE public.user_discipline_stats (
   user_id uuid NOT NULL,
@@ -334,8 +369,8 @@ CREATE TABLE public.user_flashcard_progress (
   review_count integer DEFAULT 0,
   updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT user_flashcard_progress_pkey PRIMARY KEY (id),
-  CONSTRAINT user_flashcard_progress_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
-  CONSTRAINT user_flashcard_progress_flashcard_id_fkey FOREIGN KEY (flashcard_id) REFERENCES public.flashcards(id)
+  CONSTRAINT user_flashcard_progress_flashcard_id_fkey FOREIGN KEY (flashcard_id) REFERENCES public.flashcards(id),
+  CONSTRAINT user_flashcard_progress_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
 CREATE TABLE public.user_mapa_assuntos_status (
   user_id uuid NOT NULL,
@@ -344,8 +379,8 @@ CREATE TABLE public.user_mapa_assuntos_status (
   status character varying NOT NULL DEFAULT 'não_iniciado'::character varying,
   updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT user_mapa_assuntos_status_pkey PRIMARY KEY (id),
-  CONSTRAINT user_mapa_assuntos_status_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
-  CONSTRAINT user_mapa_assuntos_status_mapa_assunto_id_fkey FOREIGN KEY (mapa_assunto_id) REFERENCES public.mapa_assuntos(id)
+  CONSTRAINT user_mapa_assuntos_status_mapa_assunto_id_fkey FOREIGN KEY (mapa_assunto_id) REFERENCES public.mapa_assuntos(id),
+  CONSTRAINT user_mapa_assuntos_status_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
 CREATE TABLE public.user_performance_cache (
   user_id uuid NOT NULL,
@@ -359,29 +394,30 @@ CREATE TABLE public.user_performance_cache (
   CONSTRAINT user_performance_cache_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
 CREATE TABLE public.user_questoes_semanais_progress (
+  completed_at timestamp with time zone,
+  answers jsonb NOT NULL,
   user_id uuid NOT NULL,
   questoes_semanais_id uuid NOT NULL,
   score numeric NOT NULL,
   id uuid NOT NULL DEFAULT gen_random_uuid(),
-  answers jsonb NOT NULL,
-  completed_at timestamp with time zone,
   CONSTRAINT user_questoes_semanais_progress_pkey PRIMARY KEY (id),
-  CONSTRAINT user_questoes_semanais_progress_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
-  CONSTRAINT user_questoes_semanais_progress_questoes_semanais_id_fkey FOREIGN KEY (questoes_semanais_id) REFERENCES public.questoes_semanais(id)
+  CONSTRAINT user_questoes_semanais_progress_questoes_semanais_id_fkey FOREIGN KEY (questoes_semanais_id) REFERENCES public.questoes_semanais(id),
+  CONSTRAINT user_questoes_semanais_progress_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
 CREATE TABLE public.user_simulado_progress (
-  user_id uuid NOT NULL,
-  simulado_id uuid NOT NULL,
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  completed_at timestamp with time zone,
   score numeric NOT NULL,
   time_taken_minutes integer NOT NULL,
   answers jsonb NOT NULL,
-  completed_at timestamp with time zone,
+  user_id uuid NOT NULL,
+  simulado_id uuid NOT NULL,
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
   CONSTRAINT user_simulado_progress_pkey PRIMARY KEY (id),
-  CONSTRAINT user_simulado_progress_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
-  CONSTRAINT user_simulado_progress_simulado_id_fkey FOREIGN KEY (simulado_id) REFERENCES public.simulados(id)
+  CONSTRAINT user_simulado_progress_simulado_id_fkey FOREIGN KEY (simulado_id) REFERENCES public.simulados(id),
+  CONSTRAINT user_simulado_progress_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
 CREATE TABLE public.users (
+  name text NOT NULL,
   email text NOT NULL UNIQUE,
   last_login timestamp with time zone,
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -391,6 +427,5 @@ CREATE TABLE public.users (
   total_correct_answers integer DEFAULT 0,
   study_time_minutes integer DEFAULT 0,
   average_score numeric DEFAULT 0,
-  name text NOT NULL,
   CONSTRAINT users_pkey PRIMARY KEY (id)
 );
