@@ -4,7 +4,6 @@ import { z } from 'zod';
 import { supabase } from '../../config/supabase.js';
 import { requireAuth } from '../../middleware/auth.js';
 import { logger } from '../../utils/logger.js';
-import '../../types/express.js';
 
 const router = express.Router();
 

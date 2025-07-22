@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import crypto from 'crypto';
 import { createDebugger } from '../utils/debugger.js';
-import '../types/express.js';
 
 // Create a debugger specific for the CSRF middleware
 const debug = createDebugger('middleware:csrf');

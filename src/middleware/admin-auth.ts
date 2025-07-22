@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { UserRepository } from '../repositories/UserRepository';
 import { createDebugger } from '../utils/debugger.js';
-import '../types/express.js';
 
 // Create a debugger specific for admin authentication
 const debug = createDebugger('middleware:admin-auth');

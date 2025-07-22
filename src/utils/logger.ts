@@ -1,4 +1,4 @@
-import winston from 'winston';
+// import winston from 'winston';
 
 interface LogEntry {
   timestamp: string;
@@ -9,27 +9,21 @@ interface LogEntry {
 }
 
 class StructuredLogger {
-  private logger: winston.Logger;
+  // private logger: winston.Logger;
   public logs: LogEntry[] = [];
   private maxLogs = 1000;
 
   constructor() {
-    this.logger = winston.createLogger({
-      level: process.env.LOG_LEVEL || 'info',
-      format: winston.format.combine(
-        winston.format.timestamp(),
-        winston.format.errors({ stack: true }),
-        winston.format.json()
-      ),
-      transports: [
-        new winston.transports.Console({
-          format: winston.format.combine(
-            winston.format.colorize(),
-            winston.format.simple()
-          )
-        })
-      ]
-    });
+    // Temporarily disabled winston to fix startup issue
+    console.log('[LOGGER] Using simplified logger (winston disabled)');
+  }
+
+  private simpleLog(level: string, message: string, metadata?: Record<string, unknown>) {
+    const timestamp = new Date().toISOString();
+    const logMessage = metadata 
+      ? `[${level.toUpperCase()}] ${timestamp} - ${message} ${JSON.stringify(metadata)}`
+      : `[${level.toUpperCase()}] ${timestamp} - ${message}`;
+    console.log(logMessage);
   }
 
   public addToMemory(level: string, message: string, service: string, metadata?: Record<string, unknown>) {
@@ -50,22 +44,22 @@ class StructuredLogger {
   }
 
   info(message: string, service = 'backend', metadata?: Record<string, unknown>) {
-    this.logger.info(message, metadata);
+    this.simpleLog('info', message, metadata);
     this.addToMemory('info', message, service, metadata);
   }
 
   warn(message: string, service = 'backend', metadata?: Record<string, unknown>) {
-    this.logger.warn(message, metadata);
+    this.simpleLog('warn', message, metadata);
     this.addToMemory('warn', message, service, metadata);
   }
 
   error(message: string, service = 'backend', metadata?: Record<string, unknown>) {
-    this.logger.error(message, metadata);
+    this.simpleLog('error', message, metadata);
     this.addToMemory('error', message, service, metadata);
   }
 
   debug(message: string, service = 'backend', metadata?: Record<string, unknown>) {
-    this.logger.debug(message, metadata);
+    this.simpleLog('debug', message, metadata);
     this.addToMemory('debug', message, service, metadata);
   }
 

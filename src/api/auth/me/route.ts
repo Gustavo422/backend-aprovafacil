@@ -65,8 +65,8 @@ async function handler(request: NextRequest) {
     
     const authService = new EnhancedAuthService(supabase as ReturnType<typeof createClient>, {
       jwtSecret: process.env.JWT_SECRET!,
-      accessTokenExpiry: parseInt(process.env.JWT_ACCESS_EXPIRY || '3600', 10),
-      refreshTokenExpiry: parseInt(process.env.JWT_REFRESH_EXPIRY || '2592000', 10)
+          accessTokenExpiry: parseInt(process.env.JWT_ACCESS_EXPIRY || '2592000', 10), // 30 dias
+    refreshTokenExpiry: parseInt(process.env.JWT_REFRESH_EXPIRY || '7776000', 10) // 90 dias
     });
     
     // Validate token and get user information
@@ -90,7 +90,7 @@ async function handler(request: NextRequest) {
     // Return user information
     return NextResponse.json({
       success: true,
-      user: {
+      data: {
         id: tokenData.user.id,
         email: tokenData.user.email,
         nome: tokenData.user.nome,

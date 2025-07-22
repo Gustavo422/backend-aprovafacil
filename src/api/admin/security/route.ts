@@ -1,7 +1,6 @@
 import express from 'express';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { getEnhancedLogger } from '../../../lib/logging/enhanced-logging-service.js';
-import '../../../types/express.js';
 
 const router = express.Router();
 const logger = getEnhancedLogger('security-api');

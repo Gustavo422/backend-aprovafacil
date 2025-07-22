@@ -36,8 +36,8 @@ export async function POST(request: NextRequest) {
     
     const authService = new EnhancedAuthService(supabase as ReturnType<typeof createClient>, {
       jwtSecret: process.env.JWT_SECRET!,
-      accessTokenExpiry: parseInt(process.env.JWT_ACCESS_EXPIRY || '3600', 10),
-      refreshTokenExpiry: parseInt(process.env.JWT_REFRESH_EXPIRY || '2592000', 10)
+          accessTokenExpiry: parseInt(process.env.JWT_ACCESS_EXPIRY || '2592000', 10), // 30 dias
+    refreshTokenExpiry: parseInt(process.env.JWT_REFRESH_EXPIRY || '7776000', 10) // 90 dias
     });
     
     // Refresh token - EnhancedAuthService tem método diferente
@@ -63,8 +63,10 @@ export async function POST(request: NextRequest) {
     // Return new access token
     return NextResponse.json({
       success: true,
-      accessToken: newAccessToken,
-      user: tokenValidation.user
+      data: {
+        token: newAccessToken,
+        usuario: tokenValidation.user
+      }
     });
   } catch (error) {
     logger.error('Error refreshing token', { error: error.message });

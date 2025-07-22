@@ -60,8 +60,8 @@ async function handler(request: NextRequest) {
     
     const authService = new EnhancedAuthService(supabase as ReturnType<typeof createClient>, {
       jwtSecret: process.env.JWT_SECRET!,
-      accessTokenExpiry: parseInt(process.env.JWT_ACCESS_EXPIRY || '3600', 10),
-      refreshTokenExpiry: parseInt(process.env.JWT_REFRESH_EXPIRY || '2592000', 10)
+      accessTokenExpiry: parseInt(process.env.JWT_ACCESS_EXPIRY || '2592000', 10), // 30 dias
+      refreshTokenExpiry: parseInt(process.env.JWT_REFRESH_EXPIRY || '7776000', 10) // 90 dias
     });
     
     // Authenticate user
@@ -77,9 +77,11 @@ async function handler(request: NextRequest) {
       // Set HTTP-only cookie with access token
       const response = NextResponse.json({
         success: true,
-        user: result.user,
-        accessToken: result.accessToken,
-        expiresIn: result.expiresIn
+        data: {
+          usuario: result.user,
+          token: result.accessToken,
+          expiresIn: result.expiresIn
+        }
       });
       
       // Set secure HTTP-only cookie for access token
@@ -89,7 +91,7 @@ async function handler(request: NextRequest) {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict',
-        maxAge: result.expiresIn || 3600, // Use the service's expiry time
+        maxAge: result.expiresIn || 2592000, // 30 dias por padrão
         path: '/'
       });
       

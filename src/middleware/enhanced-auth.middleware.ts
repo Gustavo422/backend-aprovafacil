@@ -227,7 +227,7 @@ export class EnhancedAuthMiddleware {
           httpOnly: true,
           secure: process.env.NODE_ENV === 'production',
           sameSite: 'strict',
-          maxAge: 3600000 // 1 hora
+          maxAge: 2592000000 // 30 dias
         });
 
         return {

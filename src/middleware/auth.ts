@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { createDebugger } from '../utils/debugger.js';
 import { UserRepository } from '../repositories/UserRepository';
-import '../types/express.js';
 // Import CSRF functions directly where needed
 
 // Create a debugger specific for the authentication middleware
