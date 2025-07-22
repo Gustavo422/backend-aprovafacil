@@ -1,8 +1,8 @@
 import express from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { supabase } from '../../config/supabase.js';
 import { requireAuth } from '../../middleware/auth.js';
-import { validateRequest } from '../../middleware/validation.js';
 import { logger } from '../../utils/logger.js';
 
 const router = express.Router();
@@ -35,6 +35,41 @@ const updateMapaAssuntoSchema = z.object({
   progresso_percentual: z.number().min(0).max(100).optional()
 });
 
+// Middleware de validação Express local
+const createValidationMiddleware = (schema: z.ZodTypeAny, field: 'body' | 'query' | 'params' = 'body') => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    try {
+      const data = field === 'body' ? req.body : field === 'query' ? req.query : req.params;
+      const result = schema.safeParse(data);
+      if (!result.success) {
+        const errors = result.error.errors.map(err => ({
+          field: err.path.join('.'),
+          message: err.message
+        }));
+        res.status(400).json({
+          error: 'Dados inválidos',
+          details: errors,
+          code: 'VALIDATION_ERROR'
+        });
+        return;
+      }
+      if (field === 'body') {
+        req.body = result.data;
+      } else if (field === 'query') {
+        req.query = result.data as Record<string, string | string[] | undefined>;
+      } else {
+        req.params = result.data as Record<string, string>;
+      }
+      next();
+    } catch {
+      res.status(500).json({
+        error: 'Erro interno do servidor',
+        code: 'VALIDATION_ERROR'
+      });
+    }
+  };
+};
+
 // GET /api/mapa-assuntos - Listar mapa de assuntos do usuário
 router.get('/', requireAuth, async (req, res) => {
   try {
@@ -52,7 +87,7 @@ router.get('/', requireAuth, async (req, res) => {
       .from('mapa_assuntos')
       .select(`
         *,
-        categoria_disciplinas (
+        disciplinas_categoria (
           id,
           nome,
           descricao,
@@ -84,7 +119,7 @@ router.get('/', requireAuth, async (req, res) => {
     }
 
     const { data: assuntos, error, count } = await query
-      .order('created_at', { ascending: false })
+      .order('criado_em', { ascending: false })
       .range(offset, offset + Number(limit) - 1);
 
     if (error) {
@@ -126,7 +161,7 @@ router.get('/:id', requireAuth, async (req, res) => {
       .from('mapa_assuntos')
       .select(`
         *,
-        categoria_disciplinas (
+        disciplinas_categoria (
           id,
           nome,
           descricao,
@@ -163,7 +198,7 @@ router.get('/:id', requireAuth, async (req, res) => {
 });
 
 // POST /api/mapa-assuntos - Criar novo assunto
-router.post('/', requireAuth, validateRequest(createMapaAssuntoSchema), async (req, res) => {
+router.post('/', requireAuth, createValidationMiddleware(createMapaAssuntoSchema, 'body'), async (req, res) => {
   try {
     const userId = req.user?.id;
     const assuntoData = { ...req.body, user_id: userId };
@@ -193,7 +228,7 @@ router.post('/', requireAuth, validateRequest(createMapaAssuntoSchema), async (r
 });
 
 // PUT /api/mapa-assuntos/:id - Atualizar assunto
-router.put('/:id', requireAuth, validateRequest(updateMapaAssuntoSchema), async (req, res) => {
+router.put('/:id', requireAuth, createValidationMiddleware(updateMapaAssuntoSchema, 'body'), async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user?.id;

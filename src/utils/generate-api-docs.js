@@ -6,9 +6,9 @@ const { execSync } = require('child_process');
 // TODO: Refatorar para backend puro. Blocos comentados por depender de variáveis globais Node.js/browser/SSR.
 /*
 // Caminhos importantes
-const API_DIR = path.join(__dirname, '..', 'app', 'api');
-const OUTPUT_DIR = path.join(__dirname, '..', 'docs', 'api');
-const OPENAPI_SPEC_PATH = path.join(__dirname, '..', 'openapi.json');
+const API_DIR = path.join(__dirnome, '..', 'app', 'api');
+const OUTPUT_DIR = path.join(__dirnome, '..', 'docs', 'api');
+const OPENAPI_SPEC_PATH = path.join(__dirnome, '..', 'openapi.json');
 
 // Cria o diretório de saída se não existir
 if (!fs.existsSync(OUTPUT_DIR)) {
@@ -19,22 +19,22 @@ if (!fs.existsSync(OUTPUT_DIR)) {
 const openApiSpec = {
   openapi: '3.0.0',
   info: {
-    title: 'API AprovaJá',
-    description: 'Documentação da API do AprovaJá',
+    titulo: 'API AprovaJá',
+    descricao: 'Documentação da API do AprovaJá',
     version: '1.0.0',
     contact: {
-      name: 'Suporte AprovaJá',
+      nome: 'Suporte AprovaJá',
       email: 'suporte@aprova-ja.com'
     }
   },
   servers: [
     {
       url: 'http://localhost:3000/api',
-      description: 'Servidor de Desenvolvimento'
+      descricao: 'Servidor de Desenvolvimento'
     },
     {
       url: 'https://api.aprova-ja.com',
-      description: 'Produção'
+      descricao: 'Produção'
     }
   ],
   paths: {},
@@ -52,12 +52,12 @@ const openApiSpec = {
         properties: {
           error: {
             type: 'string',
-            description: 'Mensagem de erro',
+            descricao: 'Mensagem de erro',
             example: 'Erro ao processar a requisição'
           },
           statusCode: {
             type: 'integer',
-            description: 'Código de status HTTP',
+            descricao: 'Código de status HTTP',
             example: 400
           }
         }
@@ -79,17 +79,17 @@ function addEndpoint(method, path, doc) {
   
   openApiSpec.paths[path][method.toLowerCase()] = {
     summary: doc.summary || '',
-    description: doc.description || '',
+    descricao: doc.descricao || '',
     tags: doc.tags || [],
     parameters: doc.parameters || [],
     requestBody: doc.requestBody,
     responses: {
       '200': {
-        description: 'Requisição bem-sucedida',
+        descricao: 'Requisição bem-sucedida',
         content: doc.responses?.['200']?.content || {}
       },
       '400': {
-        description: 'Requisição inválida',
+        descricao: 'Requisição inválida',
         content: {
           'application/json': {
             schema: {
@@ -99,7 +99,7 @@ function addEndpoint(method, path, doc) {
         }
       },
       '401': {
-        description: 'Não autorizado',
+        descricao: 'Não autorizado',
         content: {
           'application/json': {
             schema: {
@@ -109,7 +109,7 @@ function addEndpoint(method, path, doc) {
         }
       },
       '500': {
-        description: 'Erro interno do servidor',
+        descricao: 'Erro interno do servidor',
         content: {
           'application/json': {
             schema: {
@@ -126,7 +126,7 @@ function addEndpoint(method, path, doc) {
 // Documentação para o endpoint de autenticação
 addEndpoint('post', '/auth/login', {
   summary: 'Autentica um usuário',
-  description: 'Realiza o login do usuário e retorna um token de autenticação. Possui rate limiting de 5 tentativas a cada 15 minutos por IP.',
+  descricao: 'Realiza o login do usuário e retorna um token de autenticação. Possui rate limiting de 5 tentativas a cada 15 minutos por IP.',
   tags: ['Autenticação'],
   requestBody: {
     required: true,
@@ -139,13 +139,13 @@ addEndpoint('post', '/auth/login', {
             email: {
               type: 'string',
               format: 'email',
-              description: 'E-mail do usuário',
+              descricao: 'E-mail do usuário',
               example: 'usuario@exemplo.com'
             },
             password: {
               type: 'string',
               format: 'password',
-              description: 'Senha do usuário',
+              descricao: 'Senha do usuário',
               example: 'suaSenha123'
             }
           }
@@ -155,7 +155,7 @@ addEndpoint('post', '/auth/login', {
   },
   responses: {
     '200': {
-      description: 'Autenticação bem-sucedida',
+      descricao: 'Autenticação bem-sucedida',
       content: {
         'application/json': {
           schema: {
@@ -191,7 +191,7 @@ addEndpoint('post', '/auth/login', {
       }
     },
     '400': {
-      description: 'Credenciais inválidas ou faltando',
+      descricao: 'Credenciais inválidas ou faltando',
       content: {
         'application/json': {
           schema: {
@@ -215,7 +215,7 @@ addEndpoint('post', '/auth/login', {
       }
     },
     '429': {
-      description: 'Muitas tentativas de login',
+      descricao: 'Muitas tentativas de login',
       content: {
         'application/json': {
           schema: {
@@ -242,18 +242,18 @@ addEndpoint('post', '/auth/login', {
 // Documentação para o endpoint de dashboard
 addEndpoint('get', '/dashboard', {
   summary: 'Obtém dados do dashboard do usuário',
-  description: 'Retorna estatísticas e informações para o dashboard do usuário autenticado',
+  descricao: 'Retorna estatísticas e informações para o dashboard do usuário autenticado',
   tags: ['Dashboard'],
   responses: {
     '200': {
-      description: 'Dados do dashboard retornados com sucesso',
+      descricao: 'Dados do dashboard retornados com sucesso',
       content: {
         'application/json': {
           schema: {
             type: 'object',
             properties: {
-              totalSimulados: { type: 'number', example: 5, description: 'Total de simulados realizados pelo usuário' },
-              totalQuestoes: { type: 'number', example: 150, description: 'Total de questões respondidas' },
+              totalSimulados: { type: 'number', example: 5, descricao: 'Total de simulados realizados pelo usuário' },
+              totalQuestoes: { type: 'number', example: 150, descricao: 'Total de questões respondidas' },
               // Outras estatísticas retornadas pelo endpoint
             }
           }
@@ -261,7 +261,7 @@ addEndpoint('get', '/dashboard', {
       }
     },
     '401': {
-      description: 'Não autorizado - token inválido ou ausente',
+      descricao: 'Não autorizado - token inválido ou ausente',
       content: {
         'application/json': {
           schema: {
@@ -271,7 +271,7 @@ addEndpoint('get', '/dashboard', {
       }
     },
     '500': {
-      description: 'Erro interno do servidor',
+      descricao: 'Erro interno do servidor',
       content: {
         'application/json': {
           schema: {
@@ -286,7 +286,7 @@ addEndpoint('get', '/dashboard', {
 // Documentação para o endpoint de recuperação de senha
 addEndpoint('post', '/auth/forgot-password', {
   summary: 'Solicita recuperação de senha',
-  description: 'Envia um e-mail com um link para redefinição de senha',
+  descricao: 'Envia um e-mail com um link para redefinição de senha',
   tags: ['Autenticação'],
   requestBody: {
     required: true,
@@ -299,7 +299,7 @@ addEndpoint('post', '/auth/forgot-password', {
             email: {
               type: 'string',
               format: 'email',
-              description: 'E-mail do usuário',
+              descricao: 'E-mail do usuário',
               example: 'usuario@exemplo.com'
             }
           }
@@ -309,7 +309,7 @@ addEndpoint('post', '/auth/forgot-password', {
   },
   responses: {
     '200': {
-      description: 'E-mail de recuperação enviado com sucesso',
+      descricao: 'E-mail de recuperação enviado com sucesso',
       content: {
         'application/json': {
           schema: {
@@ -323,7 +323,7 @@ addEndpoint('post', '/auth/forgot-password', {
       }
     },
     '400': {
-      description: 'E-mail inválido ou não encontrado',
+      descricao: 'E-mail inválido ou não encontrado',
       content: {
         'application/json': {
           schema: {
@@ -361,7 +361,7 @@ if (fs.existsSync(swaggerUiDist)) {
   <html lang="pt-BR">
   <head>
     <meta charset="UTF-8">
-    <title>API AprovaJá - Documentação</title>
+    <titulo>API AprovaJá - Documentação</titulo>
     <link rel="stylesheet" type="text/css" href="./swagger-ui/swagger-ui.css" />
     <link rel="icon" type="image/png" href="./favicon-32x32.png" sizes="32x32" />
     <style>
@@ -407,3 +407,6 @@ if (fs.existsSync(swaggerUiDist)) {
 
 console.log('Documentação da API gerada com sucesso!');
 */
+
+
+

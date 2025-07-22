@@ -1,8 +1,8 @@
 import express from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { supabase } from '../../config/supabase.js';
 import { requireAuth } from '../../middleware/auth.js';
-import { validateRequest } from '../../middleware/validation.js';
 import { logger } from '../../utils/logger.js';
 import {
   CreateSimuladoDTO,
@@ -12,8 +12,8 @@ import {
   SimuladoWithRelationsDTO,
   CreateSimuladoQuestaoDTO,
   UpdateSimuladoQuestaoDTO,
-  CreateUserSimuladoProgressDTO,
-  UpdateUserSimuladoProgressDTO
+  CreateusuariosimuladoProgressDTO,
+  UpdateusuariosimuladoProgressDTO
 } from '../../types/simulados.dto.js';
 import { asyncHandler } from '../../utils/routeWrapper.js';
 
@@ -27,7 +27,7 @@ const createSimuladoSchema = z.object({
   total_questoes: z.number().min(1, 'Total de questões deve ser maior que 0'),
   concurso_id: z.string().uuid().optional(),
   categoria_id: z.string().uuid().optional(),
-  is_active: z.boolean().default(true)
+  ativo: z.boolean().default(true)
 });
 
 const updateSimuladoSchema = z.object({
@@ -37,7 +37,7 @@ const updateSimuladoSchema = z.object({
   total_questoes: z.number().min(1).optional(),
   concurso_id: z.string().uuid().optional(),
   categoria_id: z.string().uuid().optional(),
-  is_active: z.boolean().optional()
+  ativo: z.boolean().optional()
 });
 
 const createQuestaoSchema = z.object({
@@ -63,8 +63,43 @@ const createProgressSchema = z.object({
   acertos: z.number().min(0).optional(),
   erros: z.number().min(0).optional(),
   pontuacao: z.number().min(0).optional(),
-  is_completed: z.boolean().default(false)
+  is_concluido: z.boolean().default(false)
 });
+
+// Middleware de validação Express local
+const createValidationMiddleware = (schema: z.ZodTypeAny, field: 'body' | 'query' | 'params' = 'body') => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    try {
+      const data = field === 'body' ? req.body : field === 'query' ? req.query : req.params;
+      const result = schema.safeParse(data);
+      if (!result.success) {
+        const errors = result.error.errors.map(err => ({
+          field: err.path.join('.'),
+          message: err.message
+        }));
+        res.status(400).json({
+          error: 'Dados inválidos',
+          details: errors,
+          code: 'VALIDATION_ERROR'
+        });
+        return;
+      }
+      if (field === 'body') {
+        req.body = result.data;
+      } else if (field === 'query') {
+        req.query = result.data as Record<string, string | string[] | undefined>;
+      } else {
+        req.params = result.data as Record<string, string>;
+      }
+      next();
+    } catch {
+      res.status(500).json({
+        error: 'Erro interno do servidor',
+        code: 'VALIDATION_ERROR'
+      });
+    }
+  };
+};
 
 // GET /api/simulados - Listar simulados com paginação e filtros
 router.get('/', requireAuth, asyncHandler(async (req, res) => {
@@ -74,7 +109,7 @@ router.get('/', requireAuth, asyncHandler(async (req, res) => {
       limit = 10,
       concurso_id,
       categoria_id,
-      is_active,
+      ativo,
       search
     } = req.query as SimuladoFiltersDTO;
 
@@ -84,7 +119,7 @@ router.get('/', requireAuth, asyncHandler(async (req, res) => {
       .from('simulados')
       .select(`
         *,
-        concurso_categorias (
+        categorias_concursos (
           id,
           nome,
           slug,
@@ -108,15 +143,15 @@ router.get('/', requireAuth, asyncHandler(async (req, res) => {
     if (categoria_id) {
       query = query.eq('categoria_id', categoria_id);
     }
-    if (is_active !== undefined) {
-      query = query.eq('is_active', is_active);
+    if (ativo !== undefined) {
+      query = query.eq('ativo', ativo);
     }
     if (search) {
       query = query.or(`titulo.ilike.%${search}%,descricao.ilike.%${search}%`);
     }
 
     const { data: simulados, error, count } = await query
-      .order('created_at', { ascending: false })
+      .order('criado_em', { ascending: false })
       .range(offset, offset + Number(limit) - 1);
 
     if (error) {
@@ -138,8 +173,8 @@ router.get('/', requireAuth, asyncHandler(async (req, res) => {
     };
 
     res.json(response);
-  } catch (error) {
-    logger.error('Erro na rota GET /simulados:', undefined, { error: error instanceof Error ? error.message : 'Erro desconhecido' });
+  } catch {
+    logger.error('Erro na rota GET /simulados:', undefined, { error: 'Erro desconhecido' });
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 }));
@@ -153,7 +188,7 @@ router.get('/:id', requireAuth, asyncHandler(async (req, res) => {
       .from('simulados')
       .select(`
         *,
-        concurso_categorias (
+        categorias_concursos (
           id,
           nome,
           slug,
@@ -181,8 +216,8 @@ router.get('/:id', requireAuth, asyncHandler(async (req, res) => {
           peso_disciplina,
           concurso_id,
           categoria_id,
-          created_at,
-          updated_at
+          criado_em,
+          atualizado_em
         )
       `)
       .eq('id', id)
@@ -197,14 +232,14 @@ router.get('/:id', requireAuth, asyncHandler(async (req, res) => {
     }
 
     res.json({ success: true, data: simulado });
-  } catch (error) {
-    logger.error('Erro na rota GET /simulados/:id:', undefined, { error: error instanceof Error ? error.message : 'Erro desconhecido' });
+  } catch {
+    logger.error('Erro na rota GET /simulados/:id:', undefined, { error: 'Erro desconhecido' });
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 }));
 
 // POST /api/simulados - Criar novo simulado
-router.post('/', requireAuth, validateRequest(createSimuladoSchema), asyncHandler(async (req, res) => {
+router.post('/', requireAuth, createValidationMiddleware(createSimuladoSchema, 'body'), asyncHandler(async (req, res) => {
   try {
     const simuladoData: CreateSimuladoDTO = req.body;
 
@@ -220,14 +255,14 @@ router.post('/', requireAuth, validateRequest(createSimuladoSchema), asyncHandle
     }
 
     res.status(201).json({ success: true, data: simulado });
-  } catch (error) {
-    logger.error('Erro na rota POST /simulados:', undefined, { error: error instanceof Error ? error.message : 'Erro desconhecido' });
+  } catch {
+    logger.error('Erro na rota POST /simulados:', undefined, { error: 'Erro desconhecido' });
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 }));
 
 // PUT /api/simulados/:id - Atualizar simulado
-router.put('/:id', requireAuth, validateRequest(updateSimuladoSchema), asyncHandler(async (req, res) => {
+router.put('/:id', requireAuth, createValidationMiddleware(updateSimuladoSchema, 'body'), asyncHandler(async (req, res) => {
   try {
     const { id } = req.params;
     const updateData: UpdateSimuladoDTO = req.body;
@@ -248,8 +283,8 @@ router.put('/:id', requireAuth, validateRequest(updateSimuladoSchema), asyncHand
     }
 
     res.json({ success: true, data: simulado });
-  } catch (error) {
-    logger.error('Erro na rota PUT /simulados/:id:', undefined, { error: error instanceof Error ? error.message : 'Erro desconhecido' });
+  } catch {
+    logger.error('Erro na rota PUT /simulados/:id:', undefined, { error: 'Erro desconhecido' });
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 }));
@@ -270,14 +305,14 @@ router.delete('/:id', requireAuth, asyncHandler(async (req, res) => {
     }
 
     res.json({ success: true, message: 'Simulado deletado com sucesso' });
-  } catch (error) {
-    logger.error('Erro na rota DELETE /simulados/:id:', undefined, { error: error instanceof Error ? error.message : 'Erro desconhecido' });
+  } catch {
+    logger.error('Erro na rota DELETE /simulados/:id:', undefined, { error: 'Erro desconhecido' });
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 }));
 
 // POST /api/simulados/:id/questoes - Adicionar questão ao simulado
-router.post('/:id/questoes', requireAuth, validateRequest(createQuestaoSchema), asyncHandler(async (req, res) => {
+router.post('/:id/questoes', requireAuth, createValidationMiddleware(createQuestaoSchema, 'body'), asyncHandler(async (req, res) => {
   try {
     const { id: simuladoId } = req.params;
     const questaoData: CreateSimuladoQuestaoDTO = {
@@ -297,8 +332,8 @@ router.post('/:id/questoes', requireAuth, validateRequest(createQuestaoSchema), 
     }
 
     res.status(201).json({ success: true, data: questao });
-  } catch (error) {
-    logger.error('Erro na rota POST /simulados/:id/questoes:', undefined, { error: error instanceof Error ? error.message : 'Erro desconhecido' });
+  } catch {
+    logger.error('Erro na rota POST /simulados/:id/questoes:', undefined, { error: 'Erro desconhecido' });
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 }));
@@ -326,8 +361,8 @@ router.put('/:simuladoId/questoes/:questaoId', requireAuth, asyncHandler(async (
     }
 
     res.json({ success: true, data: questao });
-  } catch (error) {
-    logger.error('Erro na rota PUT /simulados/:simuladoId/questoes/:questaoId:', undefined, { error: error instanceof Error ? error.message : 'Erro desconhecido' });
+  } catch {
+    logger.error('Erro na rota PUT /simulados/:simuladoId/questoes/:questaoId:', undefined, { error: 'Erro desconhecido' });
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 }));
@@ -349,24 +384,24 @@ router.delete('/:simuladoId/questoes/:questaoId', requireAuth, asyncHandler(asyn
     }
 
     res.json({ success: true, message: 'Questão removida com sucesso' });
-  } catch (error) {
-    logger.error('Erro na rota DELETE /simulados/:simuladoId/questoes/:questaoId:', undefined, { error: error instanceof Error ? error.message : 'Erro desconhecido' });
+  } catch {
+    logger.error('Erro na rota DELETE /simulados/:simuladoId/questoes/:questaoId:', undefined, { error: 'Erro desconhecido' });
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 }));
 
 // POST /api/simulados/:id/progresso - Iniciar progresso do usuário
-router.post('/:id/progresso', requireAuth, validateRequest(createProgressSchema), async (req, res) => {
+router.post('/:id/progresso', requireAuth, createValidationMiddleware(createProgressSchema, 'body'), async (req, res) => {
   try {
     const { id: simuladoId } = req.params;
-    const progressData: CreateUserSimuladoProgressDTO = {
+    const progressData: CreateusuariosimuladoProgressDTO = {
       ...req.body,
       simulado_id: simuladoId,
       data_inicio: req.body.data_inicio || new Date().toISOString()
     };
 
     const { data: progress, error } = await supabase
-      .from('user_simulado_progress')
+      .from('progresso_usuario_simulado')
       .insert([progressData])
       .select()
       .single();
@@ -378,8 +413,8 @@ router.post('/:id/progresso', requireAuth, validateRequest(createProgressSchema)
     }
 
     res.status(201).json({ success: true, data: progress });
-  } catch (error) {
-    logger.error('Erro na rota POST /simulados/:id/progresso:', undefined, { error: error instanceof Error ? error.message : 'Erro desconhecido' });
+  } catch {
+    logger.error('Erro na rota POST /simulados/:id/progresso:', undefined, { error: 'Erro desconhecido' });
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
@@ -388,10 +423,10 @@ router.post('/:id/progresso', requireAuth, validateRequest(createProgressSchema)
 router.put('/:simuladoId/progresso/:progressId', requireAuth, async (req, res) => {
   try {
     const { simuladoId, progressId } = req.params;
-    const updateData: UpdateUserSimuladoProgressDTO = req.body;
+    const updateData: UpdateusuariosimuladoProgressDTO = req.body;
 
     const { data: progress, error } = await supabase
-      .from('user_simulado_progress')
+      .from('progresso_usuario_simulado')
       .update(updateData)
       .eq('id', progressId)
       .eq('simulado_id', simuladoId)
@@ -409,8 +444,8 @@ router.put('/:simuladoId/progresso/:progressId', requireAuth, async (req, res) =
     }
 
     res.json({ success: true, data: progress });
-  } catch (error) {
-    logger.error('Erro na rota PUT /simulados/:simuladoId/progresso/:progressId:', undefined, { error: error instanceof Error ? error.message : 'Erro desconhecido' });
+  } catch {
+    logger.error('Erro na rota PUT /simulados/:simuladoId/progresso/:progressId:', undefined, { error: 'Erro desconhecido' });
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
@@ -427,11 +462,11 @@ router.get('/:id/progresso', requireAuth, async (req, res) => {
     }
 
     const { data: progress, error } = await supabase
-      .from('user_simulado_progress')
+      .from('progresso_usuario_simulado')
       .select('*')
       .eq('simulado_id', simuladoId)
       .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+      .order('criado_em', { ascending: false });
 
     if (error) {
       logger.error('Erro ao buscar progresso:', undefined, { error: error.message });
@@ -440,8 +475,8 @@ router.get('/:id/progresso', requireAuth, async (req, res) => {
     }
 
     res.json({ success: true, data: progress });
-  } catch (error) {
-    logger.error('Erro na rota GET /simulados/:id/progresso:', undefined, { error: error instanceof Error ? error.message : 'Erro desconhecido' });
+  } catch {
+    logger.error('Erro na rota GET /simulados/:id/progresso:', undefined, { error: 'Erro desconhecido' });
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });

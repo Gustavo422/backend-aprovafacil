@@ -1,28 +1,26 @@
 // DTO de User - Atualizado para corresponder ao schema real
 export interface UserDTO {
   id: string;
-  name: string;
+  nome: string;
   email: string;
-  last_login?: string;
-  created_at: string;
-  updated_at: string;
-  total_questions_answered: number;
-  total_correct_answers: number;
-  study_time_minutes: number;
-  average_score: number;
+  ultimo_login?: string;
+  criado_em: string;
+  atualizado_em: string;
+  total_questoes_respondidas: number;
+  total_resposta_corretas: number;
+  tempo_estudo_minutos: number;
+  pontuacao_media: number;
 }
 
 export interface CreateUserDTO {
   email: string;
   nome?: string;
-  name?: string;
   avatar_url?: string;
 }
 
 export interface UpdateUserDTO {
   email?: string;
   nome?: string;
-  name?: string;
   avatar_url?: string;
-  is_active?: boolean;
+  ativo?: boolean;
 }

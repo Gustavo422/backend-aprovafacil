@@ -6,8 +6,8 @@ const SWAGGER_UI_HTML = `
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AprovaFácil API - Documentação</title>
+    <meta nome="viewport" content="width=device-width, initial-scale=1.0">
+    <titulo>AprovaFácil API - Documentação</titulo>
     <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui.css" />
     <style>
         html {
@@ -28,7 +28,7 @@ const SWAGGER_UI_HTML = `
         .swagger-ui .topbar .download-url-wrapper .select-label {
             color: #fff;
         }
-        .swagger-ui .info .title {
+        .swagger-ui .info .titulo {
             color: #2c3e50;
         }
     </style>
@@ -87,3 +87,6 @@ export function serveOpenAPISpec(): Response {
         },
     });
 } 
+
+
+

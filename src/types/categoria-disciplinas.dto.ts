@@ -5,3 +5,6 @@ export interface CategoriaDisciplinasDTO {
   descricao?: string;
   // Adicione outros campos relevantes
 } 
+
+
+

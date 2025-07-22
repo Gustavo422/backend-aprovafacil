@@ -1,4 +1,4 @@
-import { healthChecker } from './health-checker.js';
+import { createHealthChecker } from './health-checker.js';
 import { performanceMonitor } from '../middleware/performance-monitor.js';
 
 class StatusDashboard {
@@ -30,6 +30,7 @@ class StatusDashboard {
 
   private async displayStatus() {
     try {
+      const healthChecker = createHealthChecker();
       const health = await healthChecker.getHealthStatus();
       const metrics = performanceMonitor.getMetrics();
       const slowestEndpoints = performanceMonitor.getSlowestEndpoints(3);
@@ -150,7 +151,7 @@ class StatusDashboard {
     return `${seconds}s`;
   }
 
-  private getAlerts(health: ReturnType<typeof healthChecker.getHealthStatus> extends Promise<infer T> ? T : never, metrics: ReturnType<typeof performanceMonitor.getMetrics>): string[] {
+  private getAlerts(health: Awaited<ReturnType<ReturnType<typeof createHealthChecker>['getHealthStatus']>>, metrics: ReturnType<typeof performanceMonitor.getMetrics>): string[] {
     const alerts = [];
 
     // Alertas de memória

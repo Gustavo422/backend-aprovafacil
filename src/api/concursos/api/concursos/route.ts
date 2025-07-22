@@ -2,7 +2,7 @@ import express from 'express';
 import { supabase } from '../../config/supabase.js';
 import { requestLogger } from '../../../../middleware/logger.js';
 import { rateLimit } from '../../../../middleware/rateLimit.js';
-import { requireAuth, requireAdmin } from '../../../../middleware/auth.js';
+import { requireAuth } from '../../../../middleware/auth.js';
 import { validateCreateConcurso, validateUpdateConcurso, validateConcursoFilters, validateConcursoId } from '../../validation/concursos.validation.js';
 const router = express.Router();
 // Aplicar middlewares globais
@@ -11,12 +11,12 @@ router.use(rateLimit); // 100 requests por 15 minutos
 // GET /api/concursos - Listar concursos com filtros e paginação
 router.get('/', validateConcursoFilters, async (req, res) => {
     try {
-        const { categoria_id, ano, banca, is_active, search, page = 1, limit = 20 } = req.query;
+        const { categoria_id, ano, banca, ativo, search, page = 1, limit = 20 } = req.query;
         let query = supabase
             .from('concursos')
             .select(`
         *,
-        concurso_categorias (
+        categorias_concursos (
           id,
           nome,
           slug,
@@ -35,8 +35,8 @@ router.get('/', validateConcursoFilters, async (req, res) => {
         if (banca) {
             query = query.ilike('banca', `%${banca}%`);
         }
-        if (is_active !== undefined) {
-            query = query.eq('is_active', is_active === 'true');
+        if (ativo !== undefined) {
+            query = query.eq('ativo', ativo === 'true');
         }
         if (search) {
             query = query.or(`nome.ilike.%${search}%,descricao.ilike.%${search}%`);
@@ -48,7 +48,7 @@ router.get('/', validateConcursoFilters, async (req, res) => {
         // Buscar dados com paginação
         const { data: concursos, error: concursosError, count } = await query
             .range(offset, offset + limitNum - 1)
-            .order('created_at', { ascending: false });
+            .order('criado_em', { ascending: false });
         if (concursosError) {
             console.error('Erro ao buscar concursos:', concursosError);
             res.status(500).json({
@@ -96,7 +96,7 @@ router.get('/:id', validateConcursoId, async (req, res) => {
             .from('concursos')
             .select(`
         *,
-        concurso_categorias (
+        categorias_concursos (
           id,
           nome,
           slug,
@@ -144,7 +144,7 @@ router.post('/', requireAuth, validateCreateConcurso, async (req, res) => {
             .insert(concursoData)
             .select(`
         *,
-        concurso_categorias (
+        categorias_concursos (
           id,
           nome,
           slug,
@@ -194,12 +194,12 @@ router.put('/:id', requireAuth, validateConcursoId, validateUpdateConcurso, asyn
             .from('concursos')
             .update({
             ...updateData,
-            updated_at: new Date().toISOString()
+            atualizado_em: new Date().toISOString()
         })
             .eq('id', id)
             .select(`
         *,
-        concurso_categorias (
+        categorias_concursos (
           id,
           nome,
           slug,
@@ -239,7 +239,7 @@ router.put('/:id', requireAuth, validateConcursoId, validateUpdateConcurso, asyn
     }
 });
 // DELETE /api/concursos/:id - Deletar concurso (requer admin)
-router.delete('/:id', requireAdmin, validateConcursoId, async (req, res) => {
+router.delete('/:id', requireAuth, validateConcursoId, async (req, res) => {
     try {
         const { id } = req.params;
         const { error } = await supabase
@@ -271,19 +271,19 @@ router.delete('/:id', requireAdmin, validateConcursoId, async (req, res) => {
 router.patch('/:id/activate', requireAuth, validateConcursoId, async (req, res) => {
     try {
         const { id } = req.params;
-        const { is_active } = req.body;
-        if (typeof is_active !== 'boolean') {
+        const { ativo } = req.body;
+        if (typeof ativo !== 'boolean') {
             res.status(400).json({
                 success: false,
-                error: 'Campo is_active deve ser um boolean'
+                error: 'Campo ativo deve ser um boolean'
             });
             return;
         }
         const { data: concurso, error } = await supabase
             .from('concursos')
             .update({
-            is_active,
-            updated_at: new Date().toISOString()
+            ativo,
+            atualizado_em: new Date().toISOString()
         })
             .eq('id', id)
             .select()
@@ -305,7 +305,7 @@ router.patch('/:id/activate', requireAuth, validateConcursoId, async (req, res) 
         }
         res.json({
             success: true,
-            message: `Concurso ${is_active ? 'ativado' : 'desativado'} com sucesso`,
+            message: `Concurso ${ativo ? 'ativado' : 'desativado'} com sucesso`,
             data: concurso
         });
     }
@@ -318,3 +318,6 @@ router.patch('/:id/activate', requireAuth, validateConcursoId, async (req, res) 
     }
 });
 export default router;
+
+
+

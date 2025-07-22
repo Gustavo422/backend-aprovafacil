@@ -7,11 +7,11 @@ export interface SimuladoDTO {
   tempo_minutos: number;
   dificuldade: string;
   is_public: boolean;
-  is_active: boolean;
+  ativo: boolean;
   data_inicio?: string;
   data_fim?: string;
-  created_at: string;
-  updated_at: string;
+  criado_em: string;
+  atualizado_em: string;
   deleted_at?: string;
   created_by?: string;
   concurso_id?: string;
@@ -26,7 +26,7 @@ export interface CreateSimuladoDTO {
   tempo_minutos?: number;
   dificuldade?: string;
   is_public?: boolean;
-  is_active?: boolean;
+  ativo?: boolean;
   data_inicio?: string;
   data_fim?: string;
   created_by?: string;
@@ -42,7 +42,7 @@ export interface UpdateSimuladoDTO {
   tempo_minutos?: number;
   dificuldade?: string;
   is_public?: boolean;
-  is_active?: boolean;
+  ativo?: boolean;
   data_inicio?: string;
   data_fim?: string;
   concurso_id?: string;
@@ -50,9 +50,9 @@ export interface UpdateSimuladoDTO {
   disciplinas?: Record<string, unknown>;
 }
 
-// DTO para resposta de simulado com relacionamentos
+// DTO para resposta de simulado com relacionomentos
 export interface SimuladoWithRelationsDTO extends SimuladoDTO {
-  concurso_categorias?: {
+  categorias_concursos?: {
     id: string;
     nome: string;
     slug: string;
@@ -82,8 +82,8 @@ export interface SimuladoQuestaoDTO {
   assunto?: string;
   dificuldade: string;
   ordem: number;
-  created_at: string;
-  updated_at: string;
+  criado_em: string;
+  atualizado_em: string;
   deleted_at?: string;
   concurso_id?: string;
   categoria_id?: string;
@@ -91,7 +91,7 @@ export interface SimuladoQuestaoDTO {
 }
 
 // DTO para progresso do usuário com simulados
-export interface UserSimuladoProgressDTO {
+export interface usuariosimuladoProgressDTO {
   id: string;
   user_id: string;
   simulado_id: string;
@@ -105,11 +105,11 @@ export interface UserSimuladoProgressDTO {
   acertos: number;
   erros: number;
   em_branco: number;
-  is_completed: boolean;
-  created_at: string;
-  updated_at: string;
+  is_concluido: boolean;
+  criado_em: string;
+  atualizado_em: string;
   time_taken_minutes?: number;
-  completed_at?: string;
+  concluido_at?: string;
 }
 
 // DTOs adicionais para compatibilidade
@@ -142,7 +142,7 @@ export interface UpdateSimuladoQuestaoDTO {
   peso_disciplina?: number;
 }
 
-export interface CreateUserSimuladoProgressDTO {
+export interface CreateusuariosimuladoProgressDTO {
   user_id: string;
   simulado_id: string;
   start_time?: string;
@@ -154,12 +154,12 @@ export interface CreateUserSimuladoProgressDTO {
   acertos?: number;
   erros?: number;
   em_branco?: number;
-  is_completed?: boolean;
+  is_concluido?: boolean;
   time_taken_minutes?: number;
-  completed_at?: string;
+  concluido_at?: string;
 }
 
-export interface UpdateUserSimuladoProgressDTO {
+export interface UpdateusuariosimuladoProgressDTO {
   end_time?: string;
   time_taken_seconds?: number;
   respostas?: Record<string, unknown>;
@@ -169,16 +169,16 @@ export interface UpdateUserSimuladoProgressDTO {
   acertos?: number;
   erros?: number;
   em_branco?: number;
-  is_completed?: boolean;
+  is_concluido?: boolean;
   time_taken_minutes?: number;
-  completed_at?: string;
+  concluido_at?: string;
 }
 
 // DTO para filtros de busca
 export interface SimuladoFiltersDTO {
   concurso_id?: string;
   categoria_id?: string;
-  is_active?: boolean;
+  ativo?: boolean;
   search?: string;
   page?: number;
   limit?: number;
@@ -209,7 +209,7 @@ export interface CreateSimuladoDto {
   categoria_disciplina_id: string;
   tempo_limite?: number; // em minutos
   total_questoes?: number;
-  is_active?: boolean;
+  ativo?: boolean;
   metadata?: Record<string, unknown>;
 }
 
@@ -221,18 +221,18 @@ export interface UpdateSimuladoDto {
   categoria_disciplina_id?: string;
   tempo_limite?: number;
   total_questoes?: number;
-  is_active?: boolean;
+  ativo?: boolean;
   metadata?: Record<string, unknown>;
 }
 
 export interface SimuladoFiltersDto {
   concurso_id?: string;
   categoria_disciplina_id?: string;
-  is_active?: boolean;
+  ativo?: boolean;
   search?: string;
   page?: number;
   limit?: number;
-  orderBy?: 'titulo' | 'created_at' | 'updated_at';
+  orderBy?: 'titulo' | 'criado_em' | 'atualizado_em';
   order?: 'asc' | 'desc';
 }
 
@@ -267,11 +267,11 @@ export interface SimuladoResponseDto {
   categoria_disciplina_id: string;
   tempo_limite?: number;
   total_questoes?: number;
-  is_active: boolean;
+  ativo: boolean;
   metadata?: Record<string, unknown>;
-  created_at: string;
-  updated_at: string;
-  concurso_categorias?: {
+  criado_em: string;
+  atualizado_em: string;
+  categorias_concursos?: {
     id: string;
     nome: string;
     slug: string;
@@ -294,8 +294,8 @@ export interface SimuladoQuestaoResponseDto {
   questao_id: string;
   ordem: number;
   pontos: number;
-  created_at: string;
-  updated_at: string;
+  criado_em: string;
+  atualizado_em: string;
   questoes?: {
     id: string;
     enunciado: string;

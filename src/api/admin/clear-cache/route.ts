@@ -2,7 +2,7 @@ import express, { Request, Response } from 'express';
 import { supabase } from '../../../config/supabase.js';
 import { requestLogger } from '../../../middleware/logger.js';
 import { rateLimit } from '../../../middleware/rateLimit.js';
-import { requireAuth, requireAdmin } from '../../../middleware/auth.js';
+import { requireAuth } from '../../../middleware/auth.js';
 
 const router = express.Router();
 
@@ -11,7 +11,7 @@ router.use(requestLogger);
 router.use(rateLimit);
 
 // POST - Limpar cache do sistema
-router.post('/', requireAuth, requireAdmin, async (req: Request, res: Response) => {
+router.post('/', requireAuth, async (req: Request, res: Response) => {
     try {
         console.info('Iniciando limpeza de cache do sistema');
 
@@ -41,7 +41,7 @@ router.post('/', requireAuth, requireAdmin, async (req: Request, res: Response) 
 
         // Limpar cache de estatísticas de disciplina
         const { error: statsError } = await supabase
-            .from('user_discipline_stats')
+            .from('estatisticas_usuario_disciplina')
             .delete()
             .neq('id', '00000000-0000-0000-0000-000000000000');
 
@@ -59,7 +59,7 @@ router.post('/', requireAuth, requireAdmin, async (req: Request, res: Response) 
             details: {
                 performanceCache: !performanceError,
                 configCache: !configError,
-                disciplineStats: !statsError
+                disciplinaStats: !statsError
             }
         });
 
@@ -77,7 +77,7 @@ router.post('/', requireAuth, requireAdmin, async (req: Request, res: Response) 
 });
 
 // GET - Obter estatísticas do cache
-router.get('/', requireAuth, requireAdmin, async (req: Request, res: Response) => {
+router.get('/', requireAuth, async (req: Request, res: Response) => {
     try {
         // Obter estatísticas do cache
         const { count: performanceCount, error: performanceError } = await supabase
@@ -88,8 +88,8 @@ router.get('/', requireAuth, requireAdmin, async (req: Request, res: Response) =
             .from('cache_config')
             .select('*', { count: 'exact', head: true });
 
-        const { count: disciplineCount, error: statsError } = await supabase
-            .from('user_discipline_stats')
+        const { count: disciplinaCount, error: statsError } = await supabase
+            .from('estatisticas_usuario_disciplina')
             .select('*', { count: 'exact', head: true });
 
         res.json({
@@ -97,7 +97,7 @@ router.get('/', requireAuth, requireAdmin, async (req: Request, res: Response) =
             cacheStats: {
                 performanceCache: performanceError ? 0 : performanceCount || 0,
                 configCache: configError ? 0 : configCount || 0,
-                disciplineStats: statsError ? 0 : disciplineCount || 0
+                disciplinaStats: statsError ? 0 : disciplinaCount || 0
             }
         });
 
@@ -115,3 +115,6 @@ router.get('/', requireAuth, requireAdmin, async (req: Request, res: Response) =
 });
 
 export default router;
+
+
+

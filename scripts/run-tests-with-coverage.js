@@ -52,18 +52,18 @@ function logInfo(message) {
   log(`ℹ️  ${message}`, 'blue')
 }
 
-async function runCommand(command, description) {
+async function runCommand(command, descricao) {
   try {
-    logInfo(`Executando: ${description}`)
+    logInfo(`Executando: ${descricao}`)
     const result = execSync(command, { 
       encoding: 'utf8', 
       stdio: 'pipe',
       env: { ...process.env, FORCE_COLOR: '1' }
     })
-    logSuccess(`${description} - Concluído`)
+    logSuccess(`${descricao} - Concluído`)
     return { success: true, output: result }
   } catch (error) {
-    logError(`${description} - Falhou`)
+    logError(`${descricao} - Falhou`)
     logError(error.message)
     return { success: false, output: error.message }
   }
@@ -285,3 +285,6 @@ main().catch(error => {
   logError(error.message)
   process.exit(1)
 }) 
+
+
+

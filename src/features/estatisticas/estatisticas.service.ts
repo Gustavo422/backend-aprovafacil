@@ -6,7 +6,7 @@ export class EstatisticasService {
     return [];
   }
 
-  async getByUser(): Promise<unknown | null> {
+  async getByUsuario(): Promise<unknown | null> {
     // TODO: Implementar lógica de busca por usuário
     return null;
   }
@@ -16,3 +16,6 @@ export class EstatisticasService {
     return '';
   }
 } 
+
+
+

@@ -1,231 +1,143 @@
 import { Request, Response, NextFunction } from 'express';
-import { createClient } from '@supabase/supabase-js';
-import { logger } from '../utils/logger.js';
+import { createDebugger } from '../utils/debugger.js';
+import { UserRepository } from '../repositories/UserRepository';
+import '../types/express.js';
+// Import CSRF functions directly where needed
 
-// Configuração do Supabase
-const supabaseUrl = process.env['SUPABASE_URL'];
-const supabaseServiceKey = process.env['SUPABASE_SERVICE_ROLE_KEY'];
+// Create a debugger specific for the authentication middleware
+const debug = createDebugger('middleware:auth');
 
-if (!supabaseUrl || !supabaseServiceKey) {
-  console.warn('⚠️ Variáveis de ambiente do Supabase não configuradas - usando valores padrão para desenvolvimento');
-  console.warn('SUPABASE_URL:', supabaseUrl ? '✅' : '❌');
-  console.warn('SUPABASE_SERVICE_ROLE_KEY:', supabaseServiceKey ? '✅' : '❌');
-  // Não sair do processo em desenvolvimento
-  if (process.env['NODE_ENV'] === 'production') {
-    process.exit(1);
-  }
+// Global instance of UserRepository for admin verification
+let userRepository: UserRepository | null = null;
+
+/**
+ * Initialize the auth middleware with dependencies
+ * @param repo - UserRepository instance
+ */
+export function initAuthMiddleware(repo: UserRepository) {
+  userRepository = repo;
+  debug('Auth middleware initialized with UserRepository');
 }
 
-const supabase = createClient(supabaseUrl || 'https://example.supabase.co', supabaseServiceKey || 'dummy-key');
-
-// Tipos para o usuário
-interface User {
-  id: string;
-  email: string;
-  role: string;
-  nome: string;
-}
-
-// Extender Request para incluir usuário
-declare module 'express-serve-static-core' {
-  interface Request {
-    user?: User;
-  }
-}
-
-// Middleware de autenticação
-export const requireAuth = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    const authHeader = req.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      logger.warn('Tentativa de acesso sem token de autenticação', undefined, {
-        ip: req.ip,
-        url: req.originalUrl,
-        userAgent: req.get('User-Agent')
-      });
-      
-      res.status(401).json({
-        error: 'Token de autenticação necessário',
-        code: 'AUTH_TOKEN_REQUIRED'
-      });
-      return;
-    }
-    
-    const token = authHeader.substring(7);
-    
-    // Verificar token no Supabase
-    const { data: { user }, error } = await supabase.auth.getUser(token);
-    
-    if (error || !user) {
-      logger.warn('Token de autenticação inválido', undefined, {
-        ip: req.ip,
-        url: req.originalUrl,
-        error: error?.message
-      });
-      
-      res.status(401).json({
-        error: 'Token de autenticação inválido',
-        code: 'INVALID_TOKEN'
-      });
-      return;
-    }
-    
-    // Buscar dados adicionais do usuário
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('id, email, role, nome')
-      .eq('id', user.id)
-      .single();
-    
-    if (profileError) {
-      logger.error('Erro ao buscar perfil do usuário', undefined, {
-        userId: user.id,
-        error: profileError.message
-      });
-      
-      res.status(500).json({
-        error: 'Erro interno do servidor',
-        code: 'USER_PROFILE_ERROR'
-      });
-      return;
-    }
-    
-    // Adicionar usuário à requisição
-    req.user = {
-      id: userProfile.id,
-      email: userProfile.email,
-      role: userProfile.role,
-      nome: userProfile.nome
-    };
-    
-    logger.info('Usuário autenticado com sucesso', undefined, {
-      userId: userProfile.id,
-      email: userProfile.email,
-      role: userProfile.role
-    });
-    
-    next();
-  } catch (error) {
-    logger.error('Erro no middleware de autenticação', undefined, {
-      error: error instanceof Error ? error.message : 'Erro desconhecido',
-      ip: req.ip,
-      url: req.originalUrl
-    });
-    
-    res.status(500).json({
-      error: 'Erro interno do servidor',
-      code: 'AUTH_ERROR'
+/**
+ * Middleware for requiring authentication
+ */
+export function requireAuth(req: Request, res: Response, next: NextFunction) {
+  debug('Verificando autenticação para rota: %s %s', req.method, req.path);
+  
+  if (!req.user) {
+    debug('Acesso negado: usuário não autenticado');
+    return res.status(401).json({ 
+      error: 'Usuário não autenticado',
+      code: 'AUTHENTICATION_REQUIRED'
     });
   }
-};
+  
+  debug('Usuário autenticado: %o', { id: req.user.id, role: req.user.role });
+  next();
+}
 
-// Middleware de autorização para administradores
-export const requireAdmin = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    // Primeiro verificar autenticação
-    await requireAuth(req, res, (err) => {
-      if (err) {
-        next(err);
-        return;
+/**
+ * Middleware for requiring admin role
+ * This is a legacy version that only checks the role in the request object
+ * For more secure admin verification, use the admin-auth middleware
+ */
+export function requireAdmin(req: Request, res: Response, next: NextFunction) {
+  debug('Verificando permissão de administrador para rota: %s %s', req.method, req.path);
+  
+  if (!req.user) {
+    debug('Acesso negado: usuário não autenticado');
+    return res.status(401).json({ 
+      error: 'Usuário não autenticado',
+      code: 'AUTHENTICATION_REQUIRED'
+    });
+  }
+  
+  if (req.user.role !== 'admin') {
+    debug('Acesso negado: usuário %s não é administrador (role: %s)', req.user.id, req.user.role);
+    return res.status(403).json({ 
+      error: 'Acesso restrito a administradores',
+      code: 'ADMIN_REQUIRED'
+    });
+  }
+  
+  debug('Acesso de administrador concedido para usuário: %s', req.user.id);
+  next();
+}
+
+/**
+ * Enhanced middleware for requiring admin role with database verification
+ * This middleware verifies the admin role in the database
+ */
+export function requireAdminWithVerification(req: Request, res: Response, next: NextFunction) {
+  debug('Verificando permissão de administrador com verificação em banco para rota: %s %s', req.method, req.path);
+  
+  if (!req.user) {
+    debug('Acesso negado: usuário não autenticado');
+    return res.status(401).json({ 
+      error: 'Usuário não autenticado',
+      code: 'AUTHENTICATION_REQUIRED'
+    });
+  }
+  
+  // Check if userRepository is initialized
+  if (!userRepository) {
+    debug('UserRepository não inicializado. Usando verificação simples.');
+    return requireAdmin(req, res, next);
+  }
+  
+  // Verify admin role in database
+  userRepository.findById(req.user.id)
+    .then(user => {
+      if (!user) {
+        debug('Usuário não encontrado: %s', req.user.id);
+        return res.status(401).json({ 
+          error: 'Usuário não encontrado',
+          code: 'USER_NOT_FOUND'
+        });
       }
       
-      // Verificar se o usuário é administrador
-      if (!req.user || req.user.role !== 'admin') {
-        logger.warn('Tentativa de acesso administrativo sem permissão', undefined, {
-          userId: req.user?.id,
-          email: req.user?.email,
-          role: req.user?.role,
-          ip: req.ip,
-          url: req.originalUrl
+      if (!user.ativo) {
+        debug('Usuário desativado: %s', req.user.id);
+        return res.status(403).json({ 
+          error: 'Conta desativada',
+          code: 'ACCOUNT_DISABLED'
         });
-        
-        res.status(403).json({
-          error: 'Acesso negado. Permissão de administrador necessária.',
+      }
+      
+      if (user.role !== 'admin') {
+        debug('Acesso negado: usuário %s não é administrador (role: %s)', req.user.id, user.role);
+        return res.status(403).json({ 
+          error: 'Acesso restrito a administradores',
           code: 'ADMIN_REQUIRED'
         });
-        return;
       }
       
-      logger.info('Acesso administrativo autorizado', undefined, {
-        userId: req.user.id,
-        email: req.user.email,
-        role: req.user.role,
-        ip: req.ip,
-        url: req.originalUrl
+      // Verify user exists in both tables
+      return userRepository!.verifyUserExistsInBothTables(user.id)
+        .then(exists => {
+          if (!exists) {
+            debug('Usuário não encontrado em ambas as tabelas: %s', user.id);
+            return res.status(401).json({ 
+              error: 'Usuário não encontrado na tabela de autenticação',
+              code: 'USER_NOT_FOUND_IN_AUTH'
+            });
+          }
+          
+          debug('Acesso de administrador concedido para usuário: %s', user.id);
+          next();
+        });
+    })
+    .catch(error => {
+      debug('Erro ao verificar permissão de administrador: %s', error.message);
+      return res.status(500).json({ 
+        error: 'Erro interno de autenticação',
+        code: 'AUTH_MIDDLEWARE_ERROR'
       });
-      
-      next();
     });
-  } catch (error) {
-    logger.error('Erro no middleware de autorização administrativa', undefined, {
-      error: error instanceof Error ? error.message : 'Erro desconhecido',
-      ip: req.ip,
-      url: req.originalUrl
-    });
-    
-    res.status(500).json({
-      error: 'Erro interno do servidor',
-      code: 'AUTH_ERROR'
-    });
-  }
-};
+}
 
-// Middleware de autorização para usuários autenticados ou administradores
-export const requireAuthOrAdmin = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    // Primeiro verificar autenticação
-    await requireAuth(req, res, (err) => {
-      if (err) {
-        next(err);
-        return;
-      }
-      
-      // Permitir acesso se for admin ou se o usuário estiver acessando seus próprios dados
-      if (req.user?.role === 'admin') {
-        next();
-        return;
-      }
-      
-      // Para outros casos, verificar se o usuário está acessando seus próprios dados
-      const resourceUserId = req.params['userId'] || req.body['userId'];
-      
-      if (resourceUserId && req.user?.id === resourceUserId) {
-        next();
-        return;
-      }
-      
-      logger.warn('Tentativa de acesso não autorizado', undefined, {
-        userId: req.user?.id,
-        email: req.user?.email,
-        role: req.user?.role,
-        resourceUserId: req.params.userId,
-        ip: req.ip,
-        url: req.originalUrl
-      });
-      
-      res.status(403).json({
-        error: 'Acesso negado. Você só pode acessar seus próprios dados.',
-        code: 'ACCESS_DENIED'
-      });
-    });
-  } catch (error) {
-    logger.error('Erro no middleware de autorização', undefined, {
-      error: error instanceof Error ? error.message : 'Erro desconhecido',
-      ip: req.ip,
-      url: req.originalUrl
-    });
-    
-    res.status(500).json({
-      error: 'Erro interno do servidor',
-      code: 'AUTH_ERROR'
-    });
-  }
-};
-
-// Exportar objeto default para compatibilidade
-export default {
-  requireAuth,
-  requireAdmin,
-  requireAuthOrAdmin
-}; 
+/**
+ * Export CSRF middleware from the csrf module
+ */
+export { setCsrfToken, validateCsrf } from './csrf.js';

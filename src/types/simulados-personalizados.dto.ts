@@ -5,14 +5,11 @@ export interface SimuladoPersonalizadoDTO {
   titulo: string;
   descricao?: string;
   configuracoes?: Record<string, unknown>;
-  created_at: string;
-  updated_at: string;
-  // Colunas adicionais que podem ser adicionadas
-  title?: string;
-  description?: string;
+  criado_em: string;
+  atualizado_em: string;
   questions_count?: number;
   time_minutes?: number;
-  difficulty?: string;
+  dificuldade?: string;
   deleted_at?: string;
   concurso_id?: string;
   is_public?: boolean;
@@ -27,11 +24,9 @@ export interface CreateSimuladoPersonalizadoDTO {
   titulo: string;
   descricao?: string;
   configuracoes?: Record<string, unknown>;
-  title?: string;
-  description?: string;
   questions_count?: number;
   time_minutes?: number;
-  difficulty?: string;
+  dificuldade?: string;
   concurso_id?: string;
   is_public?: boolean;
   categoria_id?: string;
@@ -43,11 +38,9 @@ export interface UpdateSimuladoPersonalizadoDTO {
   titulo?: string;
   descricao?: string;
   configuracoes?: Record<string, unknown>;
-  title?: string;
-  description?: string;
   questions_count?: number;
   time_minutes?: number;
-  difficulty?: string;
+  dificuldade?: string;
   deleted_at?: string;
   concurso_id?: string;
   is_public?: boolean;

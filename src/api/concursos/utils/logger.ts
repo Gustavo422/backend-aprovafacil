@@ -121,3 +121,6 @@ export const logErrorMsg = (message: string, data?: LogData) => {
 
 // Exportar o logger padrão
 export default logger;
+
+
+

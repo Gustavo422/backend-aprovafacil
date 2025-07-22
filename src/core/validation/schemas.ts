@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 // Schema de validação para usuário
-export const UserSchema = z.object({
+export const usuarioschema = z.object({
   id: z.string().optional(),
   email: z.string().email('Email inválido'),
   senha: z.string().min(8, 'Senha deve ter pelo menos 8 caracteres'),
@@ -63,7 +63,7 @@ export const PlanoEstudosSchema = z.object({
   titulo: z.string().min(1, 'Título é obrigatório'),
   descricao: z.string().optional(),
   disciplinas: z.array(z.string()).optional(),
-  cronograma: z.record(z.any()).optional(),
+  cronograma: z.record(z.unknown()).optional(),
   userId: z.string().optional(),
 });
 
@@ -89,7 +89,7 @@ export const QuestoesSemanaisSchema = z.object({
 export const EstatisticasSchema = z.object({
   id: z.string().optional(),
   tipo: z.string().min(1, 'Tipo é obrigatório'),
-  dados: z.record(z.any()).optional(),
+  dados: z.record(z.unknown()).optional(),
   userId: z.string().optional(),
 });
 
@@ -99,7 +99,7 @@ export const ConteudoSchema = z.object({
   titulo: z.string().min(1, 'Título é obrigatório'),
   tipo: z.string().min(1, 'Tipo é obrigatório'),
   conteudo: z.string().optional(),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.unknown()).optional(),
 });
 
 // Schema de validação para categoria de disciplinas
@@ -131,7 +131,7 @@ export const UserPreferenceSchema = z.object({
   id: z.string().optional(),
   userId: z.string().min(1, 'ID do usuário é obrigatório'),
   concursoId: z.string().optional(),
-  configuracoes: z.record(z.any()).optional(),
+  configuracoes: z.record(z.unknown()).optional(),
 });
 
 // Schema de validação para weak points
@@ -148,19 +148,19 @@ export const DashboardSchema = z.object({
   id: z.string().optional(),
   userId: z.string().min(1, 'ID do usuário é obrigatório'),
   tipo: z.string().min(1, 'Tipo é obrigatório'),
-  dados: z.record(z.any()).optional(),
+  dados: z.record(z.unknown()).optional(),
 });
 
 // Schema de validação para admin
 export const AdminSchema = z.object({
   id: z.string().optional(),
   acao: z.string().min(1, 'Ação é obrigatória'),
-  parametros: z.record(z.any()).optional(),
+  parametros: z.record(z.unknown()).optional(),
   timestamp: z.date().optional(),
 });
 
 // Tipos derivados dos schemas
-export type UserDTO = z.infer<typeof UserSchema>;
+export type UserDTO = z.infer<typeof usuarioschema>;
 export type LoginDTO = z.infer<typeof LoginSchema>;
 export type RegisterDTO = z.infer<typeof RegisterSchema>;
 export type ResetPasswordDTO = z.infer<typeof ResetPasswordSchema>;
@@ -179,3 +179,6 @@ export type UserPreferenceDTO = z.infer<typeof UserPreferenceSchema>;
 export type WeakPointsDTO = z.infer<typeof WeakPointsSchema>;
 export type DashboardDTO = z.infer<typeof DashboardSchema>;
 export type AdminDTO = z.infer<typeof AdminSchema>; 
+
+
+

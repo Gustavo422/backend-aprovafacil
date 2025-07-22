@@ -1,67 +1,67 @@
 // Tipos gerados automaticamente baseados no schema do banco de dados
 // Última atualização: 2025-07-06T21:18:33.623Z
-// Baseado no schema atual do banco (tabela users real)
+// Baseado no schema atual do banco (tabela usuarios real)
 
-export interface Users {
+export interface usuarios {
   id?: string;
-  name: string;
+  nome: string;
   email: string;
-  last_login?: Date;
-  created_at?: Date;
-  updated_at?: Date;
-  total_questions_answered?: number;
-  total_correct_answers?: number;
-  study_time_minutes?: number;
-  average_score?: number;
+  ultimo_login?: Date;
+  criado_em?: Date;
+  atualizado_em?: Date;
+  total_questoes_respondidas?: number;
+  total_resposta_corretas?: number;
+  tempo_estudo_minutos?: number;
+  pontuacao_media?: number;
 }
 
-export type UsersInsert = Omit<Users, 'id' | 'created_at' | 'updated_at'> & {
-  total_questions_answered?: number;
-  total_correct_answers?: number;
-  study_time_minutes?: number;
-  average_score?: number;
+export type usuariosInsert = Omit<usuarios, 'id' | 'criado_em' | 'atualizado_em'> & {
+  total_questoes_respondidas?: number;
+  total_resposta_corretas?: number;
+  tempo_estudo_minutos?: number;
+  pontuacao_media?: number;
 };
 
-export type UsersUpdate = Partial<Omit<Users, 'id' | 'created_at' | 'updated_at'>>;
+export type usuariosUpdate = Partial<Omit<usuarios, 'id' | 'criado_em' | 'atualizado_em'>>;
 
-export interface Concurso_categorias {
+export interface categorias_concursos {
   id?: string;
   nome: string;
   slug: string;
   descricao?: string;
   cor_primaria?: string;
   cor_secundaria?: string;
-  is_active?: boolean;
-  created_at?: Date;
-  updated_at?: Date;
+  ativo?: boolean;
+  criado_em?: Date;
+  atualizado_em?: Date;
 }
 
-export type Concurso_categoriasInsert = Omit<Concurso_categorias, 'id' | 'created_at' | 'updated_at'> & {
+export type categorias_concursosInsert = Omit<categorias_concursos, 'id' | 'criado_em' | 'atualizado_em'> & {
   cor_primaria?: string;
   cor_secundaria?: string;
-  is_active?: boolean;
+  ativo?: boolean;
 };
 
-export type Concurso_categoriasUpdate = Partial<Omit<Concurso_categorias, 'id' | 'created_at' | 'updated_at'>>;
+export type categorias_concursosUpdate = Partial<Omit<categorias_concursos, 'id' | 'criado_em' | 'atualizado_em'>>;
 
-export interface Categoria_disciplinas {
+export interface disciplinas_categoria {
   id?: string;
   categoria_id: string;
   nome: string;
   peso: number;
   horas_semanais: number;
   ordem?: number;
-  is_active?: boolean;
-  created_at?: Date;
-  updated_at?: Date;
+  ativo?: boolean;
+  criado_em?: Date;
+  atualizado_em?: Date;
 }
 
-export type Categoria_disciplinasInsert = Omit<Categoria_disciplinas, 'id' | 'created_at' | 'updated_at'> & {
+export type disciplinas_categoriaInsert = Omit<disciplinas_categoria, 'id' | 'criado_em' | 'atualizado_em'> & {
   ordem?: number;
-  is_active?: boolean;
+  ativo?: boolean;
 };
 
-export type Categoria_disciplinasUpdate = Partial<Omit<Categoria_disciplinas, 'id' | 'created_at' | 'updated_at'>>;
+export type disciplinas_categoriaUpdate = Partial<Omit<disciplinas_categoria, 'id' | 'criado_em' | 'atualizado_em'>>;
 
 export interface Concursos {
   id?: string;
@@ -74,26 +74,26 @@ export interface Concursos {
   data_prova?: Date;
   vagas?: number;
   salario?: number;
-  is_active?: boolean;
-  created_at?: Date;
-  updated_at?: Date;
+  ativo?: boolean;
+  criado_em?: Date;
+  atualizado_em?: Date;
 }
 
-export type ConcursosInsert = Omit<Concursos, 'id' | 'created_at' | 'updated_at'> & {
-  is_active?: boolean;
+export type ConcursosInsert = Omit<Concursos, 'id' | 'criado_em' | 'atualizado_em'> & {
+  ativo?: boolean;
 };
 
-export type ConcursosUpdate = Partial<Omit<Concursos, 'id' | 'created_at' | 'updated_at'>>;
+export type ConcursosUpdate = Partial<Omit<Concursos, 'id' | 'criado_em' | 'atualizado_em'>>;
 
 export interface Simulados_personalizados {
   id?: string;
-  title: string;
-  description?: string;
+  titulo: string;
+  descricao?: string;
   questions_count?: number;
   time_minutes?: number;
-  difficulty?: string;
-  created_at?: Date;
-  updated_at?: Date;
+  dificuldade?: string;
+  criado_em?: Date;
+  atualizado_em?: Date;
   deleted_at?: Date;
   concurso_id?: string;
   is_public?: boolean;
@@ -103,54 +103,53 @@ export interface Simulados_personalizados {
   slug?: string;
 }
 
-export type Simulados_personalizadosInsert = Omit<Simulados_personalizados, 'id' | 'created_at' | 'updated_at'> & {
+export type Simulados_personalizadosInsert = Omit<Simulados_personalizados, 'id' | 'criado_em' | 'atualizado_em'> & {
   questions_count?: number;
   time_minutes?: number;
-  difficulty?: string;
+  dificuldade?: string;
   is_public?: boolean;
 };
 
-export type Simulados_personalizadosUpdate = Partial<Omit<Simulados_personalizados, 'id' | 'created_at' | 'updated_at'>>;
+export type Simulados_personalizadosUpdate = Partial<Omit<Simulados_personalizados, 'id' | 'criado_em' | 'atualizado_em'>>;
 
-export interface Simulado_questions {
+export interface questoes_simulado {
   id?: string;
   simulado_id: string;
   question_number: number;
-  question_text: string;
-  alternatives: unknown;
-  correct_answer: string;
-  explanation?: string;
-  topic?: string;
-  difficulty?: string;
+  enunciado: string;
+  alternativas: unknown;
+  resposta_correta: string;
+  explicacao?: string;
+  tema?: string;
+  dificuldade?: string;
   deleted_at?: Date;
   concurso_id?: string;
   categoria_id?: string;
   peso_disciplina?: number;
   disciplina?: string;
-  created_at?: Date;
-  updated_at?: Date;
-  discipline?: string;
+  criado_em?: Date;
+  atualizado_em?: Date;
 }
 
-export type Simulado_questionsInsert = Omit<Simulado_questions, 'id' | 'created_at' | 'updated_at'> & {
+export type questoes_simuladoInsert = Omit<questoes_simulado, 'id' | 'criado_em' | 'atualizado_em'> & {
 };
 
-export type Simulado_questionsUpdate = Partial<Omit<Simulado_questions, 'id' | 'created_at' | 'updated_at'>>;
+export type questoes_simuladoUpdate = Partial<Omit<questoes_simulado, 'id' | 'criado_em' | 'atualizado_em'>>;
 
-export interface User_simulado_progress {
+export interface progresso_usuario_simulado {
   id?: string;
   user_id: string;
   simulado_id: string;
   score: number;
   time_taken_minutes: number;
   answers: unknown;
-  completed_at?: Date;
+  concluido_at?: Date;
 }
 
-export type User_simulado_progressInsert = Omit<User_simulado_progress, 'id' | 'created_at' | 'updated_at'> & {
+export type progresso_usuario_simuladoInsert = Omit<progresso_usuario_simulado, 'id' | 'criado_em' | 'atualizado_em'> & {
 };
 
-export type User_simulado_progressUpdate = Partial<Omit<User_simulado_progress, 'id' | 'created_at' | 'updated_at'>>;
+export type progresso_usuario_simuladoUpdate = Partial<Omit<progresso_usuario_simulado, 'id' | 'criado_em' | 'atualizado_em'>>;
 
 export interface Cartoes_memorizacao {
   id?: string;
@@ -161,37 +160,37 @@ export interface Cartoes_memorizacao {
   concurso_id?: string;
   categoria_id?: string;
   peso_disciplina?: number;
-  created_at?: Date;
+  criado_em?: Date;
   disciplina: string;
 }
 
-export type Cartoes_memorizacaoInsert = Omit<Cartoes_memorizacao, 'id' | 'created_at' | 'updated_at'> & {
+export type Cartoes_memorizacaoInsert = Omit<Cartoes_memorizacao, 'id' | 'criado_em' | 'atualizado_em'> & {
 };
 
-export type Cartoes_memorizacaoUpdate = Partial<Omit<Cartoes_memorizacao, 'id' | 'created_at' | 'updated_at'>>;
+export type Cartoes_memorizacaoUpdate = Partial<Omit<Cartoes_memorizacao, 'id' | 'criado_em' | 'atualizado_em'>>;
 
-export interface User_flashcard_progress {
+export interface progresso_usuario_flashcard {
   id?: string;
   user_id: string;
   flashcard_id: string;
   next_review?: Date;
   status?: string;
   review_count?: number;
-  updated_at?: Date;
+  atualizado_em?: Date;
 }
 
-export type User_flashcard_progressInsert = Omit<User_flashcard_progress, 'id' | 'created_at' | 'updated_at'> & {
+export type progresso_usuario_flashcardInsert = Omit<progresso_usuario_flashcard, 'id' | 'criado_em' | 'atualizado_em'> & {
   status?: string;
   review_count?: number;
 };
 
-export type User_flashcard_progressUpdate = Partial<Omit<User_flashcard_progress, 'id' | 'created_at' | 'updated_at'>>;
+export type progresso_usuario_flashcardUpdate = Partial<Omit<progresso_usuario_flashcard, 'id' | 'criado_em' | 'atualizado_em'>>;
 
 export interface Apostila_inteligente {
   id?: string;
-  title: string;
-  created_at?: Date;
-  description?: string;
+  titulo: string;
+  criado_em?: Date;
+  descricao?: string;
   concurso_id?: string;
   categoria_id?: string;
   disciplinas?: unknown;
@@ -199,70 +198,70 @@ export interface Apostila_inteligente {
   created_by?: string;
 }
 
-export type Apostila_inteligenteInsert = Omit<Apostila_inteligente, 'id' | 'created_at' | 'updated_at'> & {
+export type Apostila_inteligenteInsert = Omit<Apostila_inteligente, 'id' | 'criado_em' | 'atualizado_em'> & {
 };
 
-export type Apostila_inteligenteUpdate = Partial<Omit<Apostila_inteligente, 'id' | 'created_at' | 'updated_at'>>;
+export type Apostila_inteligenteUpdate = Partial<Omit<Apostila_inteligente, 'id' | 'criado_em' | 'atualizado_em'>>;
 
-export interface Apostila_content {
+export interface conteudo_apostila {
   id?: string;
   apostila_id: string;
   module_number: number;
-  title: string;
+  titulo: string;
   content_json: unknown;
   concurso_id?: string;
-  created_at?: Date;
+  criado_em?: Date;
 }
 
-export type Apostila_contentInsert = Omit<Apostila_content, 'id' | 'created_at' | 'updated_at'> & {
+export type conteudo_apostilaInsert = Omit<conteudo_apostila, 'id' | 'criado_em' | 'atualizado_em'> & {
 };
 
-export type Apostila_contentUpdate = Partial<Omit<Apostila_content, 'id' | 'created_at' | 'updated_at'>>;
+export type conteudo_apostilaUpdate = Partial<Omit<conteudo_apostila, 'id' | 'criado_em' | 'atualizado_em'>>;
 
-export interface User_apostila_progress {
+export interface progresso_usuario_apostila {
   id?: string;
   user_id: string;
-  apostila_content_id: string;
-  completed?: boolean;
-  progress_percentage?: number;
-  updated_at?: Date;
+  conteudo_apostila_id: string;
+  concluido?: boolean;
+  percentual_progresso?: number;
+  atualizado_em?: Date;
 }
 
-export type User_apostila_progressInsert = Omit<User_apostila_progress, 'id' | 'created_at' | 'updated_at'> & {
-  completed?: boolean;
-  progress_percentage?: number;
+export type progresso_usuario_apostilaInsert = Omit<progresso_usuario_apostila, 'id' | 'criado_em' | 'atualizado_em'> & {
+  concluido?: boolean;
+  percentual_progresso?: number;
 };
 
-export type User_apostila_progressUpdate = Partial<Omit<User_apostila_progress, 'id' | 'created_at' | 'updated_at'>>;
+export type progresso_usuario_apostilaUpdate = Partial<Omit<progresso_usuario_apostila, 'id' | 'criado_em' | 'atualizado_em'>>;
 
 export interface Questoes_semanais {
   id?: string;
-  title: string;
-  description?: string;
+  titulo: string;
+  descricao?: string;
   week_number: number;
   year: number;
   concurso_id?: string;
-  created_at?: Date;
+  criado_em?: Date;
 }
 
-export type Questoes_semanaisInsert = Omit<Questoes_semanais, 'id' | 'created_at' | 'updated_at'> & {
+export type Questoes_semanaisInsert = Omit<Questoes_semanais, 'id' | 'criado_em' | 'atualizado_em'> & {
 };
 
-export type Questoes_semanaisUpdate = Partial<Omit<Questoes_semanais, 'id' | 'created_at' | 'updated_at'>>;
+export type Questoes_semanaisUpdate = Partial<Omit<Questoes_semanais, 'id' | 'criado_em' | 'atualizado_em'>>;
 
-export interface User_questoes_semanais_progress {
+export interface progresso_usuario_questoes_semanais {
   id?: string;
   user_id: string;
   questoes_semanais_id: string;
   score: number;
   answers: unknown;
-  completed_at?: Date;
+  concluido_at?: Date;
 }
 
-export type User_questoes_semanais_progressInsert = Omit<User_questoes_semanais_progress, 'id' | 'created_at' | 'updated_at'> & {
+export type progresso_usuario_questoes_semanaisInsert = Omit<progresso_usuario_questoes_semanais, 'id' | 'criado_em' | 'atualizado_em'> & {
 };
 
-export type User_questoes_semanais_progressUpdate = Partial<Omit<User_questoes_semanais_progress, 'id' | 'created_at' | 'updated_at'>>;
+export type progresso_usuario_questoes_semanaisUpdate = Partial<Omit<progresso_usuario_questoes_semanais, 'id' | 'criado_em' | 'atualizado_em'>>;
 
 export interface Mapa_assuntos {
   id?: string;
@@ -271,28 +270,28 @@ export interface Mapa_assuntos {
   concurso_id?: string;
   categoria_id?: string;
   peso_disciplina?: number;
-  created_at?: Date;
+  criado_em?: Date;
   disciplina: string;
 }
 
-export type Mapa_assuntosInsert = Omit<Mapa_assuntos, 'id' | 'created_at' | 'updated_at'> & {
+export type Mapa_assuntosInsert = Omit<Mapa_assuntos, 'id' | 'criado_em' | 'atualizado_em'> & {
 };
 
-export type Mapa_assuntosUpdate = Partial<Omit<Mapa_assuntos, 'id' | 'created_at' | 'updated_at'>>;
+export type Mapa_assuntosUpdate = Partial<Omit<Mapa_assuntos, 'id' | 'criado_em' | 'atualizado_em'>>;
 
-export interface User_mapa_assuntos_status {
+export interface progresso_usuario_mapa_assuntos {
   id?: string;
   user_id: string;
   mapa_assunto_id: string;
   status?: string;
-  updated_at?: Date;
+  atualizado_em?: Date;
 }
 
-export type User_mapa_assuntos_statusInsert = Omit<User_mapa_assuntos_status, 'id' | 'created_at' | 'updated_at'> & {
+export type progresso_usuario_mapa_assuntosInsert = Omit<progresso_usuario_mapa_assuntos, 'id' | 'criado_em' | 'atualizado_em'> & {
   status?: string;
 };
 
-export type User_mapa_assuntos_statusUpdate = Partial<Omit<User_mapa_assuntos_status, 'id' | 'created_at' | 'updated_at'>>;
+export type progresso_usuario_mapa_assuntosUpdate = Partial<Omit<progresso_usuario_mapa_assuntos, 'id' | 'criado_em' | 'atualizado_em'>>;
 
 export interface Planos_estudo {
   id?: string;
@@ -301,54 +300,54 @@ export interface Planos_estudo {
   start_date: Date;
   end_date: Date;
   schedule: unknown;
-  created_at?: Date;
+  criado_em?: Date;
 }
 
-export type Planos_estudoInsert = Omit<Planos_estudo, 'id' | 'created_at' | 'updated_at'> & {
+export type Planos_estudoInsert = Omit<Planos_estudo, 'id' | 'criado_em' | 'atualizado_em'> & {
 };
 
-export type Planos_estudoUpdate = Partial<Omit<Planos_estudo, 'id' | 'created_at' | 'updated_at'>>;
+export type Planos_estudoUpdate = Partial<Omit<Planos_estudo, 'id' | 'criado_em' | 'atualizado_em'>>;
 
-export interface User_concurso_preferences {
+export interface preferencias_usuario_concurso {
   id?: string;
-  user_id: string;
+  usuario_id: string;
   concurso_id: string;
-  can_change_until: Date;
-  selected_at?: Date;
-  is_active?: boolean;
-  created_at?: Date;
-  updated_at?: Date;
+  pode_alterar_ate: Date;
+  selecionado_em?: Date;
+  ativo?: boolean;
+  criado_em?: Date;
+  atualizado_em?: Date;
 }
 
-export type User_concurso_preferencesInsert = Omit<User_concurso_preferences, 'id' | 'created_at' | 'updated_at'> & {
-  selected_at?: Date;
-  is_active?: boolean;
+export type preferencias_usuario_concursoInsert = Omit<preferencias_usuario_concurso, 'id' | 'criado_em' | 'atualizado_em'> & {
+  selecionado_em?: Date;
+  ativo?: boolean;
 };
 
-export type User_concurso_preferencesUpdate = Partial<Omit<User_concurso_preferences, 'id' | 'created_at' | 'updated_at'>>;
+export type preferencias_usuario_concursoUpdate = Partial<Omit<preferencias_usuario_concurso, 'id' | 'criado_em' | 'atualizado_em'>>;
 
-export interface User_discipline_stats {
+export interface estatisticas_usuario_disciplina {
   id?: string;
   user_id: string;
   total_questions?: number;
-  correct_answers?: number;
-  average_score?: number;
-  study_time_minutes?: number;
+  resposta_corretas?: number;
+  pontuacao_media?: number;
+  tempo_estudo_minutos?: number;
   last_activity?: Date;
-  created_at?: Date;
-  updated_at?: Date;
+  criado_em?: Date;
+  atualizado_em?: Date;
   disciplina: string;
 }
 
-export type User_discipline_statsInsert = Omit<User_discipline_stats, 'id' | 'created_at' | 'updated_at'> & {
+export type estatisticas_usuario_disciplinaInsert = Omit<estatisticas_usuario_disciplina, 'id' | 'criado_em' | 'atualizado_em'> & {
   total_questions?: number;
-  correct_answers?: number;
-  average_score?: number;
-  study_time_minutes?: number;
+  resposta_corretas?: number;
+  pontuacao_media?: number;
+  tempo_estudo_minutos?: number;
   last_activity?: Date;
 };
 
-export type User_discipline_statsUpdate = Partial<Omit<User_discipline_stats, 'id' | 'created_at' | 'updated_at'>>;
+export type estatisticas_usuario_disciplinaUpdate = Partial<Omit<estatisticas_usuario_disciplina, 'id' | 'criado_em' | 'atualizado_em'>>;
 
 export interface User_performance_cache {
   id?: string;
@@ -356,47 +355,47 @@ export interface User_performance_cache {
   cache_key: string;
   cache_data: unknown;
   expires_at: Date;
-  created_at?: Date;
-  updated_at?: Date;
+  criado_em?: Date;
+  atualizado_em?: Date;
 }
 
-export type User_performance_cacheInsert = Omit<User_performance_cache, 'id' | 'created_at' | 'updated_at'> & {
+export type User_performance_cacheInsert = Omit<User_performance_cache, 'id' | 'criado_em' | 'atualizado_em'> & {
 };
 
-export type User_performance_cacheUpdate = Partial<Omit<User_performance_cache, 'id' | 'created_at' | 'updated_at'>>;
+export type User_performance_cacheUpdate = Partial<Omit<User_performance_cache, 'id' | 'criado_em' | 'atualizado_em'>>;
 
-export interface Audit_logs {
+export interface logs_auditoria {
   id?: string;
   user_id?: string;
   action: string;
-  table_name: string;
+  table_nome: string;
   record_id?: string;
   old_values?: unknown;
   new_values?: unknown;
   ip_address?: string;
   user_agent?: string;
-  created_at?: Date;
+  criado_em?: Date;
 }
 
-export type Audit_logsInsert = Omit<Audit_logs, 'id' | 'created_at' | 'updated_at'> & {
+export type logs_auditoriaInsert = Omit<logs_auditoria, 'id' | 'criado_em' | 'atualizado_em'> & {
 };
 
-export type Audit_logsUpdate = Partial<Omit<Audit_logs, 'id' | 'created_at' | 'updated_at'>>;
+export type logs_auditoriaUpdate = Partial<Omit<logs_auditoria, 'id' | 'criado_em' | 'atualizado_em'>>;
 
 export interface Cache_config {
   id?: string;
   cache_key: string;
-  description?: string;
+  descricao?: string;
   ttl_minutes?: number;
-  created_at?: Date;
-  updated_at?: Date;
+  criado_em?: Date;
+  atualizado_em?: Date;
 }
 
-export type Cache_configInsert = Omit<Cache_config, 'id' | 'created_at' | 'updated_at'> & {
+export type Cache_configInsert = Omit<Cache_config, 'id' | 'criado_em' | 'atualizado_em'> & {
   ttl_minutes?: number;
 };
 
-export type Cache_configUpdate = Partial<Omit<Cache_config, 'id' | 'created_at' | 'updated_at'>>;
+export type Cache_configUpdate = Partial<Omit<Cache_config, 'id' | 'criado_em' | 'atualizado_em'>>;
 
 // Tipos de resposta da API
 export interface ApiResponse<T> {
@@ -430,15 +429,15 @@ export interface DateRange {
 }
 
 // Tipos específicos para estatísticas
-export interface UserStats {
+export interface usuariostats {
   totalQuestionsAnswered: number;
   totalCorrectAnswers: number;
   studyTimeMinutes: number;
   averageScore: number;
-  lastLogin?: Date;
+  UltimoLogin?: Date;
 }
 
-export interface DisciplineStats {
+export interface disciplinaStats {
   disciplina: string;
   totalQuestions: number;
   correctAnswers: number;
@@ -450,7 +449,7 @@ export interface DisciplineStats {
 // Tipos para configurações de cache
 export interface CacheConfig {
   cacheKey: string;
-  description?: string;
+  descricao?: string;
   ttlMinutes: number;
 }
 
@@ -458,7 +457,7 @@ export interface CacheConfig {
 export interface AuditLog {
   user_id?: string;
   action: string;
-  table_name: string;
+  table_nome: string;
   record_id?: string;
   old_values?: unknown;
   new_values?: unknown;
@@ -473,7 +472,7 @@ export interface SimuladoProgress {
   score: number;
   time_taken_minutes: number;
   answers: unknown;
-  completed_at?: Date;
+  concluido_at?: Date;
 }
 
 // Tipos para progresso de questões semanais
@@ -482,15 +481,15 @@ export interface QuestoesSemanaisProgress {
   questoes_semanais_id: string;
   score: number;
   answers: unknown;
-  completed_at?: Date;
+  concluido_at?: Date;
 }
 
 // Tipos para progresso de apostila
 export interface ApostilaProgress {
   user_id: string;
-  apostila_content_id: string;
-  completed: boolean;
-  progress_percentage: number;
+  conteudo_apostila_id: string;
+  concluido: boolean;
+  percentual_progresso: number;
 }
 
 // Tipos para progresso de flashcards
@@ -522,19 +521,19 @@ export interface PlanoEstudo {
 export interface ConcursoPreferences {
   user_id: string;
   concurso_id: string;
-  can_change_until: Date;
-  selected_at?: Date;
-  is_active?: boolean;
+  pode_alterar_ate: Date;
+  selecionado_em?: Date;
+  ativo?: boolean;
 }
 
 // Tipos para estatísticas de disciplina (renomeado para evitar conflito)
-export interface UserDisciplineStatsDetail {
+export interface UserdisciplinaStatsDetail {
   user_id: string;
   disciplina: string;
   total_questions: number;
-  correct_answers: number;
-  average_score: number;
-  study_time_minutes: number;
+  resposta_corretas: number;
+  pontuacao_media: number;
+  tempo_estudo_minutos: number;
   last_activity: Date;
 }
 
@@ -548,11 +547,11 @@ export interface PerformanceCache {
 
 // Tipos para simulados personalizados
 export interface SimuladoPersonalizado {
-  title: string;
-  description?: string;
+  titulo: string;
+  descricao?: string;
   questions_count: number;
   time_minutes: number;
-  difficulty: string;
+  dificuldade: string;
   concurso_id?: string;
   is_public?: boolean;
   created_by?: string;
@@ -565,12 +564,12 @@ export interface SimuladoPersonalizado {
 export interface SimuladoQuestion {
   simulado_id: string;
   question_number: number;
-  question_text: string;
-  alternatives: unknown;
-  correct_answer: string;
-  explanation?: string;
-  topic?: string;
-  difficulty?: string;
+  enunciado: string;
+  alternativas: unknown;
+  resposta_correta: string;
+  explicacao?: string;
+  tema?: string;
+  dificuldade?: string;
   concurso_id?: string;
   categoria_id?: string;
   peso_disciplina?: number;
@@ -591,8 +590,8 @@ export interface CartaoMemorizacao {
 
 // Tipos para apostila inteligente
 export interface ApostilaInteligente {
-  title: string;
-  description?: string;
+  titulo: string;
+  descricao?: string;
   concurso_id?: string;
   categoria_id?: string;
   disciplinas?: unknown;
@@ -604,15 +603,15 @@ export interface ApostilaInteligente {
 export interface ApostilaContent {
   apostila_id: string;
   module_number: number;
-  title: string;
+  titulo: string;
   content_json: unknown;
   concurso_id?: string;
 }
 
 // Tipos para questões semanais
 export interface QuestoesSemanais {
-  title: string;
-  description?: string;
+  titulo: string;
+  descricao?: string;
   week_number: number;
   year: number;
   concurso_id?: string;
@@ -635,7 +634,7 @@ export interface ConcursoCategoria {
   descricao?: string;
   cor_primaria?: string;
   cor_secundaria?: string;
-  is_active?: boolean;
+  ativo?: boolean;
 }
 
 // Tipos para disciplinas de categoria
@@ -645,7 +644,7 @@ export interface CategoriaDisciplina {
   peso: number;
   horas_semanais: number;
   ordem: number;
-  is_active?: boolean;
+  ativo?: boolean;
 }
 
 // Tipos para concursos
@@ -659,28 +658,28 @@ export interface Concurso {
   data_prova?: Date;
   vagas?: number;
   salario?: number;
-  is_active?: boolean;
+  ativo?: boolean;
 }
 
 // Tipos para usuários (baseado no schema real do banco)
 export interface User {
   id?: string;
-  name: string;
+  nome: string;
   email: string;
-  last_login?: Date;
-  created_at?: Date;
-  updated_at?: Date;
-  total_questions_answered?: number;
-  total_correct_answers?: number;
-  study_time_minutes?: number;
-  average_score?: number;
+  ultimo_login?: Date;
+  criado_em?: Date;
+  atualizado_em?: Date;
+  total_questoes_respondidas?: number;
+  total_resposta_corretas?: number;
+  tempo_estudo_minutos?: number;
+  pontuacao_media?: number;
 }
 
 // Tipos para logs de auditoria (renomeado para evitar conflito)
 export interface AuditLogEntry {
   user_id?: string;
   action: string;
-  table_name: string;
+  table_nome: string;
   record_id?: string;
   old_values?: unknown;
   new_values?: unknown;
@@ -691,6 +690,6 @@ export interface AuditLogEntry {
 // Tipos para configuração de cache (renomeado para evitar conflito)
 export interface CacheConfigSettings {
   cache_key: string;
-  description?: string;
+  descricao?: string;
   ttl_minutes: number;
 }

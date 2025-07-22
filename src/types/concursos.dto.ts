@@ -10,9 +10,9 @@ export interface ConcursoDTO {
   data_prova?: string;
   vagas?: number;
   salario?: number;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
+  ativo: boolean;
+  criado_em: string;
+  atualizado_em: string;
 }
 
 // DTO para criação de concurso
@@ -26,7 +26,7 @@ export interface CreateConcursoDTO {
   data_prova?: string;
   vagas?: number;
   salario?: number;
-  is_active?: boolean;
+  ativo?: boolean;
 }
 
 // DTO para atualização de concurso
@@ -40,12 +40,12 @@ export interface UpdateConcursoDTO {
   data_prova?: string;
   vagas?: number;
   salario?: number;
-  is_active?: boolean;
+  ativo?: boolean;
 }
 
-// DTO para resposta de concurso com relacionamentos
+// DTO para resposta de concurso com relacionomentos
 export interface ConcursoWithRelationsDTO extends ConcursoDTO {
-  concurso_categorias?: {
+  categorias_concursos?: {
     id: string;
     nome: string;
     slug: string;
@@ -60,7 +60,7 @@ export interface ConcursoFiltersDTO {
   categoria_id?: string;
   ano?: number;
   banca?: string;
-  is_active?: boolean;
+  ativo?: boolean;
   search?: string;
   page?: number;
   limit?: number;
@@ -77,3 +77,6 @@ export interface PaginatedConcursosResponseDTO {
     totalPages: number;
   };
 } 
+
+
+

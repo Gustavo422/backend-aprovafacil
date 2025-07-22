@@ -19,7 +19,7 @@ export async function registerLogHistory({
   message: string,
   details?: string
 }) {
-  await supabase.from('log_history').insert({
+  await supabase.from('historico_logs').insert({
     user_id,
     user_email,
     level,
@@ -28,3 +28,6 @@ export async function registerLogHistory({
     details
   });
 } 
+
+
+

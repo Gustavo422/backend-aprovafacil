@@ -15,7 +15,7 @@ const colors = {
 };
 
 // Caminhos importantes
-const rootDir = path.resolve(__dirname, '../..');
+const rootDir = path.resolve(__dirnome, '../..');
 const envExamplePath = path.join(rootDir, '.env.production.example');
 const envPath = path.join(rootDir, '.env.production');
 const gitignorePath = path.join(rootDir, '.gitignore');
@@ -132,3 +132,6 @@ const main = async () => {
 
 // Executa o script
 main();
+
+
+

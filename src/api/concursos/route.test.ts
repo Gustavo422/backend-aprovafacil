@@ -1,8 +1,12 @@
 import dotenv from 'dotenv';
-dotenv.config({ path: __dirname + '/../../.env' });
+import path from 'path';
+import { URL } from 'url';
+dotenv.config({ path: path.dirname(new URL(import.meta.url).pathname) + '/../../.env' });
 import request from 'supertest';
 import { describe, it, expect } from 'vitest';
-import app from '../../index.js';
+import AprovaFacilApp from '../../app.js';
+
+const app = new AprovaFacilApp().getApp();
 
 describe('Concursos API (integração)', () => {
   it('deve listar concursos (GET /api/concursos)', async () => {
@@ -16,3 +20,6 @@ describe('Concursos API (integração)', () => {
     expect(Array.isArray(res.body.data)).toBe(true);
   });
 }); 
+
+
+

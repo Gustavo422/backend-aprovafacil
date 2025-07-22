@@ -2,7 +2,7 @@ import express, { Request, Response } from 'express';
 import { supabase } from '../../config/supabase.js';
 import { requestLogger } from '../../middleware/logger.js';
 import { rateLimit } from '../../middleware/rateLimit.js';
-import { requireAuth, requireAdmin } from '../../middleware/auth.js';
+import { requireAuth } from '../../middleware/auth.js';
 
 const router = express.Router();
 
@@ -16,18 +16,18 @@ router.use(rateLimit);
 
 router.get('/', async (req: Request, res: Response) => {
     try {
-        const { categoria_id, is_active } = req.query;
+        const { categoria_id, ativo } = req.query;
 
         // Construir query base
-        let query = supabase.from('categoria_disciplinas').select('*');
+        let query = supabase.from('disciplinas_categoria').select('*');
 
         // Aplicar filtros
         if (categoria_id) {
             query = query.eq('categoria_id', categoria_id);
         }
 
-        if (is_active !== undefined) {
-            query = query.eq('is_active', is_active === 'true');
+        if (ativo !== undefined) {
+            query = query.eq('ativo', ativo === 'true');
         }
 
         // Executar query
@@ -59,7 +59,7 @@ router.get('/', async (req: Request, res: Response) => {
 // POST - Criar disciplina (apenas admin)
 // ========================================
 
-router.post('/', requireAuth, requireAdmin, async (req: Request, res: Response) => {
+router.post('/', requireAuth, async (req: Request, res: Response) => {
     try {
         const { categoria_id, nome, peso, horas_semanais, ordem } = req.body;
 
@@ -92,10 +92,10 @@ router.post('/', requireAuth, requireAdmin, async (req: Request, res: Response) 
 
         // Verificar se a categoria existe
         const { data: categoria, error: categoriaError } = await supabase
-            .from('concurso_categorias')
+            .from('categorias_concursos')
             .select('id')
             .eq('id', categoria_id)
-            .eq('is_active', true)
+            .eq('ativo', true)
             .single();
 
         if (categoriaError || !categoria) {
@@ -108,7 +108,7 @@ router.post('/', requireAuth, requireAdmin, async (req: Request, res: Response) 
 
         // Verificar se já existe disciplina com o mesmo nome na categoria
         const { data: existingDisciplina, error: existingError } = await supabase
-            .from('categoria_disciplinas')
+            .from('disciplinas_categoria')
             .select('id')
             .eq('categoria_id', categoria_id)
             .eq('nome', nome)
@@ -133,14 +133,14 @@ router.post('/', requireAuth, requireAdmin, async (req: Request, res: Response) 
 
         // Criar disciplina
         const { data: disciplina, error } = await supabase
-            .from('categoria_disciplinas')
+            .from('disciplinas_categoria')
             .insert({
                 categoria_id,
                 nome,
                 peso,
                 horas_semanais,
                 ordem,
-                is_active: true
+                ativo: true
             })
             .select()
             .single();
@@ -172,14 +172,14 @@ router.post('/', requireAuth, requireAdmin, async (req: Request, res: Response) 
 // PUT - Atualizar disciplina
 // ========================================
 
-router.put('/:id', requireAuth, requireAdmin, async (req: Request, res: Response) => {
+router.put('/:id', requireAuth, async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const { categoria_id, nome, peso, horas_semanais, ordem, is_active } = req.body;
+        const { categoria_id, nome, peso, horas_semanais, ordem, ativo } = req.body;
 
         // Verificar se a disciplina existe
         const { data: existingDisciplina, error: existingError } = await supabase
-            .from('categoria_disciplinas')
+            .from('disciplinas_categoria')
             .select('*')
             .eq('id', id)
             .single();
@@ -211,15 +211,15 @@ router.put('/:id', requireAuth, requireAdmin, async (req: Request, res: Response
 
         // Atualizar disciplina
         const { data: disciplina, error } = await supabase
-            .from('categoria_disciplinas')
+            .from('disciplinas_categoria')
             .update({
                 categoria_id,
                 nome,
                 peso,
                 horas_semanais,
                 ordem,
-                is_active,
-                updated_at: new Date().toISOString()
+                ativo,
+                atualizado_em: new Date().toISOString()
             })
             .eq('id', id)
             .select()
@@ -252,13 +252,13 @@ router.put('/:id', requireAuth, requireAdmin, async (req: Request, res: Response
 // DELETE - Deletar disciplina
 // ========================================
 
-router.delete('/:id', requireAuth, requireAdmin, async (req: Request, res: Response) => {
+router.delete('/:id', requireAuth, async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
 
         // Verificar se a disciplina existe
         const { data: existingDisciplina, error: existingError } = await supabase
-            .from('categoria_disciplinas')
+            .from('disciplinas_categoria')
             .select('id')
             .eq('id', id)
             .single();
@@ -273,7 +273,7 @@ router.delete('/:id', requireAuth, requireAdmin, async (req: Request, res: Respo
 
         // Deletar disciplina
         const { error } = await supabase
-            .from('categoria_disciplinas')
+            .from('disciplinas_categoria')
             .delete()
             .eq('id', id);
 
@@ -300,3 +300,6 @@ router.delete('/:id', requireAuth, requireAdmin, async (req: Request, res: Respo
 });
 
 export default router;
+
+
+

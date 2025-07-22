@@ -5,7 +5,7 @@ export interface LogStatus {
   status: 'healthy' | 'warning' | 'error';
   recentLogs: {
     timestamp: string;
-    level: 'info' | 'warn' | 'error' | 'debug';
+    level: 'info' | 'warning' | 'error' | 'debug';
     message: string;
     service?: string;
   }[];
@@ -73,7 +73,7 @@ export async function getLogStatus(): Promise<LogStatus> {
     logStats = {
       total: recentLogs.length,
       errors: recentLogs.filter(log => log.level === 'error').length,
-      warnings: recentLogs.filter(log => log.level === 'warn').length,
+      warnings: recentLogs.filter(log => log.level === 'warning').length,
       info: recentLogs.filter(log => log.level === 'info').length
     };
     
@@ -93,11 +93,11 @@ export async function getLogStatus(): Promise<LogStatus> {
   };
 }
 
-function isLogFile(filename: string): boolean {
-  return filename.endsWith('.log') || 
-         filename.includes('app.log') || 
-         filename.includes('error.log') ||
-         filename.includes('access.log');
+function isLogFile(filenome: string): boolean {
+  return filenome.endsWith('.log') || 
+         filenome.includes('app.log') || 
+         filenome.includes('error.log') ||
+         filenome.includes('access.log');
 }
 
 function parseLogFile(content: string): LogStatus['recentLogs'] {
@@ -122,7 +122,7 @@ function parseLogFile(content: string): LogStatus['recentLogs'] {
         if (logMatch) {
           logs.push({
             timestamp: logMatch[1],
-            level: logMatch[2] as 'info' | 'warn' | 'error' | 'debug',
+            level: logMatch[2] as 'info' | 'warning' | 'error' | 'debug',
             message: logMatch[3]
           });
         }
@@ -131,3 +131,6 @@ function parseLogFile(content: string): LogStatus['recentLogs'] {
   
   return logs;
 } 
+
+
+

@@ -112,9 +112,9 @@ describe('ConcursosRepository', () => {
         nome: 'Concurso Válido',
         descricao: 'Descrição válida',
         ano: 2024,
-        is_active: true,
-        created_at: '2024-01-01T00:00:00Z',
-        updated_at: '2024-01-01T00:00:00Z'
+        ativo: true,
+        criado_em: '2024-01-01T00:00:00Z',
+        atualizado_em: '2024-01-01T00:00:00Z'
       };
 
       expect(validConcurso.id).toBeDefined();
@@ -127,9 +127,9 @@ describe('ConcursosRepository', () => {
       const concursoMinimal: ConcursoDTO = {
         id: 'minimal-id',
         nome: 'Concurso Mínimo',
-        is_active: true,
-        created_at: '2024-01-01T00:00:00Z',
-        updated_at: '2024-01-01T00:00:00Z'
+        ativo: true,
+        criado_em: '2024-01-01T00:00:00Z',
+        atualizado_em: '2024-01-01T00:00:00Z'
       };
 
       expect(concursoMinimal.id).toBeDefined();
@@ -189,3 +189,6 @@ describe('ConcursosRepository', () => {
     });
   });
 }); 
+
+
+

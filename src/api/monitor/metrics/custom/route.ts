@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: 'Token de autenticação inválido' }, { status: 401 });
   }
   const { data: userProfile, error: profileError } = await supabase
-    .from('users')
+    .from('usuarios')
     .select('id, email, role, nome')
     .eq('id', user.id)
     .single();
@@ -47,3 +47,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: err instanceof Error ? err.message : 'Erro desconhecido' }, { status: 500 });
   }
 } 
+
+
+

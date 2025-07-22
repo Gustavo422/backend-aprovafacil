@@ -6,7 +6,7 @@ interface ListarParams {
   categoria_id?: string;
   ano?: number;
   banca?: string;
-  is_active?: boolean | string;
+  ativo?: boolean | string;
   search?: string;
 }
 
@@ -16,17 +16,17 @@ interface ConcursoData {
   ano?: number;
   banca?: string;
   categoria_id?: string;
-  is_active?: boolean;
+  ativo?: boolean;
   [key: string]: unknown;
 }
 
 export class ConcursosService {
-  static async listar({ page = 1, limit = 10, categoria_id, ano, banca, is_active, search }: ListarParams) {
+  static async listar({ page = 1, limit = 10, categoria_id, ano, banca, ativo, search }: ListarParams) {
     let query = supabase
       .from('concursos')
       .select(`
         *,
-        concurso_categorias (
+        categorias_concursos (
           id,
           nome,
           slug,
@@ -45,8 +45,8 @@ export class ConcursosService {
     if (banca) {
       query = query.ilike('banca', `%${banca}%`);
     }
-    if (is_active !== undefined) {
-      query = query.eq('is_active', is_active === true || is_active === 'true');
+    if (ativo !== undefined) {
+      query = query.eq('ativo', ativo === true || ativo === 'true');
     }
     if (search) {
       query = query.or(`nome.ilike.%${search}%,descricao.ilike.%${search}%`);
@@ -55,7 +55,7 @@ export class ConcursosService {
     const offset = (page - 1) * limit;
     const { data: concursos, error: concursosError, count } = await query
       .range(offset, offset + limit - 1)
-      .order('created_at', { ascending: false });
+      .order('criado_em', { ascending: false });
 
     if (concursosError) {
       throw concursosError;
@@ -89,7 +89,7 @@ export class ConcursosService {
       .from('concursos')
       .select(`
         *,
-        concurso_categorias (
+        categorias_concursos (
           id,
           nome,
           slug,
@@ -113,7 +113,7 @@ export class ConcursosService {
       .insert(concursoData)
       .select(`
         *,
-        concurso_categorias (
+        categorias_concursos (
           id,
           nome,
           slug,
@@ -130,3 +130,6 @@ export class ConcursosService {
     return concurso;
   }
 } 
+
+
+

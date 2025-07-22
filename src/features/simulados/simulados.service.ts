@@ -27,8 +27,11 @@ export class SimuladosService {
     throw new Error('Not implemented');
   }
 
-  async corrigirSimulado(): Promise<string | number | boolean | undefined> {
+  async corrigir(): Promise<string | number | boolean | undefined> {
     // TODO: Implementar lógica de correção de simulado
     return undefined;
   }
 } 
+
+
+

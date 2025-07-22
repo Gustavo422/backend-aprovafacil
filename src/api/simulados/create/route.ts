@@ -9,27 +9,27 @@ import { z } from 'zod';
 
 // Schema de validação para criação de simulado
 const createSimuladoSchema = z.object({
-  title: z.string().min(1, 'Título é obrigatório'),
-  description: z.string().optional(),
+  titulo: z.string().min(1, 'Título é obrigatório'),
+  descricao: z.string().optional(),
   questions_count: z.number().min(1, 'Deve ter pelo menos 1 questão'),
   time_minutes: z.number().min(1, 'Tempo deve ser maior que 0'),
-  difficulty: z.enum(['Fácil', 'Médio', 'Difícil']),
+  dificuldade: z.enum(['Fácil', 'Médio', 'Difícil']),
   concurso_id: z.string().uuid().optional(),
   is_public: z.boolean().default(true),
   questions: z.array(z.object({
-    question_text: z.string().min(1, 'Texto da questão é obrigatório'),
-    alternatives: z.array(z.string()).min(2, 'Deve ter pelo menos 2 alternativas'),
-    correct_answer: z.string().min(1, 'Resposta correta é obrigatória'),
-    explanation: z.string().optional(),
-    discipline: z.string().optional(),
-    topic: z.string().optional(),
-    difficulty: z.enum(['Fácil', 'Médio', 'Difícil']).optional(),
+    enunciado: z.string().min(1, 'Texto da questão é obrigatório'),
+    alternativas: z.array(z.string()).min(2, 'Deve ter pelo menos 2 alternativas'),
+    resposta_correta: z.string().min(1, 'Resposta correta é obrigatória'),
+    explicacao: z.string().optional(),
+    disciplina: z.string().optional(),
+    tema: z.string().optional(),
+    dificuldade: z.enum(['Fácil', 'Médio', 'Difícil']).optional(),
   })).min(1, 'Deve ter pelo menos 1 questão'),
 });
 
 // Função utilitária para gerar slug a partir do título
-function generateSlug(title: string) {
-  return title
+function generateSlug(titulo: string) {
+  return titulo
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '') // Remove acentos
@@ -64,18 +64,18 @@ export async function POST(request: Request) {
     }
 
     // Gerar slug a partir do título
-    const slug = generateSlug(validatedData.title);
+    const slug = generateSlug(validatedData.titulo);
 
     // Iniciar transação
     const { data: simulado, error: simuladoError } = await supabase
       .from('simulados-personalizados')
       .insert({
-        title: validatedData.title,
+        titulo: validatedData.titulo,
         slug,
-        description: validatedData.description,
+        descricao: validatedData.descricao,
         questions_count: validatedData.questions_count,
         time_minutes: validatedData.time_minutes,
-        difficulty: validatedData.difficulty,
+        dificuldade: validatedData.dificuldade,
         concurso_id: validatedData.concurso_id,
         is_public: validatedData.is_public,
         created_by: user.id,
@@ -95,18 +95,18 @@ export async function POST(request: Request) {
     const questionsToInsert = validatedData.questions.map((question, index) => ({
       simulado_id: simulado.id,
       question_number: index + 1,
-      question_text: question.question_text,
-      alternatives: question.alternatives,
-      correct_answer: question.correct_answer,
-      explanation: question.explanation,
-      discipline: question.discipline,
-      topic: question.topic,
-      difficulty: question.difficulty || validatedData.difficulty,
+      enunciado: question.enunciado,
+      alternativas: question.alternativas,
+      resposta_correta: question.resposta_correta,
+      explicacao: question.explicacao,
+      disciplina: question.disciplina,
+      tema: question.tema,
+      dificuldade: question.dificuldade || validatedData.dificuldade,
       concurso_id: validatedData.concurso_id,
     }));
 
     const { data: questions, error: questionsError } = await supabase
-      .from('simulado_questions')
+      .from('questoes_simulado')
       .insert(questionsToInsert)
       .select();
 
@@ -126,15 +126,15 @@ export async function POST(request: Request) {
     }
 
     // Log de auditoria
-    await supabase.from('audit_logs').insert({
+    await supabase.from('logs_auditoria').insert({
       user_id: user.id,
       action: 'SIMULADO_CREATED',
-      table_name: 'simulados-personalizados',
+      table_nome: 'simulados-personalizados',
       record_id: simulado.id,
       new_values: {
-        title: validatedData.title,
+        titulo: validatedData.titulo,
         questions_count: validatedData.questions_count,
-        difficulty: validatedData.difficulty,
+        dificuldade: validatedData.dificuldade,
       },
     });
 
@@ -166,3 +166,6 @@ export async function POST(request: Request) {
 }
 
 */
+
+
+

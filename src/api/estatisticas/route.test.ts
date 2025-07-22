@@ -7,3 +7,6 @@ describe('Estatisticas API', () => {
     expect(true).toBe(true);
   });
 }); 
+
+
+

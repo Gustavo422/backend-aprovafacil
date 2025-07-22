@@ -6,6 +6,9 @@ export interface Cronograma {
   descricao?: string;
   data_inicio: string;
   data_fim: string;
-  created_at: string;
-  updated_at: string;
+  criado_em: string;
+  atualizado_em: string;
 } 
+
+
+

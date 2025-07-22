@@ -6,3 +6,6 @@ export async function GET() {
   const data = cronogramaService.getCronograma();
   return NextResponse.json(data);
 } 
+
+
+

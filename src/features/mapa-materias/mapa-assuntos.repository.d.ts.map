@@ -1,1 +1,2 @@
 {"version":3,"file":"mapa-assuntos.repository.d.ts","sourceRoot":"","sources":["mapa-assuntos.repository.ts"],"names":[],"mappings":"AAEA,qBAAa,sBAAsB;IAC3B,OAAO,IAAI,OAAO,CAAC,OAAO,EAAE,CAAC;IAK7B,UAAU,IAAI,OAAO,CAAC,OAAO,EAAE,CAAC;IAKhC,MAAM,CAAC,IAAI,EAAE,OAAO,GAAG,OAAO,CAAC,OAAO,CAAC;IAKvC,MAAM,IAAI,OAAO,CAAC,OAAO,GAAG,IAAI,CAAC;IAKjC,MAAM,IAAI,OAAO,CAAC,OAAO,CAAC;CAIjC"}
+

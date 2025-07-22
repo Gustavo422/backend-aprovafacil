@@ -1,12 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 import fs from 'fs';
 import path from 'path';
+import { URL } from 'url';
 
 // Load environment variables
 import 'dotenv/config';
-
-// Use __dirname from CommonJS
-const currentDir = __dirname;
 
 const supabaseUrl = process.env['NEXT_PUBLIC_SUPABASE_URL'];
 const supabaseServiceKey = process.env['SUPABASE_SERVICE_ROLE_KEY'];
@@ -22,10 +20,10 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 async function runMigration(): Promise<void> {
   try {
-    console.log('🚀 Starting users table migration...');
+    console.log('🚀 Starting usuarios table migration...');
 
     // Read the migration SQL file
-    const migrationPath = path.join(currentDir, '../docs/database/add_users_columns.sql');
+    const migrationPath = path.join(path.dirname(new URL(import.meta.url).pathname), '../migrations/users.sql');
     const migrationSQL = fs.readFileSync(migrationPath, 'utf8');
 
     console.log('📄 Executing migration SQL...');
@@ -55,14 +53,14 @@ async function runMigration(): Promise<void> {
       }
     }
 
-    console.log('✅ Migration completed successfully!');
+    console.log('✅ Migration concluido successfully!');
     console.log('');
-    console.log('📋 Added columns to users table:');
-    console.log('   - total_questions_answered (INTEGER)');
-    console.log('   - total_correct_answers (INTEGER)');
-    console.log('   - study_time_minutes (INTEGER)');
-    console.log('   - average_score (DECIMAL(5,2))');
-    console.log('   - updated_at (TIMESTAMP)');
+    console.log('📋 Added columns to usuarios table:');
+    console.log('   - total_questoes_respondidas (INTEGER)');
+    console.log('   - total_resposta_corretas (INTEGER)');
+    console.log('   - tempo_estudo_minutos (INTEGER)');
+    console.log('   - pontuacao_media (DECIMAL(5,2))');
+    console.log('   - atualizado_em (TIMESTAMP)');
     console.log('');
     console.log('🔧 Added triggers and indexes for performance');
   } catch (error) {
@@ -74,15 +72,15 @@ async function runMigration(): Promise<void> {
 // Alternative approach using direct SQL execution
 async function runMigrationAlternative(): Promise<void> {
   try {
-    console.log('🚀 Starting users table migration (alternative method)...');
+    console.log('🚀 Starting usuarios table migration (alternative method)...');
 
     // Add columns one by one
     const alterStatements = [
-      'ALTER TABLE users ADD COLUMN IF NOT EXISTS total_questions_answered INTEGER DEFAULT 0',
-      'ALTER TABLE users ADD COLUMN IF NOT EXISTS total_correct_answers INTEGER DEFAULT 0',
-      'ALTER TABLE users ADD COLUMN IF NOT EXISTS study_time_minutes INTEGER DEFAULT 0',
-      'ALTER TABLE users ADD COLUMN IF NOT EXISTS average_score DECIMAL(5,2) DEFAULT 0',
-      'ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP',
+      'ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS total_questoes_respondidas INTEGER DEFAULT 0',
+      'ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS total_resposta_corretas INTEGER DEFAULT 0',
+      'ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS tempo_estudo_minutos INTEGER DEFAULT 0',
+      'ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS pontuacao_media DECIMAL(5,2) DEFAULT 0',
+      'ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS atualizado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP',
     ];
 
     for (const statement of alterStatements) {
@@ -96,7 +94,7 @@ async function runMigrationAlternative(): Promise<void> {
       }
     }
 
-    console.log('✅ Migration completed successfully!');
+    console.log('✅ Migration concluido successfully!');
   } catch (error) {
     console.error('❌ Migration failed:', error instanceof Error ? error.message : 'Unknown error');
     process.exit(1);
@@ -112,3 +110,6 @@ if (require.main === module) {
 }
 
 export { runMigration, runMigrationAlternative }; 
+
+
+

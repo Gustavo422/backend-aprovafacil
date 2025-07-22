@@ -1,5 +1,10 @@
 import { defineConfig } from 'vitest/config';
-import { resolve } from 'path';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+// Obter o equivalente a __dirname em ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 export default defineConfig({
   test: {
@@ -51,3 +56,6 @@ export default defineConfig({
     }
   }
 });
+
+
+

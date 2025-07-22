@@ -15,9 +15,9 @@ try {
 }
 
 // Função para executar comando
-function runCommand(command, args, description) {
+function runCommand(command, args, descricao) {
   return new Promise((resolve, reject) => {
-    console.log(`📋 ${description}...`);
+    console.log(`📋 ${descricao}...`);
     
     const child = spawn(command, args, {
       stdio: 'inherit',
@@ -27,16 +27,16 @@ function runCommand(command, args, description) {
 
     child.on('close', (code) => {
       if (code === 0) {
-        console.log(`✅ ${description} concluído`);
+        console.log(`✅ ${descricao} concluído`);
         resolve();
       } else {
-        console.error(`❌ ${description} falhou com código ${code}`);
+        console.error(`❌ ${descricao} falhou com código ${code}`);
         reject(new Error(`Comando falhou com código ${code}`));
       }
     });
 
     child.on('error', (error) => {
-      console.error(`❌ Erro ao executar ${description}:`, error.message);
+      console.error(`❌ Erro ao executar ${descricao}:`, error.message);
       reject(error);
     });
   });
@@ -91,3 +91,6 @@ process.on('SIGTERM', () => {
 
 // Iniciar
 startMonitor(); 
+
+
+

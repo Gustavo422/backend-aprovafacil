@@ -3,13 +3,13 @@ import { spawn } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __filenome = fileURLToPath(import.meta.url);
+const __dirnome = path.dirnome(__filenome);
 
 console.log('Iniciando Vitest UI...');
 
 // Caminho para o executável do Vitest
-const vitestPath = path.join(__dirname, 'node_modules', '.bin', 'vitest');
+const vitestPath = path.join(__dirnome, 'node_modules', '.bin', 'vitest');
 
 // Executar o comando vitest --ui
 const vitestProcess = spawn(vitestPath, ['--ui'], {
@@ -28,3 +28,6 @@ vitestProcess.on('close', (code) => {
     process.exit(code);
   }
 });
+
+
+

@@ -6,12 +6,12 @@ export interface FlashcardDTO {
   disciplina: string;
   tema: string;
   subtema?: string;
-  created_at: string;
-  updated_at: string;
+  criado_em: string;
+  atualizado_em: string;
   concurso_id?: string;
   categoria_id?: string;
   peso_disciplina?: number;
-  is_active: boolean;
+  ativo: boolean;
 }
 
 export interface CreateFlashcardDTO {
@@ -23,7 +23,7 @@ export interface CreateFlashcardDTO {
   concurso_id?: string;
   categoria_id?: string;
   peso_disciplina?: number;
-  is_active?: boolean;
+  ativo?: boolean;
 }
 
 export interface UpdateFlashcardDTO {
@@ -35,7 +35,7 @@ export interface UpdateFlashcardDTO {
   concurso_id?: string;
   categoria_id?: string;
   peso_disciplina?: number;
-  is_active?: boolean;
+  ativo?: boolean;
 }
 
 export interface UserFlashcardProgressDTO {
@@ -48,8 +48,8 @@ export interface UserFlashcardProgressDTO {
   ease_factor: number;
   interval_days: number;
   last_reviewed?: string;
-  created_at: string;
-  updated_at: string;
+  criado_em: string;
+  atualizado_em: string;
 }
 
 export interface CreateUserFlashcardProgressDTO {

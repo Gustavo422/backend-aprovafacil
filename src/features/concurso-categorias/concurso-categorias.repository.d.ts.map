@@ -1,1 +1,2 @@
 {"version":3,"file":"concurso-categorias.repository.d.ts","sourceRoot":"","sources":["concurso-categorias.repository.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,oBAAoB,EAAE,MAAM,qCAAqC,CAAC;AAE3E,qBAAa,4BAA4B;IACjC,OAAO,IAAI,OAAO,CAAC,oBAAoB,EAAE,CAAC;IAK1C,QAAQ,IAAI,OAAO,CAAC,oBAAoB,GAAG,IAAI,CAAC;IAKhD,MAAM,IAAI,OAAO,CAAC,oBAAoB,CAAC;IAKvC,MAAM,IAAI,OAAO,CAAC,oBAAoB,GAAG,IAAI,CAAC;IAK9C,MAAM,IAAI,OAAO,CAAC,OAAO,CAAC;CAIjC"}
+

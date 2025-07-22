@@ -1,13 +1,10 @@
-/*
-// TODO: Corrigir import de '@/src/core/database/types' para caminho relativo ou remover se não for usado.
-// import { Database } from '@/src/core/database/types';
 import type {
   Simulado,
   SimuladoQuestion,
   Flashcard,
   Apostila,
   MapaAssunto,
-  UserDisciplineStats
+  UserdisciplinaStats
 } from '@/src/core/database/types';
 
 export interface Concurso {
@@ -16,35 +13,36 @@ export interface Concurso {
   categoria_id: string;
   banca: string;
   ano: number;
-  edital_url?: string;
-  data_prova?: string;
-  vagas?: number;
-  salario?: number;
-  created_at: string;
-  updated_at: string;
-  created_by?: string | null;
-  deleted_at?: string | null;
+  edital_url?: string | null;
+  data_prova?: string | null;
+  vagas?: number | null;
+  salario?: number | null;
+  criado_em: string;
+  atualizado_em: string;
+  criado_por?: string | null;
+  deletado_em?: string | null;
+  ativo?: boolean;
 }
 
 type Tables = Database['public']['Tables'];
 
 // Tipo auxiliar para Concurso com Categoria
 export interface ConcursoComCategoria extends Concurso {
-  concurso_categorias: ConcursoCategoria;
+  categorias_concursos: ConcursoCategoria;
 }
 
 // Tipos específicos estendidos ou modificados
 // Categorias de Concurso
-export type ConcursoCategoria = Tables['concurso_categorias']['Row'] & {
+export type ConcursoCategoria = Tables['categorias_concursos']['Row'] & {
   created_by?: string | null;
   deleted_at?: string | null;
 };
 
-export type ConcursoCategoriaInsert = Tables['concurso_categorias']['Insert'];
-export type ConcursoCategoriaUpdate = Tables['concurso_categorias']['Update'];
+export type ConcursoCategoriaInsert = Tables['categorias_concursos']['Insert'];
+export type ConcursoCategoriaUpdate = Tables['categorias_concursos']['Update'];
 
 // Disciplinas por Categoria
-export type CategoriaDisciplina = Tables['categoria_disciplinas']['Row'] & {
+export type CategoriaDisciplina = Tables['disciplinas_categoria']['Row'] & {
   created_by?: string | null;
   deleted_at?: string | null;
   disciplina_nome?: string;
@@ -54,20 +52,21 @@ export type CategoriaDisciplina = Tables['categoria_disciplinas']['Row'] & {
   is_obrigatoria?: boolean;
   is_ativo?: boolean;
 };
-export type CategoriaDisciplinaInsert = Tables['categoria_disciplinas']['Insert'];
-export type CategoriaDisciplinaUpdate = Tables['categoria_disciplinas']['Update'];
+export type CategoriaDisciplinaInsert = Tables['disciplinas_categoria']['Insert'];
+export type CategoriaDisciplinaUpdate = Tables['disciplinas_categoria']['Update'];
 
 export interface UserConcursoPreference {
   id: string;
-  user_id: string;
+  usuario_id: string;
   concurso_id: string;
   categoria_id: string;
-  is_favorite: boolean;
-  can_change_until: string; // ISO date string
-  created_at: string;
-  updated_at: string;
-  created_by?: string | null;
-  deleted_at?: string | null;
+  favorito: boolean;
+  pode_alterar_ate: string; // ISO date string
+  criado_em: string;
+  atualizado_em: string;
+  criado_por?: string | null;
+  deletado_em?: string | null;
+  ativo?: boolean;
 }
 
 // ========================================
@@ -101,7 +100,7 @@ export type NivelDificuldade = 'Fácil' | 'Médio' | 'Difícil';
 export type StatusAssunto = 'não_iniciado' | 'em_andamento' | 'concluído' | 'revisão';
 
 // ========================================
-// TIPOS DE RELACIONAMENTOS
+// TIPOS DE RELACIOnomeNTOS
 // ========================================
 
 // Simulado com Concurso
@@ -111,7 +110,7 @@ export interface SimuladoComConcurso extends Simulado {
 
 // Simulado com Questões
 export interface SimuladoComQuestoes extends Simulado {
-  simulado_questions: SimuladoQuestion[];
+  questoes_simulado: SimuladoQuestion[];
   concursos: ConcursoComCategoria | null;
 }
 
@@ -132,7 +131,7 @@ export interface MapaAssuntoComConcurso extends MapaAssunto {
 
 // Concurso com Categoria e Disciplinas
 export interface ConcursoCompleto extends ConcursoComCategoria {
-  categoria_disciplinas: CategoriaDisciplina[];
+  disciplinas_categoria: CategoriaDisciplina[];
 }
 
 // ========================================
@@ -142,7 +141,7 @@ export interface ConcursoCompleto extends ConcursoComCategoria {
 export interface ConcursoContext {
   categoria: ConcursoCategoria;
   concurso: Concurso;
-  disciplines: CategoriaDisciplina[];
+  disciplinas: CategoriaDisciplina[];
   userPreference: UserConcursoPreference;
 }
 
@@ -161,12 +160,12 @@ export interface ConcursoFilters {
   categoria_slug?: ConcursoCategoriaSlug;
   banca?: BancaOrganizadora;
   ano?: number;
-  is_active?: boolean;
+  ativo?: boolean;
 }
 
 export interface ConteudoFilters {
   categoria_id?: string;
-  discipline?: string;
+  disciplina?: string;
   dificuldade?: NivelDificuldade;
   is_public?: boolean;
 }
@@ -185,8 +184,8 @@ export interface UserProgress {
 }
 
 export interface DisciplinaProgress {
-  discipline_id: string;
-  discipline_nome: string;
+  disciplina_id: string;
+  disciplina_nome: string;
   simulados_completados: number;
   questoes_respondidas: number;
   questoes_corretas: number;
@@ -208,7 +207,7 @@ export interface ConcursoProgress {
 // ========================================
 
 export interface PlanoEstudoCronograma {
-  [discipline: string]: {
+  [disciplina: string]: {
     horas_semanais: number;
     assuntos: string[];
     simulados_planejados: string[];
@@ -225,9 +224,9 @@ export interface PlanoEstudoPersonalizado {
   data_fim: string;
   horas_diarias: number;
   cronograma: PlanoEstudoCronograma;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
+  ativo: boolean;
+  criado_em: string;
+  atualizado_em: string;
   created_by?: string | null;
   deleted_at?: string | null;
 }
@@ -293,7 +292,7 @@ export interface CategoriaConfig {
   descricao: string;
   cor_primaria: string;
   cor_secundaria: string;
-  disciplines: DisciplinaValidation[];
+  disciplinas: DisciplinaValidation[];
 }
 
 export interface SistemaConfig {
@@ -311,8 +310,8 @@ export interface ConcursoSelectionEvent {
   user_id: string;
   concurso_id: string;
   categoria_id: string;
-  selected_at: string;
-  can_change_until: string;
+  selecionado_em: string;
+  pode_alterar_ate: string;
 }
 
 export interface ConteudoAccessEvent {
@@ -354,8 +353,8 @@ export interface CacheStats {
 // TIPOS DE ESTATÍSTICAS AVANÇADAS
 // ========================================
 
-export interface UserDisciplineStatsExtended extends UserDisciplineStats {
-  discipline_nome: string;
+export interface UserdisciplinaStatsExtended extends UserdisciplinaStats {
+  disciplina_nome: string;
   categoria_nome: string;
   progresso_percentual: number;
   ranking_posicao?: number;
@@ -369,8 +368,8 @@ export interface ConcursoStats {
   media_pontuacao: number;
   simulados_completados: number;
   tempo_medio_estudo: number;
-  disciplines_mais_dificies: string[];
-  disciplines_mais_faceis: string[];
+  disciplinas_mais_dificies: string[];
+  disciplinas_mais_faceis: string[];
 }
 
 // ========================================
@@ -412,7 +411,7 @@ export interface StudyReport {
     simulados_completados: number;
     questoes_respondidas: number;
     taxa_acerto_geral: number;
-    disciplines_estudadas: string[];
+    disciplinas_estudadas: string[];
   };
   progresso_disciplinas: DisciplinaProgress[];
   simulados_realizados: {
@@ -484,4 +483,3 @@ export interface UserPermissions {
   permissions_granted_at: string;
   permissions_expire_at?: string;
 }
-*/

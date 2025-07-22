@@ -45,7 +45,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
                 *,
                 concursos (
                     *,
-                    concurso_categorias (*)
+                    categorias_concursos (*)
                 )
             `)
             .eq('categoria_id', categoria_id)
@@ -58,7 +58,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
 
         const { data: simulados, error: simuladosError } = await simuladosQuery
             .range(offset, offset + limit - 1)
-            .order('created_at', { ascending: false });
+            .order('criado_em', { ascending: false });
 
         if (simuladosError) {
             console.error('Erro ao buscar simulados:', {
@@ -78,7 +78,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
                 *,
                 concursos (
                     *,
-                    concurso_categorias (*)
+                    categorias_concursos (*)
                 )
             `)
             .eq('categoria_id', categoria_id)
@@ -90,7 +90,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
 
         const { data: cartoes, error: cartoesError } = await cartoesQuery
             .range(offset, offset + limit - 1)
-            .order('created_at', { ascending: false });
+            .order('criado_em', { ascending: false });
 
         if (cartoesError) {
             console.error('Erro ao buscar cartões de memorização:', {
@@ -110,7 +110,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
                 *,
                 concursos (
                     *,
-                    concurso_categorias (*)
+                    categorias_concursos (*)
                 )
             `)
             .eq('categoria_id', categoria_id)
@@ -118,7 +118,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
 
         const { data: apostilas, error: apostilasError } = await apostilasQuery
             .range(offset, offset + limit - 1)
-            .order('created_at', { ascending: false });
+            .order('criado_em', { ascending: false });
 
         if (apostilasError) {
             console.error('Erro ao buscar apostilas:', {
@@ -138,7 +138,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
                 *,
                 concursos (
                     *,
-                    concurso_categorias (*)
+                    categorias_concursos (*)
                 )
             `)
             .eq('categoria_id', categoria_id)
@@ -150,7 +150,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
 
         const { data: mapaAssuntos, error: mapaAssuntosError } = await mapaAssuntosQuery
             .range(offset, offset + limit - 1)
-            .order('created_at', { ascending: false });
+            .order('criado_em', { ascending: false });
 
         if (mapaAssuntosError) {
             console.error('Erro ao buscar mapa de assuntos:', {
@@ -239,3 +239,6 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
 });
 
 export default router;
+
+
+

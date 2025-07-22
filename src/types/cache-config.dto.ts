@@ -3,19 +3,19 @@ export interface CacheConfigDTO {
   id: string;
   cache_key: string;
   ttl_minutes: number;
-  description?: string;
-  created_at: string;
-  updated_at: string;
+  descricao?: string;
+  criado_em: string;
+  atualizado_em: string;
 }
 
 export interface CreateCacheConfigDTO {
   cache_key: string;
   ttl_minutes?: number;
-  description?: string;
+  descricao?: string;
 }
 
 export interface UpdateCacheConfigDTO {
   cache_key?: string;
   ttl_minutes?: number;
-  description?: string;
+  descricao?: string;
 }

@@ -1,0 +1,5 @@
+// Add this import at the top with other imports
+import { initializePerformanceMonitoring } from './middleware/performance-integration.js';
+
+// Add this line at the end of the initializeMiddlewares method
+initializePerformanceMonitoring(this.app);

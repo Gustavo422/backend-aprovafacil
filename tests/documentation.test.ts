@@ -9,7 +9,7 @@ describe('Documentação OpenAPI', () => {
     expect(spec).toBeDefined();
     expect(spec.openapi).toBe('3.0.0');
     expect(spec.info).toBeDefined();
-    expect(spec.info.title).toBe('AprovaFácil API');
+    expect(spec.info.titulo).toBe('AprovaFácil API');
     expect(spec.info.version).toBe('1.0.0');
     
     // Verificar paths
@@ -74,18 +74,18 @@ describe('Documentação OpenAPI', () => {
   it('deve ter tags organizadas', () => {
     const spec = generateOpenAPISpec();
     
-    const tagNames = spec.tags.map(tag => tag.name);
+    const tagnomes = spec.tags.map(tag => tag.nome);
     
-    expect(tagNames).toContain('Autenticação');
-    expect(tagNames).toContain('Apostilas');
-    expect(tagNames).toContain('Flashcards');
-    expect(tagNames).toContain('Simulados');
-    expect(tagNames).toContain('Estatísticas');
-    expect(tagNames).toContain('Plano de Estudos');
-    expect(tagNames).toContain('Questões Semanais');
-    expect(tagNames).toContain('Mapa de Assuntos');
-    expect(tagNames).toContain('Dashboard');
-    expect(tagNames).toContain('Admin');
+    expect(tagnomes).toContain('Autenticação');
+    expect(tagnomes).toContain('Apostilas');
+    expect(tagnomes).toContain('Flashcards');
+    expect(tagnomes).toContain('Simulados');
+    expect(tagnomes).toContain('Estatísticas');
+    expect(tagnomes).toContain('Plano de Estudos');
+    expect(tagnomes).toContain('Questões Semanais');
+    expect(tagnomes).toContain('Mapa de Assuntos');
+    expect(tagnomes).toContain('Dashboard');
+    expect(tagnomes).toContain('Admin');
   });
 
   it('deve ter exemplos válidos nos endpoints', () => {
@@ -105,7 +105,7 @@ describe('Documentação OpenAPI', () => {
     // Verificar se endpoints autenticados têm resposta 401
     const simuladosPath = spec.paths['/simulados'];
     expect(simuladosPath.get.responses['401']).toBeDefined();
-    expect(simuladosPath.get.responses['401'].description).toBe('Não autorizado');
+    expect(simuladosPath.get.responses['401'].descricao).toBe('Não autorizado');
   });
 
   it('deve ter parâmetros de query bem definidos', () => {
@@ -118,7 +118,7 @@ describe('Documentação OpenAPI', () => {
     expect(parameters).toBeDefined();
     expect(parameters.length).toBeGreaterThan(0);
     
-    const concursoParam = parameters.find(p => p.name === 'concurso');
+    const concursoParam = parameters.find(p => p.nome === 'concurso');
     expect(concursoParam).toBeDefined();
     expect(concursoParam.in).toBe('query');
     expect(concursoParam.schema.type).toBe('string');
@@ -137,3 +137,6 @@ describe('Documentação OpenAPI', () => {
     expect(requestBody.content['application/json'].schema.required).toContain('password');
   });
 }); 
+
+
+

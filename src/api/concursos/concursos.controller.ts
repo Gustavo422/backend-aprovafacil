@@ -30,7 +30,7 @@ export class ConcursosController {
         categoria_id,
         ano,
         banca,
-        is_active,
+        ativo,
         search
       } = req.query;
       const result = await ConcursosService.listar({
@@ -39,7 +39,7 @@ export class ConcursosController {
         categoria_id: getStringParam(categoria_id),
         ano: getNumberParam(ano),
         banca: getStringParam(banca),
-        is_active: getBooleanOrStringParam(is_active),
+        ativo: getBooleanOrStringParam(ativo),
         search: getStringParam(search)
       });
       res.json({
@@ -114,3 +114,6 @@ export class ConcursosController {
     }
   }
 } 
+
+
+

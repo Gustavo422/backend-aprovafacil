@@ -37,7 +37,7 @@ export async function getDatabaseStatus(): Promise<DatabaseStatus> {
     const startTime = Date.now();
     const { error } = await supabase
       .from('information_schema.tables')
-      .select('table_name')
+      .select('table_nome')
       .eq('table_schema', 'public')
       .limit(1);
     
@@ -52,7 +52,7 @@ export async function getDatabaseStatus(): Promise<DatabaseStatus> {
     // Obter lista de tabelas
     const { data: tablesData, error: tablesError } = await supabase
       .from('information_schema.tables')
-      .select('table_name')
+      .select('table_nome')
       .eq('table_schema', 'public');
     
     if (tablesError) {
@@ -60,7 +60,7 @@ export async function getDatabaseStatus(): Promise<DatabaseStatus> {
     } else {
       tables = {
         count: tablesData?.length || 0,
-        list: tablesData?.map(t => t.table_name) || []
+        list: tablesData?.map(t => t.table_nome) || []
       };
     }
     
@@ -84,3 +84,6 @@ export async function getDatabaseStatus(): Promise<DatabaseStatus> {
     errors
   };
 } 
+
+
+

@@ -2,9 +2,9 @@ import express from 'express';
 import { z } from 'zod';
 import { supabase } from '../../config/supabase.js';
 import { requireAuth } from '../../middleware/auth.js';
-import { validateRequest } from '../../middleware/validation.js';
 import { logger } from '../../utils/logger.js';
 import { asyncHandler } from '../../utils/routeWrapper.js';
+import { Request, Response, NextFunction } from 'express';
 
 const router = express.Router();
 
@@ -39,6 +39,41 @@ const estatisticasFiltrosSchema = z.object({
   disciplina: z.string().optional()
 });
 
+// Middleware de validação Express local
+const createValidationMiddleware = (schema: z.ZodTypeAny, field: 'body' | 'query' | 'params' = 'body') => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    try {
+      const data = field === 'body' ? req.body : field === 'query' ? req.query : req.params;
+      const result = schema.safeParse(data);
+      if (!result.success) {
+        const errors = result.error.errors.map(err => ({
+          field: err.path.join('.'),
+          message: err.message
+        }));
+        res.status(400).json({
+          error: 'Dados inválidos',
+          details: errors,
+          code: 'VALIDATION_ERROR'
+        });
+        return;
+      }
+      if (field === 'body') {
+        req.body = result.data;
+      } else if (field === 'query') {
+        req.query = result.data as Record<string, string | string[] | undefined>;
+      } else {
+        req.params = result.data as Record<string, string>;
+      }
+      next();
+    } catch {
+      res.status(500).json({
+        error: 'Erro interno do servidor',
+        code: 'VALIDATION_ERROR'
+      });
+    }
+  };
+};
+
 // GET /api/estatisticas/geral - Estatísticas gerais do usuário
 router.get('/geral', requireAuth, asyncHandler(async (req, res) => {
   try {
@@ -50,14 +85,14 @@ router.get('/geral', requireAuth, asyncHandler(async (req, res) => {
 
     // Buscar estatísticas de flashcards
     const { data: flashcardsStats, error: flashcardsError } = await supabase
-      .from('user_flashcard_progress')
+      .from('progresso_usuario_flashcard')
       .select('acertos, erros, tempo_gasto_minutos')
       .eq('user_id', userId);
 
     // Buscar estatísticas de simulados
     const { data: simuladosStats, error: simuladosError } = await supabase
-      .from('user_simulado_progress')
-      .select('acertos, erros, pontuacao, tempo_gasto_minutos, is_completed')
+      .from('progresso_usuario_simulado')
+      .select('acertos, erros, pontuacao, tempo_gasto_minutos, is_concluido')
       .eq('user_id', userId);
 
     // Buscar estatísticas de questões semanais
@@ -91,7 +126,7 @@ router.get('/geral', requireAuth, asyncHandler(async (req, res) => {
 
     // Calcular estatísticas de simulados
     const simuladosTotal = simuladosStats?.length || 0;
-    const simuladosCompletados = simuladosStats?.filter(item => item.is_completed).length || 0;
+    const simuladosCompletados = simuladosStats?.filter(item => item.is_concluido).length || 0;
     const simuladosAcertos = simuladosStats?.reduce((acc, item) => acc + (item.acertos || 0), 0) || 0;
     const simuladosErros = simuladosStats?.reduce((acc, item) => acc + (item.erros || 0), 0) || 0;
     const simuladosPontuacao = simuladosStats?.reduce((acc, item) => acc + (item.pontuacao || 0), 0) || 0;
@@ -160,7 +195,7 @@ router.get('/geral', requireAuth, asyncHandler(async (req, res) => {
 }));
 
 // GET /api/estatisticas/performance - Performance por período
-router.get('/performance', requireAuth, validateRequest(estatisticasFiltrosSchema), asyncHandler(async (req, res) => {
+router.get('/performance', requireAuth, createValidationMiddleware(estatisticasFiltrosSchema, 'query'), asyncHandler(async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
     const { data_inicio, data_fim } = req.query;
@@ -175,17 +210,17 @@ router.get('/performance', requireAuth, validateRequest(estatisticasFiltrosSchem
     // Construir filtros de data
     let dataFilter = '';
     if (data_inicio && data_fim) {
-      dataFilter = `created_at.gte.${data_inicio},created_at.lte.${data_fim}`;
+      dataFilter = `criado_em.gte.${data_inicio},criado_em.lte.${data_fim}`;
     } else if (data_inicio) {
-      dataFilter = `created_at.gte.${data_inicio}`;
+      dataFilter = `criado_em.gte.${data_inicio}`;
     } else if (data_fim) {
-      dataFilter = `created_at.lte.${data_fim}`;
+      dataFilter = `criado_em.lte.${data_fim}`;
     }
 
     // Buscar performance de flashcards
     let flashcardsQuery = supabase
-      .from('user_flashcard_progress')
-      .select('acertos, erros, tempo_gasto_minutos, created_at')
+      .from('progresso_usuario_flashcard')
+      .select('acertos, erros, tempo_gasto_minutos, criado_em')
       .eq('user_id', userId);
 
     if (dataFilter) {
@@ -196,8 +231,8 @@ router.get('/performance', requireAuth, validateRequest(estatisticasFiltrosSchem
 
     // Buscar performance de simulados
     let simuladosQuery = supabase
-      .from('user_simulado_progress')
-      .select('acertos, erros, pontuacao, tempo_gasto_minutos, created_at')
+      .from('progresso_usuario_simulado')
+      .select('acertos, erros, pontuacao, tempo_gasto_minutos, criado_em')
       .eq('user_id', userId);
 
     if (dataFilter) {
@@ -209,7 +244,7 @@ router.get('/performance', requireAuth, validateRequest(estatisticasFiltrosSchem
     // Buscar performance de questões semanais
     let questoesQuery = supabase
       .from('questao_semanal_respostas')
-      .select('is_correta, pontos_ganhos, tempo_gasto_segundos, created_at')
+      .select('is_correta, pontos_ganhos, tempo_gasto_segundos, criado_em')
       .eq('user_id', userId);
 
     if (dataFilter) {
@@ -237,7 +272,7 @@ router.get('/performance', requireAuth, validateRequest(estatisticasFiltrosSchem
 
     // Processar flashcards
     flashcardsData?.forEach(item => {
-      const data = new Date(item.created_at).toISOString().split('T')[0];
+      const data = new Date(item.criado_em).toISOString().split('T')[0];
       if (data && !performancePorDia[data]) {
         performancePorDia[data] = {
           data,
@@ -258,7 +293,7 @@ router.get('/performance', requireAuth, validateRequest(estatisticasFiltrosSchem
 
     // Processar simulados
     simuladosData?.forEach(item => {
-      const data = new Date(item.created_at).toISOString().split('T')[0];
+      const data = new Date(item.criado_em).toISOString().split('T')[0];
       if (data && !performancePorDia[data]) {
         performancePorDia[data] = {
           data,
@@ -280,7 +315,7 @@ router.get('/performance', requireAuth, validateRequest(estatisticasFiltrosSchem
 
     // Processar questões semanais
     questoesData?.forEach(item => {
-      const data = new Date(item.created_at).toISOString().split('T')[0];
+      const data = new Date(item.criado_em).toISOString().split('T')[0];
       if (data && !performancePorDia[data]) {
         performancePorDia[data] = {
           data,
@@ -322,7 +357,7 @@ router.get('/disciplinas', requireAuth, asyncHandler(async (req, res) => {
 
     // Buscar flashcards por disciplina
     const { data: flashcardsDisciplinas, error: flashcardsError } = await supabase
-      .from('user_flashcard_progress')
+      .from('progresso_usuario_flashcard')
       .select(`
         acertos,
         erros,
@@ -335,7 +370,7 @@ router.get('/disciplinas', requireAuth, asyncHandler(async (req, res) => {
 
     // Buscar simulados por disciplina
     const { data: simuladosDisciplinas, error: simuladosError } = await supabase
-      .from('user_simulado_progress')
+      .from('progresso_usuario_simulado')
       .select(`
         acertos,
         erros,
@@ -469,7 +504,7 @@ router.get('/ranking', requireAuth, asyncHandler(async (req, res) => {
       .select(`
         user_id,
         pontos_ganhos,
-        users (
+        usuarios (
           id,
           nome,
           email
@@ -479,11 +514,11 @@ router.get('/ranking', requireAuth, asyncHandler(async (req, res) => {
 
     // Buscar ranking por pontuação de simulados
     const { data: rankingSimulados, error: simuladosError } = await supabase
-      .from('user_simulado_progress')
+      .from('progresso_usuario_simulado')
       .select(`
         user_id,
         pontuacao,
-        users (
+        usuarios (
           id,
           nome,
           email
@@ -516,8 +551,8 @@ router.get('/ranking', requireAuth, asyncHandler(async (req, res) => {
       if (!ranking[userId]) {
         ranking[userId] = {
           user_id: userId,
-          nome: (item.users as UserData)?.nome || 'Usuário',
-          email: (item.users as UserData)?.email,
+          nome: (item.usuarios as UserData)?.nome || 'Usuário',
+          email: (item.usuarios as UserData)?.email,
           pontosQuestoes: 0,
           pontosSimulados: 0,
           totalAcertos: 0,
@@ -535,8 +570,8 @@ router.get('/ranking', requireAuth, asyncHandler(async (req, res) => {
       if (!ranking[userId]) {
         ranking[userId] = {
           user_id: userId,
-          nome: (item.users as UserData)?.nome || 'Usuário',
-          email: (item.users as UserData)?.email,
+          nome: (item.usuarios as UserData)?.nome || 'Usuário',
+          email: (item.usuarios as UserData)?.email,
           pontosQuestoes: 0,
           pontosSimulados: 0,
           totalAcertos: 0,

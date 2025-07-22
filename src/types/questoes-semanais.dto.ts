@@ -1,33 +1,29 @@
 // DTO de Questões Semanais - Atualizado para corresponder ao schema real
 export interface QuestoesSemanaDTO {
   id: string;
-  titulo?: string;
-  title?: string;
-  descricao?: string;
-  description?: string;
+  titulo: string;
+  descricao: string;
   semana_numero?: number;
   week_number?: number;
   ano?: number;
   year?: number;
-  is_active: boolean;
+  ativo: boolean;
   data_liberacao: string;
   data_encerramento: string;
-  created_at: string;
-  updated_at: string;
+  criado_em: string;
+  atualizado_em: string;
   concurso_id?: string;
   categoria_id?: string;
 }
 
 export interface CreateQuestoesSemanaDTO {
-  titulo?: string;
-  title?: string;
-  descricao?: string;
-  description?: string;
+  titulo: string;
+  descricao: string;
   semana_numero?: number;
   week_number?: number;
   ano?: number;
   year?: number;
-  is_active?: boolean;
+  ativo?: boolean;
   data_liberacao: string;
   data_encerramento: string;
   concurso_id?: string;
@@ -36,14 +32,12 @@ export interface CreateQuestoesSemanaDTO {
 
 export interface UpdateQuestoesSemanaDTO {
   titulo?: string;
-  title?: string;
   descricao?: string;
-  description?: string;
   semana_numero?: number;
   week_number?: number;
   ano?: number;
   year?: number;
-  is_active?: boolean;
+  ativo?: boolean;
   data_liberacao?: string;
   data_encerramento?: string;
   concurso_id?: string;
@@ -59,9 +53,9 @@ export interface UserQuestoesSemanaProgressDTO {
   total_questoes: number;
   time_taken_minutes?: number;
   data_conclusao?: string;
-  completed_at?: string;
+  concluido_at?: string;
   respostas?: Record<string, unknown>;
   answers?: Record<string, unknown>;
-  created_at: string;
-  updated_at: string;
+  criado_em: string;
+  atualizado_em: string;
 }

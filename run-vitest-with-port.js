@@ -4,8 +4,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import http from 'http';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __filenome = fileURLToPath(import.meta.url);
+const __dirnome = path.dirnome(__filenome);
 
 // Função para verificar se uma porta está disponível
 function isPortAvailable(port) {
@@ -42,7 +42,7 @@ async function main() {
     console.log(`Iniciando Vitest na porta ${port}...`);
 
     // Caminho para o executável do Vitest
-    const vitestPath = path.join(__dirname, 'node_modules', '.bin', 'vitest');
+    const vitestPath = path.join(__dirnome, 'node_modules', '.bin', 'vitest');
 
     // Executar o comando vitest com a porta específica
     const args = process.argv.slice(2);
@@ -90,3 +90,6 @@ async function main() {
 }
 
 main();
+
+
+

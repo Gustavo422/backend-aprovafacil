@@ -1,76 +1,118 @@
 import { NextResponse } from 'next/server';
-import { metricsStore } from '../../../core/monitoring/metrics-store.js';
-import { sendEmailAlert, sendSlackAlert } from '../../../utils/alert';
-import { createClient } from '@supabase/supabase-js';
-import { NextRequest as Request } from 'next/server';
+import { alertNotifier } from '../../../core/monitoring/alert-notifier.js';
+import { performanceMetrics } from '../../../core/monitoring/performance-metrics.js';
 
-const supabaseUrl = process.env['SUPABASE_URL'] || '';
-const supabaseServiceKey = process.env['SUPABASE_SERVICE_ROLE_KEY'] || '';
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-export async function GET() {
+/**
+ * GET /api/monitor/alerts
+ * Returns all active alerts
+ */
+export async function GET(request: globalThis.Request) {
   try {
-    const alerts = metricsStore.getAlerts();
+    // Get URL parameters
+    const url = new globalThis.URL(request.url);
+    const status = url.searchParams.get('status') || 'active';
+    
+    let alerts;
+    
+    if (status === 'all') {
+      alerts = performanceMetrics.getAllAlerts();
+    } else if (status === 'active') {
+      alerts = performanceMetrics.getActiveAlerts();
+    } else {
+      alerts = performanceMetrics.getAllAlerts().filter(a => a.status === status);
+    }
+    
+    // Get in-app notifications
+    const inAppAlerts = alertNotifier.getInAppAlerts();
     
     return NextResponse.json({
       alerts,
-      count: alerts.length,
-      hasErrors: alerts.some(alert => alert.type === 'error'),
-      hasWarnings: alerts.some(alert => alert.type === 'warning'),
-      timestamp: new Date().toISOString()
-    }, {
-      headers: {
-        'Content-Type': 'application/json; charset=utf-8',
-        'Cache-Control': 'no-cache, no-store, must-revalidate'
-      }
+      inAppAlerts,
+      notificationChannels: alertNotifier.getAllChannelConfigs()
     });
   } catch (error) {
-    console.error('Erro ao obter alertas:', error);
+    console.error('Error getting alerts:', error);
     return NextResponse.json(
-      { 
-        error: 'Erro interno do servidor',
-        timestamp: new Date().toISOString()
-      },
+      { error: 'Failed to retrieve alerts' },
       { status: 500 }
     );
   }
-} 
+}
 
-export async function POST(req: Request) {
-  // Autenticação manual admin
-  const authHeader = req.headers.get('authorization');
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return NextResponse.json({ success: false, error: 'Token de autenticação necessário' }, { status: 401 });
-  }
-  const token = authHeader.substring(7);
-  const { data: { user }, error } = await supabase.auth.getUser(token);
-  if (error || !user) {
-    return NextResponse.json({ success: false, error: 'Token de autenticação inválido' }, { status: 401 });
-  }
-  const { data: userProfile, error: profileError } = await supabase
-    .from('users')
-    .select('id, email, role, nome')
-    .eq('id', user.id)
-    .single();
-  if (profileError || !userProfile || userProfile.role !== 'admin') {
-    return NextResponse.json({ success: false, error: 'Acesso negado. Permissão de administrador necessária.' }, { status: 403 });
-  }
-
-  // Disparar alerta
-  const body = await req.json();
-  const { type, subject, message, to } = body;
+/**
+ * POST /api/monitor/alerts/config
+ * Configure alert notification channels
+ */
+export async function POST(request: globalThis.Request) {
   try {
-    if (type === 'email') {
-      await sendEmailAlert(subject || 'Alerta AprovaFácil', message, to);
-    } else if (type === 'slack') {
-      await sendSlackAlert(message);
-    } else {
-      // Ambos
-      await sendEmailAlert(subject || 'Alerta AprovaFácil', message, to);
-      await sendSlackAlert(message);
+    const url = new globalThis.URL(request.url);
+    const path = url.pathname;
+    
+    // Handle alert notification configuration
+    if (path.endsWith('/config')) {
+      const body = await request.json();
+      const { channel, config } = body;
+      
+      if (!channel || !config) {
+        return NextResponse.json(
+          { error: 'Missing channel or configuration' },
+          { status: 400 }
+        );
+      }
+      
+      alertNotifier.configureChannel(channel, config);
+      
+      return NextResponse.json({
+        success: true,
+        config: alertNotifier.getChannelConfig(channel)
+      });
     }
-    return NextResponse.json({ success: true });
-  } catch (err) {
-    return NextResponse.json({ success: false, error: err instanceof Error ? err.message : 'Erro desconhecido' }, { status: 500 });
+    
+    // Handle alert acknowledgement
+    if (path.includes('/acknowledge/')) {
+      const alertId = path.split('/acknowledge/')[1];
+      const success = performanceMetrics.acknowledgeAlert(alertId);
+      
+      if (success) {
+        return NextResponse.json({ success: true });
+      } else {
+        return NextResponse.json(
+          { error: 'Alert not found' },
+          { status: 404 }
+        );
+      }
+    }
+    
+    // Handle alert resolution
+    if (path.includes('/resolve/')) {
+      const alertId = path.split('/resolve/')[1];
+      const success = performanceMetrics.resolveAlert(alertId);
+      
+      if (success) {
+        return NextResponse.json({ success: true });
+      } else {
+        return NextResponse.json(
+          { error: 'Alert not found' },
+          { status: 404 }
+        );
+      }
+    }
+    
+    // Handle clearing in-app notifications
+    if (path.endsWith('/clear-in-app')) {
+      alertNotifier.clearInAppAlerts();
+      return NextResponse.json({ success: true });
+    }
+    
+    return NextResponse.json(
+      { error: 'Invalid endpoint' },
+      { status: 400 }
+    );
+  } catch (error) {
+    console.error('Error processing alert request:', error);
+    return NextResponse.json(
+      { error: 'Failed to process request' },
+      { status: 500 }
+    );
   }
-} 
+}

@@ -4,3 +4,6 @@ export interface DashboardDTO {
   stats: Record<string, number | string | boolean>;
   // Adicione outros campos relevantes
 } 
+
+
+

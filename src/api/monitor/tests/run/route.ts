@@ -1,9 +1,8 @@
-import { NextResponse } from 'next/server';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { createClient } from '@supabase/supabase-js';
 import { registerTestRun } from '../../../../utils/test-history';
-import { NextRequest as Request } from 'next/server';
+import { Request, Response } from 'express';
 
 const execAsync = promisify(exec);
 
@@ -21,73 +20,72 @@ const supabaseUrl = process.env['SUPABASE_URL'] || '';
 const supabaseServiceKey = process.env['SUPABASE_SERVICE_ROLE_KEY'] || '';
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-export async function POST(req: Request) {
+export async function POST(req: Request, res: Response) {
   // Autenticação manual para Next.js API Route
-  const authHeader = req.headers.get('authorization');
+  const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return NextResponse.json({
+    return res.status(401).json({
       success: false,
       error: 'Token de autenticação necessário',
       timestamp: new Date().toISOString()
-    }, { status: 401 });
+    });
   }
   const token = authHeader.substring(7);
   // Verificar token no Supabase
   const { data: { user }, error } = await supabase.auth.getUser(token);
   if (error || !user) {
-    return NextResponse.json({
+    return res.status(401).json({
       success: false,
       error: 'Token de autenticação inválido',
       timestamp: new Date().toISOString()
-    }, { status: 401 });
+    });
   }
   // Buscar perfil do usuário
   const { data: userProfile, error: profileError } = await supabase
-    .from('users')
+    .from('usuarios')
     .select('id, email, role, nome')
     .eq('id', user.id)
     .single();
   if (profileError || !userProfile) {
-    return NextResponse.json({
+    return res.status(500).json({
       success: false,
       error: 'Erro ao buscar perfil do usuário',
       timestamp: new Date().toISOString()
-    }, { status: 500 });
+    });
   }
   if (userProfile.role !== 'admin') {
-    return NextResponse.json({
+    return res.status(403).json({
       success: false,
       error: 'Acesso negado. Permissão de administrador necessária.',
       timestamp: new Date().toISOString()
-    }, { status: 403 });
+    });
   }
 
   try {
     let command = 'npx vitest run';
     let file = '';
-    let testName = '';
+    let testnome = '';
 
-    if (req) {
-      const body = await req.json();
-      file = body.file || '';
-      testName = body.testName || '';
+    if (req.body) {
+      file = req.body.file || '';
+      testnome = req.body.testnome || '';
     }
 
     if (file) {
       if (!isValidTestFile(file)) {
-        return NextResponse.json({
+        return res.status(400).json({
           success: false,
           error: 'Arquivo de teste inválido',
           timestamp: new Date().toISOString()
-        }, { status: 400 });
+        });
       }
       command += ` ${file}`;
     }
 
-    if (testName) {
+    if (testnome) {
       // Escapar aspas duplas
-      const safeTestName = testName.replace(/"/g, '');
-      command += ` -t "${safeTestName}"`;
+      const safeTestnome = testnome.replace(/"/g, '');
+      command += ` -t "${safeTestnome}"`;
     }
 
     // Executar testes com Vitest
@@ -104,14 +102,14 @@ export async function POST(req: Request) {
       user_id: userProfile.id,
       user_email: userProfile.email,
       file,
-      test_name: testName,
+      test_nome: testnome,
       status: results.failed > 0 ? 'failed' : 'passed',
       duration: results.duration,
       output: results.output,
       error: results.errors
     });
 
-    return NextResponse.json({
+    return res.status(200).json({
       success: true,
       results,
       timestamp: new Date().toISOString()
@@ -119,11 +117,11 @@ export async function POST(req: Request) {
 
   } catch (error) {
     console.error('Erro ao executar testes:', error);
-    return NextResponse.json({
+    return res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Erro desconhecido',
       timestamp: new Date().toISOString()
-    }, { status: 500 });
+    });
   }
 }
 
@@ -173,3 +171,6 @@ function parseVitestOutput(stdout: string, stderr: string) {
     errors: stderr
   };
 } 
+
+
+

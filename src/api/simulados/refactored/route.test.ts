@@ -7,3 +7,6 @@ describe('Simulados Refactored API', () => {
     expect(true).toBe(true);
   });
 }); 
+
+
+

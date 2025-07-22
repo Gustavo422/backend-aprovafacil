@@ -67,3 +67,4 @@ UI Components → Custom Hooks → Services → Repositories → Supabase
 - Repositórios para cada entidade
 - Queries otimizadas
 - Cache e performance 
+

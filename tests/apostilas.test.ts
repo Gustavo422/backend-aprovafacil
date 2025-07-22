@@ -22,7 +22,7 @@ describe('📚 Apostilas', () => {
   afterEach(async () => {
     // Limpar dados de teste
     if (testApostilaId) {
-      await cleanupTestRecords('apostila_content', 'apostila_id', testApostilaId)
+      await cleanupTestRecords('conteudo_apostila', 'apostila_id', testApostilaId)
       await cleanupTestRecords('apostilas', 'id', testApostilaId)
       testApostilaId = null
     }
@@ -33,7 +33,7 @@ describe('📚 Apostilas', () => {
       const { data, error } = await supabase
         .from('apostilas')
         .select('*')
-        .eq('is_active', true)
+        .eq('ativo', true)
 
       expect(error).toBeNull()
       expect(data).toBeDefined()
@@ -41,7 +41,7 @@ describe('📚 Apostilas', () => {
       
       // Verificar se todas as apostilas retornadas estão ativas
       data?.forEach(apostila => {
-        expect(apostila.is_active).toBe(true)
+        expect(apostila.ativo).toBe(true)
       })
     })
 
@@ -52,7 +52,7 @@ describe('📚 Apostilas', () => {
         .from('apostilas')
         .select('*')
         .eq('concurso_id', testConcursoId)
-        .eq('is_active', true)
+        .eq('ativo', true)
 
       expect(error).toBeNull()
       expect(data).toBeDefined()
@@ -69,7 +69,7 @@ describe('📚 Apostilas', () => {
         .from('apostilas')
         .select('*')
         .ilike('titulo', `%${searchTerm}%`)
-        .eq('is_active', true)
+        .eq('ativo', true)
 
       expect(error).toBeNull()
       expect(data).toBeDefined()
@@ -80,7 +80,7 @@ describe('📚 Apostilas', () => {
       })
     })
 
-    it('deve incluir relacionamentos na listagem', async () => {
+    it('deve incluir relacionomentos na listagem', async () => {
       const { data, error } = await supabase
         .from('apostilas')
         .select(`
@@ -89,22 +89,22 @@ describe('📚 Apostilas', () => {
             id,
             nome
           ),
-          concurso_categorias (
+          categorias_concursos (
             id,
             nome
           )
         `)
-        .eq('is_active', true)
+        .eq('ativo', true)
         .limit(5)
 
       expect(error).toBeNull()
       expect(data).toBeDefined()
       
-      // Verificar se os relacionamentos estão presentes
+      // Verificar se os relacionomentos estão presentes
       data?.forEach(apostila => {
         expect(apostila.concursos).toBeDefined()
-        if (apostila.concurso_categorias) {
-          expect(apostila.concurso_categorias).toBeDefined()
+        if (apostila.categorias_concursos) {
+          expect(apostila.categorias_concursos).toBeDefined()
         }
       })
     })
@@ -127,7 +127,7 @@ describe('📚 Apostilas', () => {
       expect(error).toBeNull()
       expect(data).toBeDefined()
       expect(data!.id).toBe(testApostilaId)
-      expect(data!.title).toBe(testData.apostila.title)
+      expect(data!.titulo).toBe(testData.apostila.titulo)
     })
 
     it('deve retornar erro para apostila inexistente', async () => {
@@ -153,13 +153,13 @@ describe('📚 Apostilas', () => {
       // Adicionar conteúdo à apostila
       const conteudo = {
         apostila_id: testApostilaId,
-        title: 'Módulo 1',
+        titulo: 'Módulo 1',
         content_json: { content: 'Conteúdo do módulo 1' },
         module_number: 1
       }
 
       const { data: conteudoData, error: conteudoError } = await supabase
-        .from('apostila_content')
+        .from('conteudo_apostila')
         .insert(conteudo)
         .select()
         .single()
@@ -172,9 +172,9 @@ describe('📚 Apostilas', () => {
         .from('apostilas')
         .select(`
           *,
-          apostila_content (
+          conteudo_apostila (
             id,
-            title,
+            titulo,
             content_json,
             module_number
           )
@@ -184,9 +184,9 @@ describe('📚 Apostilas', () => {
 
       expect(error).toBeNull()
       expect(data).toBeDefined()
-      expect(data!.apostila_content).toBeDefined()
-      expect(Array.isArray(data!.apostila_content)).toBe(true)
-      expect(data!.apostila_content.length).toBeGreaterThan(0)
+      expect(data!.conteudo_apostila).toBeDefined()
+      expect(Array.isArray(data!.conteudo_apostila)).toBe(true)
+      expect(data!.conteudo_apostila.length).toBeGreaterThan(0)
     })
   })
 
@@ -195,8 +195,8 @@ describe('📚 Apostilas', () => {
       expect(testConcursoId).toBeDefined()
       
       const novaApostila = {
-        title: 'Nova Apostila Teste',
-        description: 'Descrição da nova apostila',
+        titulo: 'Nova Apostila Teste',
+        descricao: 'Descrição da nova apostila',
         concurso_id: testConcursoId,
         categoria_id: null
       }
@@ -209,7 +209,7 @@ describe('📚 Apostilas', () => {
 
       expect(error).toBeNull()
       expect(data).toBeDefined()
-      expect(data!.title).toBe(novaApostila.title)
+      expect(data!.titulo).toBe(novaApostila.titulo)
       expect(data!.concurso_id).toBe(testConcursoId)
 
       testApostilaId = data!.id
@@ -217,8 +217,8 @@ describe('📚 Apostilas', () => {
 
     it('deve validar campos obrigatórios', async () => {
       const apostilaInvalida = {
-        description: 'Apenas descrição'
-        // Faltando title e concurso_id
+        descricao: 'Apenas descrição'
+        // Faltando titulo e concurso_id
       }
 
       const { data, error } = await supabase
@@ -232,8 +232,8 @@ describe('📚 Apostilas', () => {
 
     it('deve validar concurso existente', async () => {
       const apostilaConcursoInexistente = {
-        title: 'Apostila Concurso Inexistente',
-        description: 'Teste de concurso inexistente',
+        titulo: 'Apostila Concurso Inexistente',
+        descricao: 'Teste de concurso inexistente',
         concurso_id: '00000000-0000-0000-0000-000000000000'
       }
 
@@ -256,8 +256,8 @@ describe('📚 Apostilas', () => {
       testApostilaId = apostila!.id
 
       const atualizacoes = {
-        title: 'Apostila Atualizada',
-        description: 'Descrição atualizada'
+        titulo: 'Apostila Atualizada',
+        descricao: 'Descrição atualizada'
       }
 
       const { data, error } = await supabase
@@ -269,8 +269,8 @@ describe('📚 Apostilas', () => {
 
       expect(error).toBeNull()
       expect(data).toBeDefined()
-      expect(data!.title).toBe(atualizacoes.title)
-      expect(data!.description).toBe(atualizacoes.description)
+      expect(data!.titulo).toBe(atualizacoes.titulo)
+      expect(data!.descricao).toBe(atualizacoes.descricao)
     })
 
     it('deve ativar/desativar apostila', async () => {
@@ -282,8 +282,8 @@ describe('📚 Apostilas', () => {
 
       // Atualizar apostila
       const atualizacoes = {
-        title: 'Apostila Atualizada',
-        description: 'Descrição atualizada'
+        titulo: 'Apostila Atualizada',
+        descricao: 'Descrição atualizada'
       }
 
       const { data, error } = await supabase
@@ -295,8 +295,8 @@ describe('📚 Apostilas', () => {
 
       expect(error).toBeNull()
       expect(data).toBeDefined()
-      expect(data!.title).toBe(atualizacoes.title)
-      expect(data!.description).toBe(atualizacoes.description)
+      expect(data!.titulo).toBe(atualizacoes.titulo)
+      expect(data!.descricao).toBe(atualizacoes.descricao)
     })
   })
 
@@ -313,11 +313,11 @@ describe('📚 Apostilas', () => {
         titulo: 'Módulo de Teste',
         conteudo: 'Conteúdo detalhado do módulo',
         ordem: 1,
-        is_active: true
+        ativo: true
       }
 
       const { data, error } = await supabase
-        .from('apostila_content')
+        .from('conteudo_apostila')
         .insert(novoConteudo)
         .select()
         .single()
@@ -344,22 +344,22 @@ describe('📚 Apostilas', () => {
 
       for (const conteudo of conteudos) {
         await supabase
-          .from('apostila_content')
+          .from('conteudo_apostila')
           .insert({
             apostila_id: testApostilaId,
             titulo: conteudo.titulo,
             conteudo: `Conteúdo do ${conteudo.titulo}`,
             ordem: conteudo.ordem,
-            is_active: true
+            ativo: true
           })
       }
 
       // Buscar conteúdo ordenado
       const { data, error } = await supabase
-        .from('apostila_content')
+        .from('conteudo_apostila')
         .select('*')
         .eq('apostila_id', testApostilaId)
-        .eq('is_active', true)
+        .eq('ativo', true)
         .order('ordem')
 
       expect(error).toBeNull()
@@ -395,7 +395,7 @@ describe('📚 Apostilas', () => {
       }
 
       const { data, error } = await supabase
-        .from('user_apostila_progress')
+        .from('progresso_usuario_apostila')
         .insert(progresso)
         .select()
         .single()
@@ -428,7 +428,7 @@ describe('📚 Apostilas', () => {
       }
 
       await supabase
-        .from('user_apostila_progress')
+        .from('progresso_usuario_apostila')
         .insert(progressoInicial)
 
       // Atualizar progresso
@@ -439,7 +439,7 @@ describe('📚 Apostilas', () => {
       }
 
       const { data, error } = await supabase
-        .from('user_apostila_progress')
+        .from('progresso_usuario_apostila')
         .update(atualizacoes)
         .eq('user_id', userData.user!.id)
         .eq('apostila_id', testApostilaId)
@@ -460,12 +460,12 @@ describe('📚 Apostilas', () => {
 
       // Buscar progresso do usuário
       const { data, error } = await supabase
-        .from('user_apostila_progress')
+        .from('progresso_usuario_apostila')
         .select(`
           *,
-          apostila_content (
+          conteudo_apostila (
             id,
-            title,
+            titulo,
             apostila_id
           )
         `)
@@ -486,7 +486,7 @@ describe('📚 Apostilas', () => {
       const { count, error } = await supabase
         .from('apostilas')
         .select('*', { count: 'exact', head: true })
-        .eq('is_active', true)
+        .eq('ativo', true)
 
       expect(error).toBeNull()
       expect(count).toBeGreaterThanOrEqual(0)
@@ -523,7 +523,7 @@ describe('📚 Apostilas', () => {
         titulo: 'Apostila Não Autorizada',
         descricao: 'Tentativa de criação sem auth',
         concurso_id: testConcursoId,
-        is_active: true
+        ativo: true
       }
 
       const { data, error } = await supabase
@@ -542,7 +542,7 @@ describe('📚 Apostilas', () => {
       expect(userData.user).toBeDefined()
 
       const { data, error } = await supabase
-        .from('user_apostila_progress')
+        .from('progresso_usuario_apostila')
         .select('*')
 
       expect(error).toBeNull()
@@ -555,3 +555,6 @@ describe('📚 Apostilas', () => {
     })
   })
 }) 
+
+
+

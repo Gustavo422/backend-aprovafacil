@@ -90,11 +90,14 @@ async function scanForTestFiles(dir: string): Promise<string[]> {
   return testFiles;
 }
 
-function isTestFile(filename: string): boolean {
-  return filename.includes('.test.') || 
-         filename.includes('.spec.') || 
-         filename.endsWith('.test.ts') || 
-         filename.endsWith('.test.js') ||
-         filename.endsWith('.spec.ts') || 
-         filename.endsWith('.spec.js');
+function isTestFile(filenome: string): boolean {
+  return filenome.includes('.test.') || 
+         filenome.includes('.spec.') || 
+         filenome.endsWith('.test.ts') || 
+         filenome.endsWith('.test.js') ||
+         filenome.endsWith('.spec.ts') || 
+         filenome.endsWith('.spec.js');
 } 
+
+
+

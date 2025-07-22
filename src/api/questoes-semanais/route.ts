@@ -1,8 +1,8 @@
 import express from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { supabase } from '../../config/supabase.js';
 import { requireAuth } from '../../middleware/auth.js';
-import { validateRequest } from '../../middleware/validation.js';
 import { logger } from '../../utils/logger.js';
 
 const router = express.Router();
@@ -20,7 +20,7 @@ const createQuestaoSemanalSchema = z.object({
   dificuldade: z.enum(['facil', 'medio', 'dificil']).default('medio'),
   concurso_id: z.string().uuid().optional(),
   categoria_id: z.string().uuid().optional(),
-  is_active: z.boolean().default(true),
+  ativo: z.boolean().default(true),
   pontos: z.number().min(0).default(10)
 });
 
@@ -36,7 +36,7 @@ const updateQuestaoSemanalSchema = z.object({
   dificuldade: z.enum(['facil', 'medio', 'dificil']).optional(),
   concurso_id: z.string().uuid().optional(),
   categoria_id: z.string().uuid().optional(),
-  is_active: z.boolean().optional(),
+  ativo: z.boolean().optional(),
   pontos: z.number().min(0).optional()
 });
 
@@ -49,10 +49,45 @@ const createRespostaSchema = z.object({
   pontos_ganhos: z.number().min(0).optional()
 });
 
+// Middleware de validação Express local
+const createValidationMiddleware = (schema: z.ZodTypeAny, field: 'body' | 'query' | 'params' = 'body') => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    try {
+      const data = field === 'body' ? req.body : field === 'query' ? req.query : req.params;
+      const result = schema.safeParse(data);
+      if (!result.success) {
+        const errors = result.error.errors.map(err => ({
+          field: err.path.join('.'),
+          message: err.message
+        }));
+        res.status(400).json({
+          error: 'Dados inválidos',
+          details: errors,
+          code: 'VALIDATION_ERROR'
+        });
+        return;
+      }
+      if (field === 'body') {
+        req.body = result.data;
+      } else if (field === 'query') {
+        req.query = result.data as Record<string, string | string[] | undefined>;
+      } else {
+        req.params = result.data as Record<string, string>;
+      }
+      next();
+    } catch {
+      res.status(500).json({
+        error: 'Erro interno do servidor',
+        code: 'VALIDATION_ERROR'
+      });
+    }
+  };
+};
+
 // GET /api/questoes-semanais - Listar questões semanais
 router.get('/', requireAuth, async (req, res) => {
   try {
-    const { page = 1, limit = 10, is_active, disciplina, dificuldade, concurso_id, categoria_id } = req.query;
+    const { page = 1, limit = 10, ativo, disciplina, dificuldade, concurso_id, categoria_id } = req.query;
 
     const offset = (Number(page) - 1) * Number(limit);
 
@@ -67,7 +102,7 @@ router.get('/', requireAuth, async (req, res) => {
           ano,
           banca
         ),
-        categoria_disciplinas (
+        disciplinas_categoria (
           id,
           nome,
           descricao,
@@ -77,8 +112,8 @@ router.get('/', requireAuth, async (req, res) => {
       `, { count: 'exact' });
 
     // Aplicar filtros
-    if (is_active !== undefined) {
-      query = query.eq('is_active', is_active);
+    if (ativo !== undefined) {
+      query = query.eq('ativo', ativo);
     }
     if (disciplina) {
       query = query.ilike('disciplina', `%${disciplina}%`);
@@ -94,7 +129,7 @@ router.get('/', requireAuth, async (req, res) => {
     }
 
     const { data: questoes, error, count } = await query
-      .order('created_at', { ascending: false })
+      .order('criado_em', { ascending: false })
       .range(offset, offset + Number(limit) - 1);
 
     if (error) {
@@ -115,8 +150,8 @@ router.get('/', requireAuth, async (req, res) => {
         totalPages
       }
     });
-  } catch (error) {
-    logger.error('Erro na rota GET /questoes-semanais:', undefined, { error: error instanceof Error ? error.message : 'Erro desconhecido' });
+  } catch {
+    logger.error('Erro na rota GET /questoes-semanais:', undefined, { error: 'Erro desconhecido' });
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
@@ -137,7 +172,7 @@ router.get('/:id', requireAuth, async (req, res) => {
           ano,
           banca
         ),
-        categoria_disciplinas (
+        disciplinas_categoria (
           id,
           nome,
           descricao,
@@ -159,14 +194,14 @@ router.get('/:id', requireAuth, async (req, res) => {
     }
 
     res.json({ success: true, data: questao });
-  } catch (error) {
-    logger.error('Erro na rota GET /questoes-semanais/:id:', undefined, { error: error instanceof Error ? error.message : 'Erro desconhecido' });
+  } catch {
+    logger.error('Erro na rota GET /questoes-semanais/:id:', undefined, { error: 'Erro desconhecido' });
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
 
 // POST /api/questoes-semanais - Criar nova questão
-router.post('/', requireAuth, validateRequest(createQuestaoSemanalSchema), async (req, res) => {
+router.post('/', requireAuth, createValidationMiddleware(createQuestaoSemanalSchema, 'body'), async (req, res) => {
   try {
     const questaoData = req.body;
 
@@ -183,14 +218,14 @@ router.post('/', requireAuth, validateRequest(createQuestaoSemanalSchema), async
     }
 
     res.status(201).json({ success: true, data: questao });
-  } catch (error) {
-    logger.error('Erro na rota POST /questoes-semanais:', undefined, { error: error instanceof Error ? error.message : 'Erro desconhecido' });
+  } catch {
+    logger.error('Erro na rota POST /questoes-semanais:', undefined, { error: 'Erro desconhecido' });
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
 
 // PUT /api/questoes-semanais/:id - Atualizar questão
-router.put('/:id', requireAuth, validateRequest(updateQuestaoSemanalSchema), async (req, res) => {
+router.put('/:id', requireAuth, createValidationMiddleware(updateQuestaoSemanalSchema, 'body'), async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
@@ -213,8 +248,8 @@ router.put('/:id', requireAuth, validateRequest(updateQuestaoSemanalSchema), asy
     }
 
     res.json({ success: true, data: questao });
-  } catch (error) {
-    logger.error('Erro na rota PUT /questoes-semanais/:id:', undefined, { error: error instanceof Error ? error.message : 'Erro desconhecido' });
+  } catch {
+    logger.error('Erro na rota PUT /questoes-semanais/:id:', undefined, { error: 'Erro desconhecido' });
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
@@ -236,14 +271,14 @@ router.delete('/:id', requireAuth, async (req, res) => {
     }
 
     res.json({ success: true });
-  } catch (error) {
-    logger.error('Erro na rota DELETE /questoes-semanais/:id:', undefined, { error: error instanceof Error ? error.message : 'Erro desconhecido' });
+  } catch {
+    logger.error('Erro na rota DELETE /questoes-semanais/:id:', undefined, { error: 'Erro desconhecido' });
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
 
 // POST /api/questoes-semanais/:id/respostas - Criar resposta para questão
-router.post('/:id/respostas', requireAuth, validateRequest(createRespostaSchema), async (req, res) => {
+router.post('/:id/respostas', requireAuth, createValidationMiddleware(createRespostaSchema, 'body'), async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user?.id;
@@ -295,8 +330,8 @@ router.post('/:id/respostas', requireAuth, validateRequest(createRespostaSchema)
       is_correta: isCorreta,
       pontos_ganhos: pontosGanhos
     });
-  } catch (error) {
-    logger.error('Erro na rota POST /questoes-semanais/:id/respostas:', undefined, { error: error instanceof Error ? error.message : 'Erro desconhecido' });
+  } catch {
+    logger.error('Erro na rota POST /questoes-semanais/:id/respostas:', undefined, { error: 'Erro desconhecido' });
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
@@ -313,14 +348,14 @@ router.get('/:id/respostas', requireAuth, async (req, res) => {
       .from('respostas_questoes_semanais')
       .select(`
         *,
-        users (
+        usuarios (
           id,
           nome,
           email
         )
       `, { count: 'exact' })
       .eq('questao_semanal_id', id)
-      .order('created_at', { ascending: false })
+      .order('criado_em', { ascending: false })
       .range(offset, offset + Number(limit) - 1);
 
     if (error) {
@@ -341,8 +376,8 @@ router.get('/:id/respostas', requireAuth, async (req, res) => {
         totalPages
       }
     });
-  } catch (error) {
-    logger.error('Erro na rota GET /questoes-semanais/:id/respostas:', undefined, { error: error instanceof Error ? error.message : 'Erro desconhecido' });
+  } catch {
+    logger.error('Erro na rota GET /questoes-semanais/:id/respostas:', undefined, { error: 'Erro desconhecido' });
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
@@ -356,14 +391,14 @@ router.get('/stats/ranking', requireAuth, async (req, res) => {
       .from('respostas_questoes_semanais')
       .select(`
         user_id,
-        users (
+        usuarios (
           id,
           nome,
           email
         )
       `)
       .eq('is_correta', true)
-      .order('created_at', { ascending: false })
+      .order('criado_em', { ascending: false })
       .limit(Number(limit));
 
     if (error) {
@@ -376,7 +411,7 @@ router.get('/stats/ranking', requireAuth, async (req, res) => {
     const rankingMap = new Map();
     ranking?.forEach(resposta => {
       const userId = resposta.user_id;
-      const user = resposta.users;
+      const user = resposta.usuarios;
       
       if (!rankingMap.has(userId)) {
         rankingMap.set(userId, {
@@ -399,8 +434,8 @@ router.get('/stats/ranking', requireAuth, async (req, res) => {
       success: true,
       data: rankingFinal
     });
-  } catch (error) {
-    logger.error('Erro na rota GET /questoes-semanais/stats/ranking:', undefined, { error: error instanceof Error ? error.message : 'Erro desconhecido' });
+  } catch {
+    logger.error('Erro na rota GET /questoes-semanais/stats/ranking:', undefined, { error: 'Erro desconhecido' });
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });

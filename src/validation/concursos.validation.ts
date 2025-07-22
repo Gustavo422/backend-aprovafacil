@@ -6,7 +6,7 @@ import { logger } from '../utils/logger.js';
 export const ConcursoSchema = z.object({
   nome: z.string().min(1, 'Nome é obrigatório').max(255, 'Nome muito longo'),
   descricao: z.string().optional(),
-  is_active: z.boolean().default(true),
+  ativo: z.boolean().default(true),
   ordem: z.number().int().min(0).optional(),
   tags: z.array(z.string()).optional(),
   metadata: z.record(z.unknown()).optional()
@@ -17,11 +17,11 @@ export const UpdateConcursoSchema = ConcursoSchema.partial().extend({
 });
 
 export const ConcursoFiltersSchema = z.object({
-  is_active: z.boolean().optional(),
+  ativo: z.boolean().optional(),
   search: z.string().optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
-  orderBy: z.enum(['nome', 'created_at', 'updated_at']).default('created_at'),
+  orderBy: z.enum(['nome', 'criado_em', 'atualizado_em']).default('criado_em'),
   order: z.enum(['asc', 'desc']).default('desc')
 });
 
@@ -119,3 +119,6 @@ export default {
   ConcursoFiltersSchema,
   ConcursoIdSchema
 }; 
+
+
+

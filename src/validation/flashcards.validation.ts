@@ -9,7 +9,7 @@ export const FlashcardSchema = z.object({
   categoria_disciplina_id: z.string().uuid('ID da categoria deve ser um UUID válido'),
   concurso_id: z.string().uuid('ID do concurso deve ser um UUID válido'),
   nivel_dificuldade: z.enum(['facil', 'medio', 'dificil']).default('medio'),
-  is_active: z.boolean().default(true),
+  ativo: z.boolean().default(true),
   tags: z.array(z.string()).optional(),
   metadata: z.record(z.unknown()).optional()
 });
@@ -22,11 +22,11 @@ export const FlashcardFiltersSchema = z.object({
   categoria_disciplina_id: z.string().uuid('ID da categoria deve ser um UUID válido').optional(),
   concurso_id: z.string().uuid('ID do concurso deve ser um UUID válido').optional(),
   nivel_dificuldade: z.enum(['facil', 'medio', 'dificil']).optional(),
-  is_active: z.boolean().optional(),
+  ativo: z.boolean().optional(),
   search: z.string().optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
-  orderBy: z.enum(['pergunta', 'created_at', 'updated_at']).default('created_at'),
+  orderBy: z.enum(['pergunta', 'criado_em', 'atualizado_em']).default('criado_em'),
   order: z.enum(['asc', 'desc']).default('desc')
 });
 
@@ -162,3 +162,6 @@ export default {
   UpdateUserFlashcardProgressSchema,
   UserFlashcardProgressIdSchema
 }; 
+
+
+

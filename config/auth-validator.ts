@@ -51,10 +51,7 @@ export async function validateAuth() {
   } catch {
     return false;
   }
-}
-
-
-export function createAuthErrorResponse(message: string = 'Não autorizado', status: number = 401) {
+}export function createAuthErrorResponse(message: string = 'Não autorizado', status: number = 401) {
   // TODO: Refatorar para backend puro. Bloco comentado por depender de Next.js ou imports quebrados.
 
   return NextResponse.json(
@@ -76,3 +73,6 @@ export function createAuthErrorResponse(message: string = 'Não autorizado', sta
   );
 } 
 */
+
+
+

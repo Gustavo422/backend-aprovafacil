@@ -32,3 +32,6 @@ export default defineConfig({
   ],
   onSuccess: 'echo "✅ Build concluído com sucesso!"',
 }); 
+
+
+

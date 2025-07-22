@@ -1,9 +1,9 @@
 import express from 'express';
-import { healthChecker } from './health-checker.js';
+import { createHealthChecker } from './health-checker.js';
 import { performanceMonitor } from '../middleware/performance-monitor.js';
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import { requireAdmin } from '../middleware/auth.js';
+import { requireAuth } from '../middleware/auth.js';
 
 const execAsync = promisify(exec);
 
@@ -24,6 +24,7 @@ class WebDashboard {
     // API para dados do dashboard
     this.app.get('/api/dashboard/health', async (req, res) => {
       try {
+        const healthChecker = createHealthChecker();
         const health = await healthChecker.getHealthStatus();
         res.json(health);
       } catch {
@@ -43,7 +44,7 @@ class WebDashboard {
     });
 
     // API para executar testes
-    this.app.post('/api/dashboard/run-tests', requireAdmin, async (req, res) => {
+    this.app.post('/api/dashboard/run-tests', requireAuth, async (req, res) => {
       try {
         const { stdout, stderr } = await execAsync('npm test', { 
           cwd: process.cwd(),
@@ -79,7 +80,7 @@ class WebDashboard {
     });
 
     // API para exportar logs
-    this.app.get('/api/dashboard/logs/export', requireAdmin, async (req, res) => {
+    this.app.get('/api/dashboard/logs/export', requireAuth, async (req, res) => {
       const { logger } = await import('./logger.js');
       const format = (req.query.format as string) || 'json';
       const level = req.query.level as string | undefined;
@@ -92,7 +93,7 @@ class WebDashboard {
 
       let contentType = 'application/json';
       let fileContent = '';
-      let fileName = 'logs.' + format;
+      let filenome = 'logs.' + format;
 
       if (format === 'json') {
         fileContent = JSON.stringify(logs, null, 2);
@@ -112,7 +113,7 @@ class WebDashboard {
         return;
       }
 
-      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+      res.setHeader('Content-Disposition', `attachment; filenome="${filenome}"`);
       res.setHeader('Content-Type', contentType);
       res.send(fileContent);
     });
@@ -158,8 +159,8 @@ class WebDashboard {
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aprova Fácil - Central de Monitoramento</title>
+    <meta nome="viewport" content="width=device-width, initial-scale=1.0">
+    <titulo>Aprova Fácil - Central de Monitoramento</titulo>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
@@ -512,7 +513,7 @@ class WebDashboard {
             <div class="flex items-center">
                 <div id="toastIcon" class="mr-3"></div>
                 <div>
-                    <div id="toastTitle" class="font-semibold"></div>
+                    <div id="toasttitulo" class="font-semibold"></div>
                     <div id="toastMessage" class="text-sm text-muted-foreground"></div>
                 </div>
             </div>
@@ -588,7 +589,7 @@ class WebDashboard {
                         },
                         tooltip: {
                             backgroundColor: 'rgba(30,32,40,0.95)',
-                            titleColor: '#fff',
+                            tituloColor: '#fff',
                             bodyColor: '#e0e6ed',
                             borderColor: '#38bdf8',
                             borderWidth: 1.5
@@ -639,7 +640,7 @@ class WebDashboard {
 
             // Status
             statusText.textContent = health.status.toUpperCase();
-            statusIndicator.className = 'w-4 h-4 rounded-full mr-3 status-' + health.status;
+            statusIndicator.classnome = 'w-4 h-4 rounded-full mr-3 status-' + health.status;
 
             // Uptime
             uptime.textContent = formatUptime(health.uptime);
@@ -678,7 +679,7 @@ class WebDashboard {
 
             Object.entries(health.services).forEach(([service, status]) => {
                 const serviceDiv = document.createElement('div');
-                serviceDiv.className = 'flex items-center justify-between p-4 bg-muted/50 rounded-lg';
+                serviceDiv.classnome = 'flex items-center justify-between p-4 bg-muted/50 rounded-lg';
                 
                 const statusColor = status === 'connected' || status === 'healthy' ? '#10b981' : 
                                   status === 'degraded' ? '#f59e0b' : '#ef4444';
@@ -817,10 +818,10 @@ class WebDashboard {
             showToast('Info', 'Logs limpos', 'info');
         }
 
-        function showToast(title, message, type = 'info') {
+        function showToast(titulo, message, type = 'info') {
             const toast = document.getElementById('toast');
             const toastIcon = document.getElementById('toastIcon');
-            const toastTitle = document.getElementById('toastTitle');
+            const toasttitulo = document.getElementById('toasttitulo');
             const toastMessage = document.getElementById('toastMessage');
 
             const icons = {
@@ -831,7 +832,7 @@ class WebDashboard {
             };
 
             toastIcon.innerHTML = icons[type] || icons.info;
-            toastTitle.textContent = title;
+            toasttitulo.textContent = titulo;
             toastMessage.textContent = message;
 
             toast.classList.remove('hidden');

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { Validator } from './validator.js';
-import { UserSchema, LoginSchema, RegisterSchema, ResetPasswordSchema } from './schemas.js';
+import { usuarioschema, LoginSchema, RegisterSchema, ResetPasswordSchema } from './schemas.js';
 import { z } from 'zod';
 
 describe('Validation System', () => {
@@ -12,7 +12,7 @@ describe('Validation System', () => {
         senha: 'password123'
       };
 
-      const result = Validator.validate(UserSchema, validUser);
+      const result = Validator.validate(usuarioschema, validUser);
       
       expect(result.success).toBe(true);
       expect(result.data).toEqual(validUser);
@@ -26,7 +26,7 @@ describe('Validation System', () => {
         senha: '123' // muito curto
       };
 
-      const result = Validator.validate(UserSchema, invalidUser);
+      const result = Validator.validate(usuarioschema, invalidUser);
       
       expect(result.success).toBe(false);
       expect(result.errors).toBeDefined();
@@ -37,7 +37,7 @@ describe('Validation System', () => {
     it('deve validar email corretamente', () => {
       const validEmails = [
         'test@example.com',
-        'user.name@domain.co.uk',
+        'user.nome@domain.co.uk',
         'user+tag@example.org'
       ];
 
@@ -49,12 +49,12 @@ describe('Validation System', () => {
       ];
 
       validEmails.forEach(email => {
-        const result = Validator.validate(UserSchema, { email, nome: 'Test', senha: 'password123' });
+        const result = Validator.validate(usuarioschema, { email, nome: 'Test', senha: 'password123' });
         expect(result.success).toBe(true);
       });
 
       invalidEmails.forEach(email => {
-        const result = Validator.validate(UserSchema, { email, nome: 'Test', senha: 'password123' });
+        const result = Validator.validate(usuarioschema, { email, nome: 'Test', senha: 'password123' });
         expect(result.success).toBe(false);
       });
     });
@@ -73,7 +73,7 @@ describe('Validation System', () => {
       ];
 
       validPasswords.forEach(senha => {
-        const result = Validator.validate(UserSchema, { 
+        const result = Validator.validate(usuarioschema, { 
           email: 'test@example.com', 
           nome: 'Test', 
           senha 
@@ -82,7 +82,7 @@ describe('Validation System', () => {
       });
 
       invalidPasswords.forEach(senha => {
-        const result = Validator.validate(UserSchema, { 
+        const result = Validator.validate(usuarioschema, { 
           email: 'test@example.com', 
           nome: 'Test', 
           senha 
@@ -125,7 +125,7 @@ describe('Validation System', () => {
         senha: 'password123'
       };
 
-      const result = Validator.validateAndSanitize(UserSchema, dirtyValidData);
+      const result = Validator.validateAndSanitize(usuarioschema, dirtyValidData);
       
       expect(result.success).toBe(true);
       expect(result.data?.email).toBe('test@example.com');
@@ -140,7 +140,7 @@ describe('Validation System', () => {
         senha: '123' // muito curto
       };
 
-      const result = Validator.validateAndSanitize(UserSchema, dirtyInvalidData);
+      const result = Validator.validateAndSanitize(usuarioschema, dirtyInvalidData);
       
       expect(result.success).toBe(false);
       expect(result.errors).toBeDefined();
@@ -148,7 +148,7 @@ describe('Validation System', () => {
   });
 
   describe('Schemas de Validação', () => {
-    describe('UserSchema', () => {
+    describe('usuarioschema', () => {
       it('deve validar usuário completo', () => {
         const validUser = {
           email: 'test@example.com',
@@ -156,7 +156,7 @@ describe('Validation System', () => {
           senha: 'password123'
         };
 
-        const result = Validator.validate(UserSchema, validUser);
+        const result = Validator.validate(usuarioschema, validUser);
         
         expect(result.success).toBe(true);
         expect(result.data).toEqual(validUser);
@@ -171,7 +171,7 @@ describe('Validation System', () => {
           token: 'jwt-token'
         };
 
-        const result = Validator.validate(UserSchema, userWithOptionals);
+        const result = Validator.validate(usuarioschema, userWithOptionals);
         
         expect(result.success).toBe(true);
         expect(result.data).toEqual(userWithOptionals);
@@ -183,7 +183,7 @@ describe('Validation System', () => {
           senha: 'password123'
         };
 
-        const result = Validator.validate(UserSchema, userWithoutEmail);
+        const result = Validator.validate(usuarioschema, userWithoutEmail);
         
         expect(result.success).toBe(false);
         expect(result.errors).toBeDefined();
@@ -196,7 +196,7 @@ describe('Validation System', () => {
           senha: 'password123'
         };
 
-        const result = Validator.validate(UserSchema, userWithInvalidEmail);
+        const result = Validator.validate(usuarioschema, userWithInvalidEmail);
         
         expect(result.success).toBe(false);
         expect(result.errors).toBeDefined();
@@ -209,7 +209,7 @@ describe('Validation System', () => {
           senha: '123'
         };
 
-        const result = Validator.validate(UserSchema, userWithShortPassword);
+        const result = Validator.validate(usuarioschema, userWithShortPassword);
         
         expect(result.success).toBe(false);
         expect(result.errors).toBeDefined();
@@ -315,7 +315,7 @@ describe('Validation System', () => {
     describe('validateEmail', () => {
       it('deve validar emails válidos', () => {
         expect(Validator.validateEmail('test@example.com')).toBe(true);
-        expect(Validator.validateEmail('user.name@domain.co.uk')).toBe(true);
+        expect(Validator.validateEmail('user.nome@domain.co.uk')).toBe(true);
       });
 
       it('deve rejeitar emails inválidos', () => {
@@ -339,3 +339,6 @@ describe('Validation System', () => {
     });
   });
 }); 
+
+
+

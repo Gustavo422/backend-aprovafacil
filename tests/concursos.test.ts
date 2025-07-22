@@ -27,7 +27,7 @@ describe('🏆 Concursos', () => {
       const { data, error } = await supabase
         .from('concursos')
         .select('*')
-        .eq('is_active', true)
+        .eq('ativo', true)
 
       expect(error).toBeNull()
       expect(data).toBeDefined()
@@ -35,7 +35,7 @@ describe('🏆 Concursos', () => {
       
       // Verificar se todos os concursos retornados estão ativos
       data?.forEach(concurso => {
-        expect(concurso.is_active).toBe(true)
+        expect(concurso.ativo).toBe(true)
       })
     })
 
@@ -44,7 +44,7 @@ describe('🏆 Concursos', () => {
       const { data, error } = await supabase
         .from('concursos')
         .select('*')
-        .eq('is_active', true)
+        .eq('ativo', true)
         .limit(limit)
 
       expect(error).toBeNull()
@@ -55,7 +55,7 @@ describe('🏆 Concursos', () => {
     it('deve filtrar por categoria', async () => {
       // Primeiro obter uma categoria existente
       const { data: categorias } = await supabase
-        .from('concurso_categorias')
+        .from('categorias_concursos')
         .select('id')
         .limit(1)
 
@@ -66,7 +66,7 @@ describe('🏆 Concursos', () => {
           .from('concursos')
           .select('*')
           .eq('categoria_id', categoriaId)
-          .eq('is_active', true)
+          .eq('ativo', true)
 
         expect(error).toBeNull()
         expect(data).toBeDefined()
@@ -84,7 +84,7 @@ describe('🏆 Concursos', () => {
         .from('concursos')
         .select('*')
         .ilike('nome', `%${searchTerm}%`)
-        .eq('is_active', true)
+        .eq('ativo', true)
 
       expect(error).toBeNull()
       expect(data).toBeDefined()
@@ -132,7 +132,7 @@ describe('🏆 Concursos', () => {
       expect(data).toBeNull()
     })
 
-    it('deve incluir relacionamentos', async () => {
+    it('deve incluir relacionomentos', async () => {
       // Criar concurso de teste
       const concurso = await createTestConcurso()
       expect(concurso).toBeDefined()
@@ -142,7 +142,7 @@ describe('🏆 Concursos', () => {
         .from('concursos')
         .select(`
           *,
-          concurso_categorias (
+          categorias_concursos (
             id,
             nome,
             slug
@@ -153,7 +153,7 @@ describe('🏆 Concursos', () => {
 
       expect(error).toBeNull()
       expect(data).toBeDefined()
-      expect(data!.concurso_categorias).toBeDefined()
+      expect(data!.categorias_concursos).toBeDefined()
     })
   })
 
@@ -164,7 +164,7 @@ describe('🏆 Concursos', () => {
         descricao: 'Descrição do novo concurso',
         ano: 2024,
         banca: 'VUNESP',
-        is_active: true
+        ativo: true
       }
 
       const { data, error } = await supabase
@@ -178,7 +178,7 @@ describe('🏆 Concursos', () => {
       expect(data!.nome).toBe(novoConcurso.nome)
       expect(data!.ano).toBe(novoConcurso.ano)
       expect(data!.banca).toBe(novoConcurso.banca)
-      expect(data!.is_active).toBe(true)
+      expect(data!.ativo).toBe(true)
 
       testConcursoId = data!.id
     })
@@ -203,7 +203,7 @@ describe('🏆 Concursos', () => {
         nome: 'Concurso Data Inválida',
         descricao: 'Teste de data inválida',
         data_prova: 'data-invalida',
-        is_active: true
+        ativo: true
       }
 
       const { data, error } = await supabase
@@ -254,24 +254,24 @@ describe('🏆 Concursos', () => {
       // Desativar concurso
       const { data: dataDesativado, error: errorDesativado } = await supabase
         .from('concursos')
-        .update({ is_active: false })
+        .update({ ativo: false })
         .eq('id', testConcursoId)
         .select()
         .single()
 
       expect(errorDesativado).toBeNull()
-      expect(dataDesativado!.is_active).toBe(false)
+      expect(dataDesativado!.ativo).toBe(false)
 
       // Reativar concurso
       const { data: dataReativado, error: errorReativado } = await supabase
         .from('concursos')
-        .update({ is_active: true })
+        .update({ ativo: true })
         .eq('id', testConcursoId)
         .select()
         .single()
 
       expect(errorReativado).toBeNull()
-      expect(dataReativado!.is_active).toBe(true)
+      expect(dataReativado!.ativo).toBe(true)
     })
 
     it('deve bloquear atualização sem permissão de admin', async () => {
@@ -320,7 +320,7 @@ describe('🏆 Concursos', () => {
       const { count, error } = await supabase
         .from('concursos')
         .select('*', { count: 'exact', head: true })
-        .eq('is_active', true)
+        .eq('ativo', true)
 
       expect(error).toBeNull()
       expect(count).toBeGreaterThanOrEqual(0)
@@ -330,13 +330,13 @@ describe('🏆 Concursos', () => {
       const { data, error } = await supabase
         .from('concursos')
         .select(`
-          concurso_categorias!inner (
+          categorias_concursos!inner (
             id,
             nome
           ),
           id
         `)
-        .eq('is_active', true)
+        .eq('ativo', true)
 
       expect(error).toBeNull()
       expect(data).toBeDefined()
@@ -344,8 +344,8 @@ describe('🏆 Concursos', () => {
       // Agrupar por categoria
       const categorias = new Map()
       data?.forEach(concurso => {
-        const categoriaId = concurso.concurso_categorias.id
-        const categoriaNome = concurso.concurso_categorias.nome
+        const categoriaId = concurso.categorias_concursos.id
+        const categoriaNome = concurso.categorias_concursos.nome
         categorias.set(categoriaId, {
           nome: categoriaNome,
           count: (categorias.get(categoriaId)?.count || 0) + 1
@@ -376,7 +376,7 @@ describe('🏆 Concursos', () => {
         nome: 'Concurso Não Autorizado',
         descricao: 'Tentativa de criação sem auth',
         data_prova: '2024-12-31',
-        is_active: true
+        ativo: true
       }
 
       const { data, error } = await supabase
@@ -401,3 +401,6 @@ describe('🏆 Concursos', () => {
     })
   })
 }) 
+
+
+

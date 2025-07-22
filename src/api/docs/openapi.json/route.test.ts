@@ -6,9 +6,9 @@ vi.mock('../../../../core/documentation/openapi', () => ({
   generateOpenAPISpec: vi.fn(() => ({
     openapi: '3.0.0',
     info: {
-      title: 'AprovaFácil API',
+      titulo: 'AprovaFácil API',
       version: '1.0.0',
-      description: 'API completa para sistema de estudos e preparação para concursos públicos'
+      descricao: 'API completa para sistema de estudos e preparação para concursos públicos'
     },
     paths: {
       '/auth/login': {
@@ -140,8 +140,8 @@ vi.mock('../../../../core/documentation/openapi', () => ({
       }
     },
     tags: [
-      { name: 'Autenticação', description: 'Endpoints de autenticação e autorização' },
-      { name: 'Preferências', description: 'Preferências de usuário por concurso' }
+      { nome: 'Autenticação', descricao: 'Endpoints de autenticação e autorização' },
+      { nome: 'Preferências', descricao: 'Preferências de usuário por concurso' }
     ]
   }))
 }));
@@ -172,9 +172,9 @@ describe('OpenAPI JSON Route', () => {
     const response = await GET();
     const data = await response.json();
     
-    expect(data.info.title).toBeDefined();
+    expect(data.info.titulo).toBeDefined();
     expect(data.info.version).toBeDefined();
-    expect(data.info.description).toBeDefined();
+    expect(data.info.descricao).toBeDefined();
   });
 
   it('deve incluir caminhos da API', async () => {
@@ -322,3 +322,6 @@ describe('OpenAPI JSON Route', () => {
     expect(data.paths['/admin']).toBeDefined();
   });
 }); 
+
+
+

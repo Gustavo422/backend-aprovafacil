@@ -5,3 +5,6 @@ export interface AdminDTO {
   tipo: string;
   // Adicione outros campos relevantes
 } 
+
+
+

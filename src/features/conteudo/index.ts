@@ -4,3 +4,6 @@
 export * from './conteudo.service';
 export * from './conteudo.repository';
 export * from '../../types/conteudo.dto'; 
+
+
+

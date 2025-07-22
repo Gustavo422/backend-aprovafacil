@@ -1,42 +1,19 @@
 import express from 'express';
-import { z } from 'zod';
 import { supabase } from '../../config/supabase.js';
 import { requireAuth } from '../../middleware/auth.js';
-import { validateRequest } from '../../middleware/validation.js';
+import {
+  validateCreateFlashcard,
+  validateUpdateFlashcard
+} from '../../validation/flashcards.validation.js';
 import { logger } from '../../utils/logger.js';
-import { applyConcursoFilterToQuery } from '../../utils/concurso-filter.js';
+import { getUserConcurso } from '../../utils/concurso-filter.js';
 
 const router = express.Router();
-
-// Schemas de validação
-const createFlashcardSchema = z.object({
-  front: z.string().min(1, 'Frente é obrigatória'),
-  back: z.string().min(1, 'Verso é obrigatório'),
-  disciplina: z.string().min(1, 'Disciplina é obrigatória'),
-  tema: z.string().min(1, 'Tema é obrigatório'),
-  subtema: z.string().optional(),
-  concurso_id: z.string().uuid().optional(),
-  categoria_id: z.string().uuid().optional(),
-  peso_disciplina: z.number().min(1).max(100).optional(),
-  is_active: z.boolean().default(true)
-});
-
-const updateFlashcardSchema = z.object({
-  front: z.string().min(1).optional(),
-  back: z.string().min(1).optional(),
-  disciplina: z.string().min(1).optional(),
-  tema: z.string().min(1).optional(),
-  subtema: z.string().optional(),
-  concurso_id: z.string().uuid().optional(),
-  categoria_id: z.string().uuid().optional(),
-  peso_disciplina: z.number().min(1).max(100).optional(),
-  is_active: z.boolean().optional()
-});
 
 // GET /api/flashcards - Listar flashcards
 router.get('/', requireAuth, async (req, res) => {
   try {
-    const { page = 1, limit = 10, disciplina, tema, subtema, is_active } = req.query;
+    const { page = 1, limit = 10, disciplina, tema, subtema, ativo } = req.query;
     const userId = req.user?.id;
 
     if (!userId) {
@@ -45,6 +22,9 @@ router.get('/', requireAuth, async (req, res) => {
     }
 
     const offset = (Number(page) - 1) * Number(limit);
+
+    // Buscar concursoId antes
+    const concursoId = await getUserConcurso(supabase, userId);
 
     let query = supabase
       .from('flashcards')
@@ -57,7 +37,7 @@ router.get('/', requireAuth, async (req, res) => {
           ano,
           banca
         ),
-        concurso_categorias (
+        categorias_concursos (
           id,
           nome,
           descricao,
@@ -66,12 +46,13 @@ router.get('/', requireAuth, async (req, res) => {
         )
       `, { count: 'exact' });
 
-    // Aplicar filtro por concurso do usuário
-    query = await applyConcursoFilterToQuery(supabase, userId, query, 'flashcards');
+    if (concursoId) {
+      query = query.eq('concurso_id', concursoId);
+    }
 
     // Aplicar filtros adicionais
-    if (is_active !== undefined) {
-      query = query.eq('is_active', is_active);
+    if (ativo !== undefined) {
+      query = query.eq('ativo', ativo);
     }
     if (disciplina) {
       query = query.ilike('disciplina', `%${disciplina}%`);
@@ -84,7 +65,7 @@ router.get('/', requireAuth, async (req, res) => {
     }
 
     const { data: flashcards, error, count } = await query
-      .order('created_at', { ascending: false })
+      .order('criado_em', { ascending: false })
       .range(offset, offset + Number(limit) - 1);
 
     if (error) {
@@ -122,6 +103,8 @@ router.get('/:id', requireAuth, async (req, res) => {
       return;
     }
 
+    const concursoId = await getUserConcurso(supabase, userId);
+
     let query = supabase
       .from('flashcards')
       .select(`
@@ -133,7 +116,7 @@ router.get('/:id', requireAuth, async (req, res) => {
           ano,
           banca
         ),
-        concurso_categorias (
+        categorias_concursos (
           id,
           nome,
           descricao,
@@ -143,8 +126,9 @@ router.get('/:id', requireAuth, async (req, res) => {
       `)
       .eq('id', id);
 
-    // Aplicar filtro por concurso do usuário
-    query = await applyConcursoFilterToQuery(supabase, userId, query, 'flashcards');
+    if (concursoId) {
+      query = query.eq('concurso_id', concursoId);
+    }
 
     const { data: flashcard, error } = await query.single();
 
@@ -166,7 +150,7 @@ router.get('/:id', requireAuth, async (req, res) => {
 });
 
 // POST /api/flashcards - Criar novo flashcard
-router.post('/', requireAuth, validateRequest(createFlashcardSchema), async (req, res) => {
+router.post('/', requireAuth, validateCreateFlashcard, async (req, res) => {
   try {
     const flashcardData = req.body;
     const userId = req.user?.id;
@@ -196,7 +180,7 @@ router.post('/', requireAuth, validateRequest(createFlashcardSchema), async (req
 });
 
 // PUT /api/flashcards/:id - Atualizar flashcard
-router.put('/:id', requireAuth, validateRequest(updateFlashcardSchema), async (req, res) => {
+router.put('/:id', requireAuth, validateUpdateFlashcard, async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
@@ -207,13 +191,17 @@ router.put('/:id', requireAuth, validateRequest(updateFlashcardSchema), async (r
       return;
     }
 
+    const concursoId = await getUserConcurso(supabase, userId);
+
     // Verificar se o flashcard existe e pertence ao concurso do usuário
     let query = supabase
       .from('flashcards')
       .select('id')
       .eq('id', id);
 
-    query = await applyConcursoFilterToQuery(supabase, userId, query, 'flashcards');
+    if (concursoId) {
+      query = query.eq('concurso_id', concursoId);
+    }
 
     const { data: existingFlashcard, error: checkError } = await query.single();
 
@@ -253,13 +241,17 @@ router.delete('/:id', requireAuth, async (req, res) => {
       return;
     }
 
+    const concursoId = await getUserConcurso(supabase, userId);
+
     // Verificar se o flashcard existe e pertence ao concurso do usuário
     let query = supabase
       .from('flashcards')
       .select('id')
       .eq('id', id);
 
-    query = await applyConcursoFilterToQuery(supabase, userId, query, 'flashcards');
+    if (concursoId) {
+      query = query.eq('concurso_id', concursoId);
+    }
 
     const { data: existingFlashcard, error: checkError } = await query.single();
 
@@ -301,7 +293,10 @@ router.get('/stats/disciplinas', requireAuth, async (req, res) => {
       .select('disciplina, peso_disciplina');
 
     // Aplicar filtro por concurso do usuário
-    query = await applyConcursoFilterToQuery(supabase, userId, query, 'flashcards');
+    const concursoId = await getUserConcurso(supabase, userId);
+    if (concursoId) {
+      query = query.eq('concurso_id', concursoId);
+    }
 
     const { data: flashcards, error } = await query;
 

@@ -12,3 +12,6 @@ export interface PaginatedResponse<T = unknown> {
   page: number;
   pageSize: number;
 } 
+
+
+

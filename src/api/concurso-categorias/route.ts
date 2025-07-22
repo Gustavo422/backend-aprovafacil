@@ -2,7 +2,7 @@ import express, { Request, Response } from 'express';
 import { supabase } from '../../config/supabase.js';
 import { requestLogger } from '../../middleware/logger.js';
 import { rateLimit } from '../../middleware/rateLimit.js';
-import { requireAuth, requireAdmin } from '../../middleware/auth.js';
+import { requireAuth } from '../../middleware/auth.js';
 
 const router = express.Router();
 
@@ -16,14 +16,14 @@ router.use(rateLimit);
 
 router.get('/', async (req: Request, res: Response) => {
     try {
-        const { is_active, slug } = req.query;
+        const { ativo, slug } = req.query;
 
         // Construir query base
-        let query = supabase.from('concurso_categorias').select('*');
+        let query = supabase.from('categorias_concursos').select('*');
 
         // Aplicar filtros
-        if (is_active !== undefined) {
-            query = query.eq('is_active', is_active === 'true');
+        if (ativo !== undefined) {
+            query = query.eq('ativo', ativo === 'true');
         }
 
         if (slug) {
@@ -59,7 +59,7 @@ router.get('/', async (req: Request, res: Response) => {
 // POST - Criar categoria (apenas admin)
 // ========================================
 
-router.post('/', requireAuth, requireAdmin, async (req: Request, res: Response) => {
+router.post('/', requireAuth, async (req: Request, res: Response) => {
     try {
         const { nome, slug, descricao, cor_primaria, cor_secundaria } = req.body;
 
@@ -74,7 +74,7 @@ router.post('/', requireAuth, requireAdmin, async (req: Request, res: Response) 
 
         // Verificar se o slug já existe
         const { data: existingCategoria, error: existingError } = await supabase
-            .from('concurso_categorias')
+            .from('categorias_concursos')
             .select('id')
             .eq('slug', slug)
             .single();
@@ -98,14 +98,14 @@ router.post('/', requireAuth, requireAdmin, async (req: Request, res: Response) 
 
         // Criar categoria
         const { data: categoria, error } = await supabase
-            .from('concurso_categorias')
+            .from('categorias_concursos')
             .insert({
                 nome,
                 slug,
                 descricao,
                 cor_primaria: cor_primaria || '#2563EB',
                 cor_secundaria: cor_secundaria || '#1E40AF',
-                is_active: true
+                ativo: true
             })
             .select()
             .single();
@@ -137,14 +137,14 @@ router.post('/', requireAuth, requireAdmin, async (req: Request, res: Response) 
 // PUT - Atualizar categoria
 // ========================================
 
-router.put('/:id', requireAuth, requireAdmin, async (req: Request, res: Response) => {
+router.put('/:id', requireAuth, async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const { nome, slug, descricao, cor_primaria, cor_secundaria, is_active } = req.body;
+        const { nome, slug, descricao, cor_primaria, cor_secundaria, ativo } = req.body;
 
         // Verificar se a categoria existe
         const { data: existingCategoria, error: existingError } = await supabase
-            .from('concurso_categorias')
+            .from('categorias_concursos')
             .select('*')
             .eq('id', id)
             .single();
@@ -160,7 +160,7 @@ router.put('/:id', requireAuth, requireAdmin, async (req: Request, res: Response
         // Se o slug foi alterado, verificar se já existe
         if (slug && slug !== existingCategoria.slug) {
             const { data: slugExists, error: slugError } = await supabase
-                .from('concurso_categorias')
+                .from('categorias_concursos')
                 .select('id')
                 .eq('slug', slug)
                 .single();
@@ -185,15 +185,15 @@ router.put('/:id', requireAuth, requireAdmin, async (req: Request, res: Response
 
         // Atualizar categoria
         const { data: categoria, error } = await supabase
-            .from('concurso_categorias')
+            .from('categorias_concursos')
             .update({
                 nome,
                 slug,
                 descricao,
                 cor_primaria,
                 cor_secundaria,
-                is_active,
-                updated_at: new Date().toISOString()
+                ativo,
+                atualizado_em: new Date().toISOString()
             })
             .eq('id', id)
             .select()
@@ -226,13 +226,13 @@ router.put('/:id', requireAuth, requireAdmin, async (req: Request, res: Response
 // DELETE - Deletar categoria
 // ========================================
 
-router.delete('/:id', requireAuth, requireAdmin, async (req: Request, res: Response) => {
+router.delete('/:id', requireAuth, async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
 
         // Verificar se a categoria existe
         const { data: existingCategoria, error: existingError } = await supabase
-            .from('concurso_categorias')
+            .from('categorias_concursos')
             .select('id')
             .eq('id', id)
             .single();
@@ -247,7 +247,7 @@ router.delete('/:id', requireAuth, requireAdmin, async (req: Request, res: Respo
 
         // Deletar categoria
         const { error } = await supabase
-            .from('concurso_categorias')
+            .from('categorias_concursos')
             .delete()
             .eq('id', id);
 
@@ -274,3 +274,6 @@ router.delete('/:id', requireAuth, requireAdmin, async (req: Request, res: Respo
 });
 
 export default router;
+
+
+

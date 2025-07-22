@@ -217,3 +217,6 @@ describe('Sistema de Monitoramento Avançado', () => {
     });
   });
 }); 
+
+
+

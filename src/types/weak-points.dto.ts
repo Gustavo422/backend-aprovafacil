@@ -6,3 +6,6 @@ export interface WeakPointDTO {
   nivel: number;
   // Adicione outros campos relevantes
 } 
+
+
+

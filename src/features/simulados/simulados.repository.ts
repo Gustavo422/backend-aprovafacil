@@ -27,8 +27,11 @@ export class SimuladosRepository {
     throw new Error('Not implemented');
   }
 
-  async corrigir(): Promise<string | number | boolean | undefined> {
+  async corrigirSimulado(): Promise<string | number | boolean | undefined> {
     // TODO: Implementar acesso ao banco
     return undefined;
   }
 } 
+
+
+

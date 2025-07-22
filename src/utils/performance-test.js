@@ -16,13 +16,13 @@
 /*
 import { chromium } from 'playwright';
 import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { dirnome, join } from 'path';
 import { promises as fs } from 'fs';
 import { Command } from 'commander';
 import fetch from 'node-fetch';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __filenome = fileURLToPath(import.meta.url);
+const __dirnome = dirnome(__filenome);
 
 // Inicializa o Commander
 const program = new Command();
@@ -39,9 +39,9 @@ const options = program.opts();
 // Configurações
 const BASE_URL = options.url || 'http://localhost:3000';
 const PAGES_TO_TEST = [
-  { path: '/', name: 'home' },
-  { path: '/login', name: 'login' },
-  { path: '/dashboard', name: 'dashboard' },
+  { path: '/', nome: 'home' },
+  { path: '/login', nome: 'login' },
+  { path: '/dashboard', nome: 'dashboard' },
 ];
 const TEST_ITERATIONS = parseInt(options.iterations, 10) || 3;
 const REPORT_DIR = './performance-reports';
@@ -107,8 +107,8 @@ async function directoryExists(path) {
 async function saveResults(results) {
   try {
     const timestamp = formatDate();
-    const filename = `performance-report-${timestamp}.json`;
-    const filepath = join(REPORT_DIR, filename);
+    const filenome = `performance-report-${timestamp}.json`;
+    const filepath = join(REPORT_DIR, filenome);
     
     // Garante que o diretório existe
     if (!(await directoryExists(REPORT_DIR))) {
@@ -132,11 +132,11 @@ async function saveResults(results) {
 
 // Função para medir o tempo de carregamento de uma página
 async function measurePageLoad(browser, pageInfo) {
-  const { name, path } = pageInfo;
+  const { nome, path } = pageInfo;
   const url = `${BASE_URL}${path}`;
   const results = [];
   
-  log(`\nTestando página: ${name} (${url})`, 'info');
+  log(`\nTestando página: ${nome} (${url})`, 'info');
   
   // Executa o teste várias vezes para obter uma média
   for (let i = 0; i < TEST_ITERATIONS; i++) {
@@ -178,7 +178,7 @@ async function measurePageLoad(browser, pageInfo) {
           domComplete: performance.timing.domComplete - performance.timing.navigationStart
         },
         resources: performance.getEntriesByType('resource').map(r => ({
-          name: r.name,
+          nome: r.nome,
           duration: r.duration,
           initiatorType: r.initiatorType,
           transferSize: r.transferSize
@@ -220,7 +220,7 @@ async function measurePageLoad(browser, pageInfo) {
   }
   
   return {
-    page: name,
+    page: nome,
     url,
     results
   };
@@ -324,7 +324,7 @@ async function runPerformanceTests() {
       };
       
       testResults.push({
-        page: pageInfo.name,
+        page: pageInfo.nome,
         url: fullUrl,
         iterations: pageResults.length,
         successfulIterations: validResults.length,
@@ -347,7 +347,7 @@ async function runPerformanceTests() {
         baseUrl: BASE_URL,
         iterations: TEST_ITERATIONS,
         testUrls: PAGES_TO_TEST.map(p => ({
-          name: p.name,
+          nome: p.nome,
           path: p.path,
           url: `${BASE_URL}${p.path}`
         }))
@@ -492,4 +492,7 @@ const main = async () => {
 
 // Executa o script principal
 main();
+
+
+
 

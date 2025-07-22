@@ -11,14 +11,14 @@ router.use(requestLogger);
 router.use(rateLimit);
 
 interface SimuladoPersonalizado {
-    title: string;
-    difficulty: string;
+    titulo: string;
+    dificuldade: string;
 }
 
-interface UserSimuladoProgress {
+interface usuariosimuladoProgress {
     id: string;
     user_id: string;
-    completed_at: string;
+    concluido_at: string;
     time_taken_minutes: number | null;
     score: number;
     simulados_personalizados: SimuladoPersonalizado;
@@ -28,10 +28,10 @@ interface UserSimuladoProgress {
 interface Activity {
     id: string;
     type: string;
-    title: string;
-    description: string;
+    titulo: string;
+    descricao: string;
     time: string;
-    created_at: string;
+    criado_em: string;
     score?: number;
     improvement?: number;
 }
@@ -43,27 +43,27 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
 
         // Buscar atividades de simulados-personalizados
         const { data: simuladoProgress } = await supabase
-            .from('user_simulado_progress')
+            .from('progresso_usuario_simulado')
             .select(`
                 *,
                 simulados_personalizados:simulados_personalizados (
-                    title,
-                    difficulty
+                    titulo,
+                    dificuldade
                 )
             `)
             .eq('user_id', req.user.id)
-            .order('completed_at', { ascending: false })
-            .limit(10) as { data: UserSimuladoProgress[] | null };
+            .order('concluido_at', { ascending: false })
+            .limit(10) as { data: usuariosimuladoProgress[] | null };
 
         if (simuladoProgress) {
             for (const progress of simuladoProgress) {
                 activities.push({
                     id: `simulado-${progress.id}`,
                     type: 'simulado',
-                    title: progress.simulados_personalizados?.title || 'Simulado',
-                    description: `Pontuação: ${progress.score}% - ${progress.simulados_personalizados?.difficulty || 'Médio'}`,
+                    titulo: progress.simulados_personalizados?.titulo || 'Simulado',
+                    descricao: `Pontuação: ${progress.score}% - ${progress.simulados_personalizados?.dificuldade || 'Médio'}`,
                     time: progress.time_taken_minutes ? `${progress.time_taken_minutes}min` : '',
-                    created_at: progress.completed_at,
+                    criado_em: progress.concluido_at,
                     score: progress.score,
                     improvement: 0, // Será calculado comparando com simulados-personalizados anteriores
                 });
@@ -73,19 +73,19 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
         // Buscar atividades de cartoes-memorizacao
         interface FlashcardProgress {
             id: string;
-            created_at: string;
+            criado_em: string;
             status: string;
             flashcard: {
                 front: string;
                 disciplina: string;
             } | null;
-            updated_at: string;
+            atualizado_em: string;
             user_id: string;
-            progress_percentage?: number;
+            percentual_progresso?: number;
         }
 
         const { data: flashcardProgress } = await supabase
-            .from('user_flashcard_progress')
+            .from('progresso_usuario_flashcard')
             .select(`
                 *,
                 flashcard:flashcard (
@@ -94,7 +94,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
                 )
             `)
             .eq('user_id', req.user.id)
-            .order('updated_at', { ascending: false })
+            .order('atualizado_em', { ascending: false })
             .limit(10) as { data: FlashcardProgress[] | null };
 
         if (flashcardProgress) {
@@ -102,10 +102,10 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
                 activities.push({
                     id: `flashcard-${progress.id}`,
                     type: 'flashcard',
-                    title: 'Revisão de Flashcard',
-                    description: `${progress.flashcard?.disciplina || 'Disciplina'} - ${progress.status}`,
+                    titulo: 'Revisão de Flashcard',
+                    descricao: `${progress.flashcard?.disciplina || 'Disciplina'} - ${progress.status}`,
                     time: '',
-                    created_at: progress.updated_at,
+                    criado_em: progress.atualizado_em,
                 });
             }
         }
@@ -113,25 +113,25 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
         // Buscar atividades de apostilas
         interface ApostilaProgress {
             id: string;
-            created_at: string;
-            updated_at: string;
+            criado_em: string;
+            atualizado_em: string;
             user_id: string;
-            progress_percentage: number;
-            apostila_content: {
-                title: string;
+            percentual_progresso: number;
+            conteudo_apostila: {
+                titulo: string;
             } | null;
         }
 
         const { data: apostilaProgress } = await supabase
-            .from('user_apostila_progress')
+            .from('progresso_usuario_apostila')
             .select(`
                 *,
-                apostila_content (
-                    title
+                conteudo_apostila (
+                    titulo
                 )
             `)
             .eq('user_id', req.user.id)
-            .order('updated_at', { ascending: false })
+            .order('atualizado_em', { ascending: false })
             .limit(5) as { data: ApostilaProgress[] | null };
 
         if (apostilaProgress) {
@@ -139,16 +139,16 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
                 activities.push({
                     id: `apostila-${progress.id}`,
                     type: 'questao',
-                    title: 'Estudo de Apostila',
-                    description: `${progress.apostila_content?.title || 'Apostila'} - ${progress['progress_percentage']}% concluído`,
+                    titulo: 'Estudo de Apostila',
+                    descricao: `${progress.conteudo_apostila?.titulo || 'Apostila'} - ${progress['percentual_progresso']}% concluído`,
                     time: '',
-                    created_at: progress.updated_at,
+                    criado_em: progress.atualizado_em,
                 });
             }
         }
 
         // Ordenar todas as atividades por data
-        activities.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        activities.sort((a, b) => new Date(b.criado_em).getTime() - new Date(a.criado_em).getTime());
 
         // Calcular melhorias para simulados-personalizados
         if (simuladoProgress && simuladoProgress.length > 1) {
@@ -186,3 +186,6 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
 });
 
 export default router;
+
+
+

@@ -8,7 +8,7 @@ export const ApostilaSchema = z.object({
   descricao: z.string().optional(),
   categoria_disciplina_id: z.string().uuid('ID da categoria deve ser um UUID válido'),
   concurso_id: z.string().uuid('ID do concurso deve ser um UUID válido'),
-  is_active: z.boolean().default(true),
+  ativo: z.boolean().default(true),
   ordem: z.number().int().min(0).optional(),
   tags: z.array(z.string()).optional(),
   metadata: z.record(z.unknown()).optional()
@@ -21,11 +21,11 @@ export const UpdateApostilaSchema = ApostilaSchema.partial().extend({
 export const ApostilaFiltersSchema = z.object({
   categoria_disciplina_id: z.string().uuid('ID da categoria deve ser um UUID válido').optional(),
   concurso_id: z.string().uuid('ID do concurso deve ser um UUID válido').optional(),
-  is_active: z.boolean().optional(),
+  ativo: z.boolean().optional(),
   search: z.string().optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
-  orderBy: z.enum(['titulo', 'created_at', 'updated_at']).default('created_at'),
+  orderBy: z.enum(['titulo', 'criado_em', 'atualizado_em']).default('criado_em'),
   order: z.enum(['asc', 'desc']).default('desc')
 });
 
@@ -38,7 +38,7 @@ export const ApostilaContentSchema = z.object({
   conteudo: z.string().min(1, 'Conteúdo é obrigatório'),
   tipo: z.enum(['texto', 'html', 'markdown']).default('texto'),
   ordem: z.number().int().min(0).default(0),
-  is_active: z.boolean().default(true),
+  ativo: z.boolean().default(true),
   metadata: z.record(z.unknown()).optional()
 });
 
@@ -149,3 +149,6 @@ export default {
   UpdateApostilaContentSchema,
   ApostilaContentIdSchema
 }; 
+
+
+

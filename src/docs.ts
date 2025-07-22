@@ -2,29 +2,29 @@
 export const openApiSpec = {
   openapi: '3.0.0',
   info: {
-    title: 'AprovaFácil API',
-    description: 'API para sistema de estudos e preparação para concursos',
+    titulo: 'AprovaFácil API',
+    descricao: 'API para sistema de estudos e preparação para concursos',
     version: '1.0.0',
     contact: {
-      name: 'AprovaFacil Team',
+      nome: 'AprovaFacil Team',
       email: 'contato@aprovafacil.com'
     }
   },
   servers: [
     {
       url: 'http://localhost:5000/api',
-      description: 'Servidor de desenvolvimento'
+      descricao: 'Servidor de desenvolvimento'
     },
     {
       url: 'https://api.aprovafacil.com',
-      description: 'Servidor de produção'
+      descricao: 'Servidor de produção'
     }
   ],
   paths: {
     '/auth/login': {
       post: {
         summary: 'Autenticar usuário',
-        description: 'Realiza login do usuário com email e senha',
+        descricao: 'Realiza login do usuário com email e senha',
         tags: ['Autenticação'],
         requestBody: {
           required: true,
@@ -37,12 +37,12 @@ export const openApiSpec = {
                   email: {
                     type: 'string',
                     format: 'email',
-                    description: 'Email do usuário'
+                    descricao: 'Email do usuário'
                   },
                   senha: {
                     type: 'string',
                     minLength: 6,
-                    description: 'Senha do usuário'
+                    descricao: 'Senha do usuário'
                   }
                 }
               },
@@ -60,7 +60,7 @@ export const openApiSpec = {
         },
         responses: {
           '200': {
-            description: 'Login realizado com sucesso',
+            descricao: 'Login realizado com sucesso',
             content: {
               'application/json': {
                 schema: {
@@ -82,7 +82,7 @@ export const openApiSpec = {
             }
           },
           '400': {
-            description: 'Dados inválidos',
+            descricao: 'Dados inválidos',
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/Error' }
@@ -90,7 +90,7 @@ export const openApiSpec = {
             }
           },
           '401': {
-            description: 'Credenciais inválidas',
+            descricao: 'Credenciais inválidas',
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/Error' }
@@ -103,7 +103,7 @@ export const openApiSpec = {
     '/auth/register': {
       post: {
         summary: 'Registrar novo usuário',
-        description: 'Cria uma nova conta de usuário',
+        descricao: 'Cria uma nova conta de usuário',
         tags: ['Autenticação'],
         requestBody: {
           required: true,
@@ -116,17 +116,17 @@ export const openApiSpec = {
                   email: {
                     type: 'string',
                     format: 'email',
-                    description: 'Email do usuário'
+                    descricao: 'Email do usuário'
                   },
                   senha: {
                     type: 'string',
                     minLength: 6,
-                    description: 'Senha do usuário'
+                    descricao: 'Senha do usuário'
                   },
                   nome: {
                     type: 'string',
                     minLength: 2,
-                    description: 'Nome completo do usuário'
+                    descricao: 'Nome completo do usuário'
                   }
                 }
               },
@@ -145,7 +145,7 @@ export const openApiSpec = {
         },
         responses: {
           '201': {
-            description: 'Usuário criado com sucesso',
+            descricao: 'Usuário criado com sucesso',
             content: {
               'application/json': {
                 schema: {
@@ -166,7 +166,7 @@ export const openApiSpec = {
             }
           },
           '400': {
-            description: 'Dados inválidos',
+            descricao: 'Dados inválidos',
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/Error' }
@@ -179,26 +179,26 @@ export const openApiSpec = {
     '/apostilas': {
       get: {
         summary: 'Listar apostilas',
-        description: 'Retorna lista de apostilas disponíveis',
+        descricao: 'Retorna lista de apostilas disponíveis',
         tags: ['Apostilas'],
         security: [{ bearerAuth: [] }],
         parameters: [
           {
-            name: 'concurso',
+            nome: 'concurso',
             in: 'query',
-            description: 'Filtrar por concurso',
+            descricao: 'Filtrar por concurso',
             schema: { type: 'string' }
           },
           {
-            name: 'disciplina',
+            nome: 'disciplina',
             in: 'query',
-            description: 'Filtrar por disciplina',
+            descricao: 'Filtrar por disciplina',
             schema: { type: 'string' }
           }
         ],
         responses: {
           '200': {
-            description: 'Lista de apostilas',
+            descricao: 'Lista de apostilas',
             content: {
               'application/json': {
                 schema: {
@@ -226,7 +226,7 @@ export const openApiSpec = {
             }
           },
           '401': {
-            description: 'Não autorizado',
+            descricao: 'Não autorizado',
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/Error' }
@@ -258,12 +258,12 @@ export const openApiSpec = {
   },
   tags: [
     {
-      name: 'Autenticação',
-      description: 'Endpoints relacionados à autenticação de usuários'
+      nome: 'Autenticação',
+      descricao: 'Endpoints relacionados à autenticação de usuários'
     },
     {
-      name: 'Apostilas',
-      description: 'Endpoints relacionados ao gerenciamento de apostilas'
+      nome: 'Apostilas',
+      descricao: 'Endpoints relacionados ao gerenciamento de apostilas'
     }
   ]
 };
@@ -278,8 +278,8 @@ export function serveSwaggerUI(): string {
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AprovaFácil API - Documentação</title>
+    <meta nome="viewport" content="width=device-width, initial-scale=1.0">
+    <titulo>AprovaFácil API - Documentação</titulo>
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.9.0/swagger-ui.css" />
     <style>
         body {
@@ -294,11 +294,11 @@ export function serveSwaggerUI(): string {
         .swagger-ui .topbar .download-url-wrapper .select-label {
             color: #fff;
         }
-        .swagger-ui .info .title {
+        .swagger-ui .info .titulo {
             color: #2c3e50;
             font-size: 36px;
         }
-        .swagger-ui .info .description {
+        .swagger-ui .info .descricao {
             font-size: 16px;
             line-height: 1.5;
         }
@@ -359,3 +359,6 @@ export function serveSwaggerUI(): string {
 </html>
   `;
 } 
+
+
+

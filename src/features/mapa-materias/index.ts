@@ -3,3 +3,6 @@
 
 export { MapaAssuntosService } from './mapa-assuntos.service';
 export { MapaAssuntosRepository } from './mapa-assuntos.repository'; 
+
+
+

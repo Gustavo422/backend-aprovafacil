@@ -5,3 +5,6 @@ export interface ConteudoDTO {
   descricao?: string;
   // Adicione outros campos relevantes
 } 
+
+
+

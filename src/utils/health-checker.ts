@@ -67,7 +67,7 @@ class HealthChecker {
     try {
       // Teste simples de conexão com Supabase
       const { error } = await this.supabase
-        .from('users')
+        .from('usuarios')
         .select('count')
         .limit(1)
         .single();
@@ -172,4 +172,10 @@ class HealthChecker {
   }
 }
 
-export const healthChecker = new HealthChecker(); 
+// Instância será criada quando necessário, após o carregamento das variáveis de ambiente
+export function createHealthChecker(): HealthChecker {
+  return new HealthChecker();
+} 
+
+
+

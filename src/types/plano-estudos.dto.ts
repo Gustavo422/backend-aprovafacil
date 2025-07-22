@@ -2,13 +2,13 @@
 export interface PlanoEstudoDTO {
   id: string;
   user_id: string;
-  name: string;
-  description?: string;
-  is_active: boolean;
+  nome: string;
+  descricao?: string;
+  ativo: boolean;
   start_date: string;
   end_date: string;
-  created_at: string;
-  updated_at: string;
+  criado_em: string;
+  atualizado_em: string;
   concurso_id?: string;
   categoria_id?: string;
   schedule?: Record<string, unknown>;
@@ -16,9 +16,9 @@ export interface PlanoEstudoDTO {
 
 export interface CreatePlanoEstudoDTO {
   user_id: string;
-  name: string;
-  description?: string;
-  is_active?: boolean;
+  nome: string;
+  descricao?: string;
+  ativo?: boolean;
   start_date: string;
   end_date: string;
   concurso_id?: string;
@@ -27,9 +27,9 @@ export interface CreatePlanoEstudoDTO {
 }
 
 export interface UpdatePlanoEstudoDTO {
-  name?: string;
-  description?: string;
-  is_active?: boolean;
+  nome?: string;
+  descricao?: string;
+  ativo?: boolean;
   start_date?: string;
   end_date?: string;
   concurso_id?: string;

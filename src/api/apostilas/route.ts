@@ -3,8 +3,8 @@ import { Request, Response } from 'express';
 import { supabase } from '../../config/supabase.js';
 import { requestLogger } from '../../middleware/logger.js';
 import { rateLimit } from '../../middleware/rateLimit.js';
-import { requireAuth, requireAdmin } from '../../middleware/auth.js';
-import { applyConcursoFilterToQuery, checkConcursoAccess } from '../../utils/concurso-filter.js';
+import { requireAuth } from '../../middleware/auth.js';
+import { getUserConcurso, checkConcursoAccess } from '../../utils/concurso-filter.js';
 import { 
   validateApostilaFilters,
   validateApostilaId,
@@ -30,14 +30,14 @@ router.get('/', validateApostilaFilters, requireAuth, async (req: Request, res: 
   try {
     const { 
       categoria_id, 
-      is_active, 
+      ativo, 
       search, 
       page = 1, 
       limit = 20 
     } = req.query;
 
     // Obter o usuário autenticado
-    const userId = (req as any).user?.id;
+    const userId = (req as { user?: { id?: string } }).user?.id;
     if (!userId) {
       res.status(401).json({
         success: false,
@@ -50,7 +50,7 @@ router.get('/', validateApostilaFilters, requireAuth, async (req: Request, res: 
       .from('apostilas')
       .select(`
         *,
-        concurso_categorias (
+        categorias_concursos (
           id,
           nome,
           slug,
@@ -68,19 +68,22 @@ router.get('/', validateApostilaFilters, requireAuth, async (req: Request, res: 
       `);
 
     // Aplicar filtro automático por concurso do usuário
-    query = await applyConcursoFilterToQuery(supabase, userId, query, 'apostilas');
+    const concursoId = await getUserConcurso(supabase, userId);
+    if (concursoId) {
+      query = query.eq('concurso_id', concursoId);
+    }
 
     // Aplicar filtros adicionais
     if (categoria_id) {
       query = query.eq('categoria_id', categoria_id);
     }
 
-    if (is_active !== undefined) {
-      query = query.eq('is_active', is_active === 'true');
+    if (ativo !== undefined) {
+      query = query.eq('ativo', ativo === 'true');
     }
 
     if (search) {
-      query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%`);
+      query = query.or(`titulo.ilike.%${search}%,descricao.ilike.%${search}%`);
     }
 
     // Calcular offset para paginação
@@ -91,7 +94,7 @@ router.get('/', validateApostilaFilters, requireAuth, async (req: Request, res: 
     // Buscar dados com paginação
     const { data: apostilas, error: apostilasError, count } = await query
       .range(offset, offset + limitNum - 1)
-      .order('created_at', { ascending: false });
+      .order('criado_em', { ascending: false });
 
     if (apostilasError) {
       console.error('Erro ao buscar apostilas:', apostilasError);
@@ -141,7 +144,7 @@ router.get('/:id', validateApostilaId, requireAuth, async (req: Request, res: Re
     const { id } = req.params;
     
     // Obter o usuário autenticado
-    const userId = (req as any).user?.id;
+    const userId = (req as { user?: { id?: string } }).user?.id;
     if (!userId) {
       res.status(401).json({
         success: false,
@@ -164,7 +167,7 @@ router.get('/:id', validateApostilaId, requireAuth, async (req: Request, res: Re
       .from('apostilas')
       .select(`
         *,
-        concurso_categorias (
+        categorias_concursos (
           id,
           nome,
           slug,
@@ -224,7 +227,7 @@ router.post('/', requireAuth, validateCreateApostila, async (req: Request, res: 
       .insert(apostilaData)
       .select(`
         *,
-        concurso_categorias (
+        categorias_concursos (
           id,
           nome,
           slug,
@@ -288,12 +291,12 @@ router.put('/:id', requireAuth, validateApostilaId, validateUpdateApostila, asyn
       .from('apostilas')
       .update({
         ...updateData,
-        updated_at: new Date().toISOString()
+        atualizado_em: new Date().toISOString()
       })
       .eq('id', id)
       .select(`
         *,
-        concurso_categorias (
+        categorias_concursos (
           id,
           nome,
           slug,
@@ -344,9 +347,19 @@ router.put('/:id', requireAuth, validateApostilaId, validateUpdateApostila, asyn
 });
 
 // DELETE /api/apostilas/:id - Deletar apostila (requer admin)
-router.delete('/:id', requireAdmin, validateApostilaId, async (req: Request, res: Response) => {
+router.delete('/:id', requireAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+
+    // Verificar se o usuário é admin
+    const userId = (req as { user?: { id?: string; is_admin?: boolean } }).user?.id;
+    if (!userId || !(req.user?.is_admin)) {
+      res.status(403).json({
+        success: false,
+        error: 'Acesso negado: usuário não é administrador'
+      });
+      return;
+    }
 
     const { error } = await supabase
       .from('apostilas')
@@ -386,11 +399,11 @@ router.get('/:id/content', validateApostilaId, async (req: Request, res: Respons
     const { id } = req.params;
 
     const { data: content, error } = await supabase
-      .from('apostila_content')
+      .from('conteudo_apostila')
       .select('*')
       .eq('apostila_id', id)
-      .eq('is_active', true)
-      .order('order_index', { ascending: true })
+      .eq('ativo', true)
+      .order('ordem', { ascending: true })
       .order('module_number', { ascending: true });
 
     if (error) {
@@ -426,7 +439,7 @@ router.post('/:id/content', requireAuth, validateApostilaId, validateCreateApost
     contentData.apostila_id = id;
 
     const { data: content, error } = await supabase
-      .from('apostila_content')
+      .from('conteudo_apostila')
       .insert(contentData)
       .select()
       .single();
@@ -465,10 +478,10 @@ router.put('/content/:id', requireAuth, validateApostilaContentId, validateUpdat
     delete updateData.id;
 
     const { data: content, error } = await supabase
-      .from('apostila_content')
+      .from('conteudo_apostila')
       .update({
         ...updateData,
-        updated_at: new Date().toISOString()
+        atualizado_em: new Date().toISOString()
       })
       .eq('id', id)
       .select()
@@ -507,12 +520,22 @@ router.put('/content/:id', requireAuth, validateApostilaContentId, validateUpdat
 });
 
 // DELETE /api/apostilas/content/:contentId - Deletar conteúdo específico (requer admin)
-router.delete('/content/:id', requireAdmin, validateApostilaContentId, async (req: Request, res: Response) => {
+router.delete('/content/:id', requireAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
+    // Verificar se o usuário é admin
+    const userId = (req as { user?: { id?: string; is_admin?: boolean } }).user?.id;
+    if (!userId || !(req.user?.is_admin)) {
+      res.status(403).json({
+        success: false,
+        error: 'Acesso negado: usuário não é administrador'
+      });
+      return;
+    }
+
     const { error } = await supabase
-      .from('apostila_content')
+      .from('conteudo_apostila')
       .delete()
       .eq('id', id);
 
@@ -540,3 +563,6 @@ router.delete('/content/:id', requireAdmin, validateApostilaContentId, async (re
 });
 
 export default router;
+
+
+

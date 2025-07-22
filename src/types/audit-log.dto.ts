@@ -3,19 +3,19 @@ export interface AuditLogDTO {
   id: string;
   user_id?: string;
   action: string;
-  table_name: string;
+  table_nome: string;
   record_id?: string;
   old_values?: Record<string, unknown>;
   new_values?: Record<string, unknown>;
   ip_address?: string;
   user_agent?: string;
-  created_at: string;
+  criado_em: string;
 }
 
 export interface CreateAuditLogDTO {
   user_id?: string;
   action: string;
-  table_name: string;
+  table_nome: string;
   record_id?: string;
   old_values?: Record<string, unknown>;
   new_values?: Record<string, unknown>;
@@ -26,7 +26,7 @@ export interface CreateAuditLogDTO {
 export interface UpdateAuditLogDTO {
   user_id?: string;
   action?: string;
-  table_name?: string;
+  table_nome?: string;
   record_id?: string;
   old_values?: Record<string, unknown>;
   new_values?: Record<string, unknown>;

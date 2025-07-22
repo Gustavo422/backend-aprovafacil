@@ -6,12 +6,9 @@ export interface ApostilaInteligenteDTO {
   conteudo: Record<string, unknown>;
   concurso_id?: string;
   categoria_id?: string;
-  created_at: string;
-  updated_at: string;
-  is_active: boolean;
-  // Colunas adicionais que podem ser adicionadas
-  title?: string;
-  description?: string;
+  criado_em: string;
+  atualizado_em: string;
+  ativo: boolean;
   disciplinas?: Record<string, unknown>;
   slug?: string;
   created_by?: string;
@@ -23,9 +20,7 @@ export interface CreateApostilaInteligenteDTO {
   conteudo: Record<string, unknown>;
   concurso_id?: string;
   categoria_id?: string;
-  is_active?: boolean;
-  title?: string;
-  description?: string;
+  ativo?: boolean;
   disciplinas?: Record<string, unknown>;
   slug?: string;
   created_by?: string;
@@ -37,9 +32,7 @@ export interface UpdateApostilaInteligenteDTO {
   conteudo?: Record<string, unknown>;
   concurso_id?: string;
   categoria_id?: string;
-  is_active?: boolean;
-  title?: string;
-  description?: string;
+  ativo?: boolean;
   disciplinas?: Record<string, unknown>;
   slug?: string;
   created_by?: string;

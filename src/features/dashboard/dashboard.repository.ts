@@ -7,7 +7,7 @@ export class DashboardRepository {
     return { resumo: '', stats: {} };
   }
 
-  async fetchUserStats(): Promise<DashboardDTO> {
+  async fetchUsuarioStats(): Promise<DashboardDTO> {
     // TODO: Implementar acesso ao banco
     return { resumo: '', stats: {} };
   }
@@ -17,3 +17,6 @@ export class DashboardRepository {
     return '';
   }
 } 
+
+
+

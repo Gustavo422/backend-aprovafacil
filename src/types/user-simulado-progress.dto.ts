@@ -1,5 +1,5 @@
 // DTO de Progresso de Simulado do Usuário - Atualizado para corresponder ao schema real
-export interface UserSimuladoProgressDTO {
+export interface UsuarioSimuladoProgressDTO {
   id: string;
   user_id: string;
   simulado_id: string;
@@ -13,14 +13,14 @@ export interface UserSimuladoProgressDTO {
   acertos: number;
   erros: number;
   em_branco: number;
-  is_completed: boolean;
-  created_at: string;
-  updated_at: string;
+  is_concluido: boolean;
+  criado_em: string;
+  atualizado_em: string;
   time_taken_minutes?: number;
-  completed_at?: string;
+  concluido_at?: string;
 }
 
-export interface CreateUserSimuladoProgressDTO {
+export interface CreateusuariosimuladoProgressDTO {
   user_id: string;
   simulado_id: string;
   start_time?: string;
@@ -33,12 +33,12 @@ export interface CreateUserSimuladoProgressDTO {
   acertos?: number;
   erros?: number;
   em_branco?: number;
-  is_completed?: boolean;
+  is_concluido?: boolean;
   time_taken_minutes?: number;
-  completed_at?: string;
+  concluido_at?: string;
 }
 
-export interface UpdateUserSimuladoProgressDTO {
+export interface UpdateusuariosimuladoProgressDTO {
   end_time?: string;
   time_taken_seconds?: number;
   respostas?: Record<string, unknown>;
@@ -48,7 +48,7 @@ export interface UpdateUserSimuladoProgressDTO {
   acertos?: number;
   erros?: number;
   em_branco?: number;
-  is_completed?: boolean;
+  is_concluido?: boolean;
   time_taken_minutes?: number;
-  completed_at?: string;
+  concluido_at?: string;
 }

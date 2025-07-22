@@ -5,3 +5,6 @@ export interface ConcursoCategoriaDTO {
   descricao?: string;
   // Adicione outros campos relevantes
 } 
+
+
+

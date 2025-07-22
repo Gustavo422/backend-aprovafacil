@@ -44,12 +44,12 @@ export async function PUT(request: Request) {
     // Atualizar o status do assunto
     // TODO: Corrigir import de '@/lib/supabase' para caminho relativo ou remover se não for usado.
     // const { data, error } = await supabase
-    //   .from('user_mapa_assuntos_status')
+    //   .from('progresso_usuario_mapa_assuntos')
     //   .upsert({
     //     user_id: user.id,
     //     mapa_assunto_id: assuntoId,
     //     status,
-    //     updated_at: new Date().toISOString(),
+    //     atualizado_em: new Date().toISOString(),
     //   })
     //   .select();
 
@@ -76,3 +76,6 @@ export async function PUT(request: Request) {
   }
 }
 */
+
+
+

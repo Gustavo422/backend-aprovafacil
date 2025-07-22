@@ -7,7 +7,7 @@ export class DashboardService {
     return { resumo: '', stats: {} };
   }
 
-  async getUserStats(): Promise<DashboardDTO> {
+  async getUsuarioStats(): Promise<DashboardDTO> {
     // TODO: Implementar lógica de estatísticas do usuário
     return { resumo: '', stats: {} };
   }
@@ -17,3 +17,6 @@ export class DashboardService {
     return '';
   }
 } 
+
+
+

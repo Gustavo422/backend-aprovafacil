@@ -42,7 +42,7 @@ export async function PUT(request: Request) {
 
     // Buscar o progresso atual
     const { data: progressAtual, error: buscaError } = await supabase
-      .from('user_flashcard_progress')
+      .from('progresso_usuario_flashcard')
       .select('*')
       .eq('user_id', user.id)
       .eq('flashcard_id', flashcard_id)
@@ -86,14 +86,14 @@ export async function PUT(request: Request) {
 
     // Atualizar o progresso
     const { data, error } = await supabase
-      .from('user_flashcard_progress')
+      .from('progresso_usuario_flashcard')
       .upsert({
         user_id: user.id,
         flashcard_id,
         status,
         next_review: proximaRevisao,
         review_count: progressAtual ? progressAtual.review_count + 1 : 1,
-        updated_at: new Date().toISOString(),
+        atualizado_em: new Date().toISOString(),
       })
       .select();
 
@@ -144,7 +144,7 @@ export async function GET(_request: Request) {
 
     // Construir a query base
     let query = supabase
-      .from('user_flashcard_progress')
+      .from('progresso_usuario_flashcard')
       .select(
         `
         *,
@@ -201,3 +201,6 @@ export async function GET(_request: Request) {
   }
 }
 */
+
+
+

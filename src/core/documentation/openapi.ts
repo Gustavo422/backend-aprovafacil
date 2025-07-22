@@ -1,4 +1,7 @@
 import { OpenAPIV3 } from 'openapi-types';
+import { ErrorSchema } from './schemas/Error.schema';
+import { ConcursoSchema, ConcursoInputSchema } from './schemas/Concurso.schema';
+import { UserSchema } from './schemas/User.schema';
 
 export const openApiConfig: OpenAPIV3.Document = {
   openapi: '3.0.0',
@@ -481,7 +484,7 @@ export const openApiConfig: OpenAPIV3.Document = {
                           categoria: { type: 'string', example: 'Direito' },
                           disciplina: { type: 'string', example: 'Constitucional' },
                           concurso: { type: 'string', example: 'OAB' },
-                          descricao: { type: 'string', example: 'Apostila completa sobre Direito Constitucional' },
+                          description: { type: 'string', example: 'Apostila completa sobre Direito Constitucional' },
                           autor: { type: 'string', example: 'Prof. Silva' },
                           dataCriacao: { type: 'string', format: 'date-time' },
                           tamanho: { type: 'integer', example: 2048576 },
@@ -546,7 +549,7 @@ export const openApiConfig: OpenAPIV3.Document = {
                     type: 'string',
                     description: 'Concurso relacionado'
                   },
-                  descricao: {
+                  description: {
                     type: 'string',
                     maxLength: 1000,
                     description: 'Descrição da apostila'
@@ -576,7 +579,7 @@ export const openApiConfig: OpenAPIV3.Document = {
                     categoria: 'Direito',
                     disciplina: 'Administrativo',
                     concurso: 'OAB',
-                    descricao: 'Apostila completa sobre Direito Administrativo',
+                    description: 'Apostila completa sobre Direito Administrativo',
                     autor: 'Prof. Santos',
                     tags: ['direito', 'administrativo', 'oab'],
                     visibilidade: 'publica'
@@ -660,7 +663,7 @@ export const openApiConfig: OpenAPIV3.Document = {
                         categoria: { type: 'string', example: 'Direito' },
                         disciplina: { type: 'string', example: 'Constitucional' },
                         concurso: { type: 'string', example: 'OAB' },
-                        descricao: { type: 'string', example: 'Apostila completa sobre Direito Constitucional' },
+                        description: { type: 'string', example: 'Apostila completa sobre Direito Constitucional' },
                         autor: { type: 'string', example: 'Prof. Silva' },
                         dataCriacao: { type: 'string', format: 'date-time' },
                         dataAtualizacao: { type: 'string', format: 'date-time' },
@@ -723,7 +726,7 @@ export const openApiConfig: OpenAPIV3.Document = {
                   categoria: { type: 'string' },
                   disciplina: { type: 'string' },
                   concurso: { type: 'string' },
-                  descricao: { type: 'string', maxLength: 1000 },
+                  description: { type: 'string', maxLength: 1000 },
                   autor: { type: 'string' },
                   tags: { type: 'array', items: { type: 'string' } },
                   visibilidade: { type: 'string', enum: ['publica', 'privada'] }
@@ -1245,7 +1248,7 @@ export const openApiConfig: OpenAPIV3.Document = {
                         properties: {
                           id: { type: 'string', example: 'simulado-123' },
                           titulo: { type: 'string', example: 'Simulado OAB - Direito Constitucional' },
-                          descricao: { type: 'string', example: 'Simulado completo de Direito Constitucional' },
+                          description: { type: 'string', example: 'Simulado completo de Direito Constitucional' },
                           concurso: { type: 'string', example: 'OAB' },
                           disciplina: { type: 'string', example: 'Direito Constitucional' },
                           nivel: { type: 'string', example: 'intermediario' },
@@ -1302,7 +1305,7 @@ export const openApiConfig: OpenAPIV3.Document = {
                     maxLength: 200,
                     description: 'Título do simulado'
                   },
-                  descricao: {
+                  description: {
                     type: 'string',
                     maxLength: 1000,
                     description: 'Descrição do simulado'
@@ -1355,7 +1358,7 @@ export const openApiConfig: OpenAPIV3.Document = {
                   summary: 'Exemplo de criação de simulado',
                   value: {
                     titulo: 'Simulado OAB - Direito Constitucional',
-                    descricao: 'Simulado completo de Direito Constitucional para OAB',
+                    description: 'Simulado completo de Direito Constitucional para OAB',
                     concurso: 'OAB',
                     disciplina: 'Direito Constitucional',
                     nivel: 'intermediario',
@@ -1452,7 +1455,7 @@ export const openApiConfig: OpenAPIV3.Document = {
                       properties: {
                         id: { type: 'string', example: 'simulado-123' },
                         titulo: { type: 'string', example: 'Simulado OAB - Direito Constitucional' },
-                        descricao: { type: 'string', example: 'Simulado completo de Direito Constitucional' },
+                        description: { type: 'string', example: 'Simulado completo de Direito Constitucional' },
                         concurso: { type: 'string', example: 'OAB' },
                         disciplina: { type: 'string', example: 'Direito Constitucional' },
                         nivel: { type: 'string', example: 'intermediario' },
@@ -1513,7 +1516,7 @@ export const openApiConfig: OpenAPIV3.Document = {
                     maxLength: 200,
                     description: 'Título do simulado'
                   },
-                  descricao: {
+                  description: {
                     type: 'string',
                     maxLength: 1000,
                     description: 'Descrição do simulado'
@@ -1538,7 +1541,7 @@ export const openApiConfig: OpenAPIV3.Document = {
                   summary: 'Exemplo de simulado personalizado',
                   value: {
                     titulo: 'Meu Simulado Personalizado',
-                    descricao: 'Simulado criado com questões selecionadas',
+                    description: 'Simulado criado com questões selecionadas',
                     questoesIds: ['questao-1', 'questao-2', 'questao-3'],
                     tempoLimite: 1800
                   }
@@ -2081,7 +2084,7 @@ export const openApiConfig: OpenAPIV3.Document = {
                         properties: {
                           id: { type: 'string', example: 'questao-semanal-123' },
                           titulo: { type: 'string', example: 'Questão Semanal #15' },
-                          descricao: { type: 'string', example: 'Questão de Direito Constitucional' },
+                          description: { type: 'string', example: 'Questão de Direito Constitucional' },
                           concurso: { type: 'string', example: 'OAB' },
                           disciplina: { type: 'string', example: 'Direito Constitucional' },
                           semana: { type: 'integer', example: 15 },
@@ -2127,7 +2130,7 @@ export const openApiConfig: OpenAPIV3.Document = {
                     maxLength: 200,
                     description: 'Título da questão'
                   },
-                  descricao: {
+                  description: {
                     type: 'string',
                     maxLength: 500,
                     description: 'Descrição da questão'
@@ -2185,7 +2188,7 @@ export const openApiConfig: OpenAPIV3.Document = {
                   summary: 'Exemplo de questão semanal',
                   value: {
                     titulo: 'Questão Semanal #15 - Direito Constitucional',
-                    descricao: 'Questão sobre princípios fundamentais',
+                    description: 'Questão sobre princípios fundamentais',
                     concurso: 'OAB',
                     disciplina: 'Direito Constitucional',
                     semana: 15,
@@ -2293,7 +2296,7 @@ export const openApiConfig: OpenAPIV3.Document = {
                               properties: {
                                 id: { type: 'string', example: 'assunto-1' },
                                 nome: { type: 'string', example: 'Princípios Fundamentais' },
-                                descricao: { type: 'string', example: 'Fundamentos da República' },
+                                description: { type: 'string', example: 'Fundamentos da República' },
                                 nivel: { type: 'string', example: 'basico' },
                                 status: { type: 'string', example: 'estudado' },
                                 questoes: { type: 'integer', example: 10 },
@@ -2363,7 +2366,7 @@ export const openApiConfig: OpenAPIV3.Document = {
                       properties: {
                         id: { type: 'string', example: 'assunto-1' },
                         nome: { type: 'string', example: 'Princípios Fundamentais' },
-                        descricao: { type: 'string', example: 'Fundamentos da República' },
+                        description: { type: 'string', example: 'Fundamentos da República' },
                         disciplina: { type: 'string', example: 'Direito Constitucional' },
                         nivel: { type: 'string', example: 'basico' },
                         status: { type: 'string', example: 'estudado' },
@@ -3281,7 +3284,7 @@ export const openApiConfig: OpenAPIV3.Document = {
                         properties: {
                           id: { type: 'string', example: 'cat-123' },
                           nome: { type: 'string', example: 'Exatas' },
-                          descricao: { type: 'string', example: 'Disciplinas exatas' }
+                          description: { type: 'string', example: 'Disciplinas exatas' }
                         }
                       }
                     }
@@ -3314,7 +3317,7 @@ export const openApiConfig: OpenAPIV3.Document = {
                         properties: {
                           id: { type: 'string', example: 'cat-123' },
                           nome: { type: 'string', example: 'Federal' },
-                          descricao: { type: 'string', example: 'Concursos federais' }
+                          description: { type: 'string', example: 'Concursos federais' }
                         }
                       }
                     }
@@ -3329,137 +3332,11 @@ export const openApiConfig: OpenAPIV3.Document = {
   },
   components: {
     schemas: {
-      Error: {
-        type: 'object',
-        properties: {
-          success: {
-            type: 'boolean',
-            example: false
-          },
-          message: {
-            type: 'string',
-            example: 'Mensagem de erro'
-          },
-          error: {
-            type: 'object',
-            properties: {
-              code: {
-                type: 'string',
-                example: 'ERROR_CODE'
-              },
-              message: {
-                type: 'string',
-                example: 'Mensagem de erro'
-              }
-            }
-          }
-        }
-      },
-      Concurso: {
-        type: 'object',
-        properties: {
-          id: {
-            type: 'string',
-            example: 'concurso-123'
-          },
-          nome: {
-            type: 'string',
-            example: 'Concurso Exemplo'
-          },
-          descricao: {
-            type: 'string',
-            example: 'Descrição do concurso'
-          },
-          dataInicio: {
-            type: 'string',
-            format: 'date',
-            example: '2024-01-01'
-          },
-          dataFim: {
-            type: 'string',
-            format: 'date',
-            example: '2024-12-31'
-          },
-          ativo: {
-            type: 'boolean',
-            example: true
-          },
-          createdAt: {
-            type: 'string',
-            format: 'date-time',
-            example: '2024-01-01T00:00:00Z'
-          },
-          updatedAt: {
-            type: 'string',
-            format: 'date-time',
-            example: '2024-01-01T00:00:00Z'
-          }
-        }
-      },
-      ConcursoInput: {
-        type: 'object',
-        required: ['nome'],
-        properties: {
-          nome: {
-            type: 'string',
-            minLength: 1,
-            maxLength: 255,
-            example: 'Concurso Exemplo'
-          },
-          descricao: {
-            type: 'string',
-            maxLength: 1000,
-            example: 'Descrição do concurso'
-          },
-          dataInicio: {
-            type: 'string',
-            format: 'date',
-            example: '2024-01-01'
-          },
-          dataFim: {
-            type: 'string',
-            format: 'date',
-            example: '2024-12-31'
-          },
-          ativo: {
-            type: 'boolean',
-            example: true
-          }
-        }
-      },
-      User: {
-        type: 'object',
-        properties: {
-          id: {
-            type: 'string',
-            example: 'user-123'
-          },
-          email: {
-            type: 'string',
-            format: 'email',
-            example: 'usuario@exemplo.com'
-          },
-          nome: {
-            type: 'string',
-            example: 'João Silva'
-          },
-          role: {
-            type: 'string',
-            enum: ['user', 'admin'],
-            example: 'user'
-          },
-          createdAt: {
-            type: 'string',
-            format: 'date-time',
-            example: '2024-01-01T00:00:00Z'
-          },
-          updatedAt: {
-            type: 'string',
-            format: 'date-time',
-            example: '2024-01-01T00:00:00Z'
-          }
-        }
-      }
+      Error: ErrorSchema,
+      Concurso: ConcursoSchema,
+      ConcursoInput: ConcursoInputSchema,
+      User: UserSchema,
+      // ... outros schemas ...
     },
     securitySchemes: {
       bearerAuth: {

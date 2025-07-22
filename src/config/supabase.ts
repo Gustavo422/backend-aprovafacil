@@ -1,7 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import * as dotenv from 'dotenv';
-
-dotenv.config();
+import express from 'express';
 
 // Configuração do Supabase
 const supabaseUrl = process.env['SUPABASE_URL'];
@@ -16,6 +14,8 @@ if (!supabaseUrl || !supabaseServiceKey) {
         process.exit(1);
     }
 }
+
+console.log('SUPABASE_URL em uso:', supabaseUrl);
 
 // Cliente Supabase para operações do servidor
 export const supabase = createClient(supabaseUrl || 'https://example.supabase.co', supabaseServiceKey || 'dummy-key', {
@@ -38,46 +38,74 @@ if (!supabaseAnonKey) {
 
 export const supabaseClient = createClient(supabaseUrl || 'https://example.supabase.co', supabaseAnonKey || 'dummy-key');
 
+// Endpoint temporário para teste descartável
+if (process.env.NODE_ENV !== 'production') {
+  const app = express();
+  app.get('/test-supabase', async (req, res) => {
+    try {
+      const { data, error } = await supabase
+        .from('usuarios')
+        .select('id')
+        .limit(1);
+      res.json({
+        SUPABASE_URL: supabaseUrl,
+        success: !error,
+        error: error ? error.message : null,
+        data
+      });
+    } catch (err) {
+      res.status(500).json({
+        SUPABASE_URL: supabaseUrl,
+        success: false,
+        error: err instanceof Error ? err.message : err
+      });
+    }
+  });
+  app.listen(5050, () => {
+    console.log('Teste Supabase rodando em http://localhost:5050/test-supabase');
+  });
+}
+
 // Tipos para o Supabase
 export type Database = {
   public: {
     Tables: {
-      users: {
+      usuarios: {
         Row: {
           id: string;
-          name: string;
+          nome: string;
           email: string;
-          last_login: string | null;
-          created_at: string;
-          updated_at: string;
-          total_questions_answered: number;
-          total_correct_answers: number;
-          study_time_minutes: number;
-          average_score: number;
+          ultimo_login: string | null;
+          criado_em: string;
+          atualizado_em: string;
+          total_questoes_respondidas: number;
+          total_resposta_corretas: number;
+          tempo_estudo_minutos: number;
+          pontuacao_media: number;
         };
         Insert: {
           id?: string;
-          name: string;
+          nome: string;
           email: string;
-          last_login?: string | null;
-          created_at?: string;
-          updated_at?: string;
-          total_questions_answered?: number;
-          total_correct_answers?: number;
-          study_time_minutes?: number;
-          average_score?: number;
+          ultimo_login?: string | null;
+          criado_em?: string;
+          atualizado_em?: string;
+          total_questoes_respondidas?: number;
+          total_resposta_corretas?: number;
+          tempo_estudo_minutos?: number;
+          pontuacao_media?: number;
         };
         Update: {
           id?: string;
-          name?: string;
+          nome?: string;
           email?: string;
-          last_login?: string | null;
-          created_at?: string;
-          updated_at?: string;
-          total_questions_answered?: number;
-          total_correct_answers?: number;
-          study_time_minutes?: number;
-          average_score?: number;
+          ultimo_login?: string | null;
+          criado_em?: string;
+          atualizado_em?: string;
+          total_questoes_respondidas?: number;
+          total_resposta_corretas?: number;
+          tempo_estudo_minutos?: number;
+          pontuacao_media?: number;
         };
       };
       concursos: {
@@ -87,9 +115,9 @@ export type Database = {
           descricao: string | null;
           ano: number;
           banca: string;
-          is_active: boolean;
-          created_at: string;
-          updated_at: string;
+          ativo: boolean;
+          criado_em: string;
+          atualizado_em: string;
         };
         Insert: {
           id?: string;
@@ -97,9 +125,9 @@ export type Database = {
           descricao?: string | null;
           ano: number;
           banca: string;
-          is_active?: boolean;
-          created_at?: string;
-          updated_at?: string;
+          ativo?: boolean;
+          criado_em?: string;
+          atualizado_em?: string;
         };
         Update: {
           id?: string;
@@ -107,9 +135,9 @@ export type Database = {
           descricao?: string | null;
           ano?: number;
           banca?: string;
-          is_active?: boolean;
-          created_at?: string;
-          updated_at?: string;
+          ativo?: boolean;
+          criado_em?: string;
+          atualizado_em?: string;
         };
       };
       // Adicione outras tabelas conforme necessário
@@ -122,3 +150,6 @@ export default {
   supabase,
   supabaseClient
 }; 
+
+
+

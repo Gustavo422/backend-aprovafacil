@@ -3,8 +3,8 @@ const DASHBOARD_HTML = `
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AprovaFácil - Central de Monitoramento Avançada</title>
+    <meta nome="viewport" content="width=device-width, initial-scale=1.0">
+    <titulo>AprovaFácil - Central de Monitoramento Avançada</titulo>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -298,7 +298,7 @@ const DASHBOARD_HTML = `
         function updateStatusIndicator(selector, status) {
             const element = document.querySelector(selector);
             if (element) {
-                element.className = 'w-4 h-4 rounded-full';
+                element.classnome = 'w-4 h-4 rounded-full';
                 element.classList.add(
                     status === 'healthy' ? 'status-healthy' :
                     status === 'warning' ? 'status-warning' : 'status-error'
@@ -603,7 +603,7 @@ const DASHBOARD_HTML = `
             isDarkMode = !isDarkMode;
             document.body.classList.toggle('dark-mode');
             const icon = event.target.querySelector('i');
-            icon.className = isDarkMode ? 'fas fa-sun' : 'fas fa-moon';
+            icon.classnome = isDarkMode ? 'fas fa-sun' : 'fas fa-moon';
         }
 
         function showSuccess(message) {
@@ -641,3 +641,6 @@ export async function GET(): Promise<globalThis.Response> {
     },
   });
 } 
+
+
+

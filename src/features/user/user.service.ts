@@ -1,7 +1,7 @@
 // Service de User - refatoração SOLID
 import { UserDTO } from '../../types/user.dto.js';
 
-export class UserService {
+export class usuarioservice {
   async getAll(): Promise<UserDTO[]> {
     // TODO: Implementar lógica de listagem
     return [];
@@ -27,3 +27,6 @@ export class UserService {
     throw new Error('Not implemented');
   }
 } 
+
+
+
