@@ -25,6 +25,7 @@ import { Usuario } from './shared/types/index.js';
 import { debugRequestMiddleware } from './middleware/debug-request.js';
 import { applySecurityMiddlewares } from './middleware/security.js';
 import { createClient } from '@supabase/supabase-js';
+import { jwtAuthGlobal } from './middleware/jwt-auth-global.js';
 
 // Importar rotas da pasta api
 // Não existe exportação concursosRoutes, remover o import
@@ -43,6 +44,9 @@ import userAuthTestRoutes from './api/user/auth-test/route.js';
 import tokenDebugRoutes from './api/auth/token-debug/route.js';
 import dashboardEnhancedStatsRoutes from './api/dashboard/enhanced-stats/route.js';
 import dashboardActivitiesRoutes from './api/dashboard/activities/route.js';
+import dashboardStatsRoutes from './api/dashboard/stats/route.js';
+import conteudoFiltradoRoutes from './api/conteudo/filtrado/route.js';
+import verifyTokenRoutes from './api/auth/verify-token/route.js';
 import debugRoutes from './api/debug/route.js';
 import testRoutes from './api/test/route.js';
 import simpleRoutes from './api/simple/route.js';
@@ -193,6 +197,9 @@ class AprovaFacilApp {
     
     // Debug middleware
     this.app.use(debugRequestMiddleware);
+
+    // Middleware JWT global (define req.user se token válido for encontrado)
+    this.app.use('/api', jwtAuthGlobal);
 
     // Middleware de autenticação
     this.app.use('/api/protected', this.authMiddleware.bind(this));
@@ -598,6 +605,9 @@ class AprovaFacilApp {
     this.app.use('/api/auth/token-debug', tokenDebugRoutes);
     this.app.use('/api/dashboard/enhanced-stats', dashboardEnhancedStatsRoutes);
     this.app.use('/api/dashboard/activities', dashboardActivitiesRoutes);
+    this.app.use('/api/dashboard/stats', dashboardStatsRoutes);
+    this.app.use('/api/conteudo/filtrado', conteudoFiltradoRoutes);
+    this.app.use('/api/auth/verify-token', verifyTokenRoutes);
     this.app.use('/api/debug', debugRoutes);
     this.app.use('/api/test', testRoutes);
     this.app.use('/api/simple', simpleRoutes);

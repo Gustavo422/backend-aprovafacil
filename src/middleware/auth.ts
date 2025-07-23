@@ -26,6 +26,19 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
   
   if (!req.user) {
     debug('Acesso negado: usuário não autenticado');
+    
+    // Verificar se há um token, mas ele pode estar expirado
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : authHeader;
+    
+    if (token) {
+      debug('Token presente mas usuário não autenticado - provavelmente expirado');
+      return res.status(401).json({ 
+        error: 'Token expirado ou inválido. Faça login novamente.',
+        code: 'TOKEN_EXPIRED'
+      });
+    }
+    
     return res.status(401).json({ 
       error: 'Usuário não autenticado',
       code: 'AUTHENTICATION_REQUIRED'
