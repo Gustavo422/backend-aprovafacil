@@ -1,11 +1,8 @@
 // Re-export from logging service
 export {
   LogLevel,
-  LogEntry,
-  LogTransport,
   ConsoleTransport,
   MemoryTransport,
-  Logger,
   LoggerImpl,
   LoggingService,
   getLoggingService,
@@ -14,9 +11,6 @@ export {
 
 // Export enhanced logging service
 export {
-  LogContext,
-  EnhancedLogEntry,
-  EnhancedLogger,
   EnhancedLoggerImpl,
   EnhancedLoggingService,
   getEnhancedLoggingService,
@@ -29,20 +23,17 @@ export { FileLogTransport } from './file-transport';
 
 // Export middleware
 export { 
-  RequestLoggerOptions,
   createRequestLoggerMiddleware 
 } from './request-logger-middleware';
 
 // Export error logger
 export {
-  ErrorLoggerOptions,
   ErrorLogger,
   getErrorLogger
 } from './error-logger';
 
 // Export logging configuration
 export {
-  LoggingConfig,
   defaultLoggingConfig,
   loadLoggingConfigFromEnv,
   getLoggingConfig,

@@ -3,6 +3,8 @@ import { CrudRouteHandler } from '../../core/api/crud-route-handler';
 import { ResponseFormatter } from '../../core/api/response-formatter';
 import { SupabaseConfig } from '../../core/database/supabase.js';
 import { requestLoggingMiddleware, corsMiddleware } from '../../core/api';
+import express from 'express';
+import * as concursosController from './concursos.controller';
 
 // Create Supabase client
 const supabaseClient = SupabaseConfig.getInstance();
@@ -589,3 +591,13 @@ export const POST = routeHandlers.POST;
 export const PUT = routeHandlers.PUT;
 export const PATCH = routeHandlers.PATCH;
 export const DELETE = routeHandlers.DELETE;
+
+// Rotas Express tradicionais para concursos
+const router = express.Router();
+
+router.get('/', concursosController.getConcursos);
+router.get('/:id', concursosController.getConcursoById);
+router.post('/', concursosController.createConcurso);
+// Rotas de update, patch e delete só devem ser adicionadas quando existirem no controller
+
+export default router;

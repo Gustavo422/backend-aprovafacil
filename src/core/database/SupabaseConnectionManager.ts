@@ -152,6 +152,10 @@ export class SupabaseConnectionManager {
       
       // Verificar conexão
       this.checkConnection();
+      if (this.connectionStatus === 'DISCONNECTED') {
+        this.log('aviso', 'Conexão inicial falhou, tentando reconectar');
+        await this.reconnect();
+      }
     }
   }
   
@@ -287,6 +291,41 @@ export class SupabaseConnectionManager {
       url: this.supabaseUrl,
       keyType
     };
+  }
+  
+  /**
+   * Reconectar ao Supabase com tentativas
+   * @param maxAttempts Número máximo de tentativas
+   * @param delay Delay entre tentativas em ms
+   * @returns True se reconectado com sucesso
+   */
+  public async reconnect(maxAttempts: number = 3, delay: number = 1000): Promise<boolean> {
+    this.log('info', 'Iniciando reconexão', { maxAttempts, delay });
+    let attempts = 0;
+
+    while (attempts < maxAttempts && this.connectionStatus !== 'CONNECTED') {
+      attempts++;
+      this.log('debug', `Tentativa de reconexão ${attempts}/${maxAttempts}`);
+
+      try {
+        this.resetClient();
+        const connected = await this.testConnection();
+        if (connected) {
+          this.log('info', 'Reconexão bem-sucedida', { attempts });
+          return true;
+        }
+      } catch (error) {
+        this.log('erro', `Erro na tentativa de reconexão ${attempts}`, error);
+      }
+
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+
+    if (this.connectionStatus !== 'CONNECTED') {
+      this.log('erro', 'Falha na reconexão após todas as tentativas', { attempts });
+      return false;
+    }
+    return true;
   }
   
   /**

@@ -12,6 +12,8 @@ const router = express.Router();
 
 // GET /api/flashcards - Listar flashcards
 router.get('/', requireAuth, async (req, res) => {
+  logger.info('Início da requisição GET /api/flashcards', { query: req.query, user: req.user?.id });
+
   try {
     const { page = 1, limit = 10, disciplina, tema, subtema, ativo } = req.query;
     const userId = req.user?.id;
@@ -25,6 +27,7 @@ router.get('/', requireAuth, async (req, res) => {
 
     // Buscar concursoId antes
     const concursoId = await getUserConcurso(supabase, userId);
+    logger.debug('Concurso do usuário obtido', { concursoId });
 
     let query = supabase
       .from('flashcards')
@@ -64,18 +67,20 @@ router.get('/', requireAuth, async (req, res) => {
       query = query.ilike('subtema', `%${subtema}%`);
     }
 
+    logger.debug('Executando query para flashcards', { filters: { ativo, disciplina, tema, subtema }, offset, limit: Number(limit) });
     const { data: flashcards, error, count } = await query
       .order('criado_em', { ascending: false })
       .range(offset, offset + Number(limit) - 1);
 
     if (error) {
-      logger.error('Erro ao buscar flashcards:', undefined, { error: error.message });
+      logger.error('Erro ao executar query Supabase para flashcards', { error: error.message, details: error.details, hint: error.hint, filters: { ativo, disciplina, tema, subtema } });
       res.status(500).json({ error: 'Erro interno do servidor' });
       return;
     }
 
     const totalPages = Math.ceil((count || 0) / Number(limit));
 
+    logger.info('Resposta de flashcards preparada', { total: count || 0, page: Number(page), resultsCount: flashcards?.length || 0 });
     res.json({
       success: true,
       data: flashcards,
@@ -87,7 +92,7 @@ router.get('/', requireAuth, async (req, res) => {
       }
     });
   } catch (error) {
-    logger.error('Erro na rota GET /flashcards:', undefined, { error: error instanceof Error ? error.message : 'Erro desconhecido' });
+    logger.error('Erro inesperado no endpoint GET /api/flashcards', { error: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined });
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });

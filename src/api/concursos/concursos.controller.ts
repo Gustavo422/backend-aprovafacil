@@ -115,5 +115,10 @@ export class ConcursosController {
   }
 } 
 
+export const getConcursos = ConcursosController.listar;
+export const getConcursoById = ConcursosController.buscarPorId;
+export const createConcurso = ConcursosController.criar;
+// Se existirem métodos de update, patch e delete, exporte-os também (adicionar depois se necessário) 
+
 
 

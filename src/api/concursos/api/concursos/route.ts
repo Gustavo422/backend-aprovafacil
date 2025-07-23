@@ -4,12 +4,14 @@ import { requestLogger } from '../../../../middleware/logger.js';
 import { rateLimit } from '../../../../middleware/rateLimit.js';
 import { requireAuth } from '../../../../middleware/auth.js';
 import { validateCreateConcurso, validateUpdateConcurso, validateConcursoFilters, validateConcursoId } from '../../validation/concursos.validation.js';
+import { logger } from '../../../../utils/logger.js';
 const router = express.Router();
 // Aplicar middlewares globais
 router.use(requestLogger);
 router.use(rateLimit); // 100 requests por 15 minutos
 // GET /api/concursos - Listar concursos com filtros e paginação
 router.get('/', validateConcursoFilters, async (req, res) => {
+    logger.info('Início da requisição GET /api/concursos', { query: req.query });
     try {
         const { categoria_id, ano, banca, ativo, search, page = 1, limit = 20 } = req.query;
         let query = supabase
@@ -45,11 +47,13 @@ router.get('/', validateConcursoFilters, async (req, res) => {
         const pageNum = Number(page);
         const limitNum = Number(limit);
         const offset = (pageNum - 1) * limitNum;
+        logger.debug('Executando query para concursos', { filters: { categoria_id, ano, banca, ativo, search }, offset, limit: limitNum });
         // Buscar dados com paginação
         const { data: concursos, error: concursosError, count } = await query
             .range(offset, offset + limitNum - 1)
             .order('criado_em', { ascending: false });
         if (concursosError) {
+            logger.error('Erro ao executar query Supabase para concursos', { error: concursosError, details: concursosError.details, hint: concursosError.hint, filters: { categoria_id, ano, banca, ativo, search } });
             console.error('Erro ao buscar concursos:', concursosError);
             res.status(500).json({
                 success: false,
@@ -69,6 +73,7 @@ router.get('/', validateConcursoFilters, async (req, res) => {
             totalCount = count;
         }
         const totalPages = Math.ceil(totalCount / limitNum);
+        logger.info('Resposta de concursos preparada', { totalCount, page: pageNum, resultsCount: concursos?.length || 0 });
         res.json({
             success: true,
             data: concursos || [],
@@ -81,6 +86,7 @@ router.get('/', validateConcursoFilters, async (req, res) => {
         });
     }
     catch (error) {
+        logger.error('Erro inesperado no endpoint GET /api/concursos', { error: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined });
         console.error('Erro ao processar requisição GET /api/concursos:', error);
         res.status(500).json({
             success: false,

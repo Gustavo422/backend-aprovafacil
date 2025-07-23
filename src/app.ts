@@ -50,6 +50,7 @@ import verifyTokenRoutes from './api/auth/verify-token/route.js';
 import debugRoutes from './api/debug/route.js';
 import testRoutes from './api/test/route.js';
 import simpleRoutes from './api/simple/route.js';
+import concursosRoutes from './api/concursos/route.js';
 
 // Tipo para request autenticada
 interface RequestComUsuario extends express.Request {
@@ -611,6 +612,7 @@ class AprovaFacilApp {
     this.app.use('/api/debug', debugRoutes);
     this.app.use('/api/test', testRoutes);
     this.app.use('/api/simple', simpleRoutes);
+    this.app.use('/api/concursos', concursosRoutes);
 
     // Rota 404
     this.app.use('*', (req, res) => {
