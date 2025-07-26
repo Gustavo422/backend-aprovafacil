@@ -1,22 +1,34 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import { supabase } from '../../config/supabase.js';
 import { requestLogger } from '../../../../middleware/logger.js';
 import { rateLimit } from '../../../../middleware/rateLimit.js';
 import { requireAuth } from '../../../../middleware/auth.js';
 import { validateCreateConcurso, validateUpdateConcurso, validateConcursoFilters, validateConcursoId } from '../../validation/concursos.validation.js';
 import { logger } from '../../../../utils/logger.js';
+
 const router = express.Router();
+
 // Aplicar middlewares globais
 router.use(requestLogger);
 router.use(rateLimit); // 100 requests por 15 minutos
 // GET /api/concursos - Listar concursos com filtros e paginação
-router.get('/', validateConcursoFilters, async (req, res) => {
-    logger.info('Início da requisição GET /api/concursos', { query: req.query });
-    try {
-        const { categoria_id, ano, banca, ativo, search, page = 1, limit = 20 } = req.query;
-        let query = supabase
-            .from('concursos')
-            .select(`
+router.get('/', validateConcursoFilters, async (req: Request, res: Response) => {
+  try {
+    logger.info('Início da requisição GET /api/concursos', 'backend', { query: req.query });
+
+    const { 
+      categoria_id, 
+      ano, 
+      banca, 
+      ativo, 
+      search, 
+      page = 1, 
+      limit = 20 
+    } = req.query;
+
+    let query = supabase
+      .from('concursos')
+      .select(`
         *,
         categorias_concursos (
           id,
@@ -27,72 +39,82 @@ router.get('/', validateConcursoFilters, async (req, res) => {
           cor_secundaria
         )
       `);
-        // Aplicar filtros
-        if (categoria_id) {
-            query = query.eq('categoria_id', categoria_id);
-        }
-        if (ano) {
-            query = query.eq('ano', ano);
-        }
-        if (banca) {
-            query = query.ilike('banca', `%${banca}%`);
-        }
-        if (ativo !== undefined) {
-            query = query.eq('ativo', ativo === 'true');
-        }
-        if (search) {
-            query = query.or(`nome.ilike.%${search}%,descricao.ilike.%${search}%`);
-        }
-        // Calcular offset para paginação
-        const pageNum = Number(page);
-        const limitNum = Number(limit);
-        const offset = (pageNum - 1) * limitNum;
-        logger.debug('Executando query para concursos', { filters: { categoria_id, ano, banca, ativo, search }, offset, limit: limitNum });
-        // Buscar dados com paginação
-        const { data: concursos, error: concursosError, count } = await query
-            .range(offset, offset + limitNum - 1)
-            .order('criado_em', { ascending: false });
-        if (concursosError) {
-            logger.error('Erro ao executar query Supabase para concursos', { error: concursosError, details: concursosError.details, hint: concursosError.hint, filters: { categoria_id, ano, banca, ativo, search } });
-            console.error('Erro ao buscar concursos:', concursosError);
-            res.status(500).json({
-                success: false,
-                error: 'Erro interno ao buscar concursos'
-            });
-            return;
-        }
-        // Buscar total de registros para paginação
-        let totalCount = 0;
-        if (count === null) {
-            const { count: total } = await supabase
-                .from('concursos')
-                .select('*', { count: 'exact', head: true });
-            totalCount = total || 0;
-        }
-        else {
-            totalCount = count;
-        }
-        const totalPages = Math.ceil(totalCount / limitNum);
-        logger.info('Resposta de concursos preparada', { totalCount, page: pageNum, resultsCount: concursos?.length || 0 });
-        res.json({
-            success: true,
-            data: concursos || [],
-            pagination: {
-                page: pageNum,
-                limit: limitNum,
-                total: totalCount,
-                totalPages
-            }
-        });
+
+    // Aplicar filtros
+    if (categoria_id) {
+      query = query.eq('categoria_id', categoria_id);
     }
-    catch (error) {
-        logger.error('Erro inesperado no endpoint GET /api/concursos', { error: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined });
-        console.error('Erro ao processar requisição GET /api/concursos:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Erro interno no servidor'
-        });
+
+    if (ano) {
+      query = query.eq('ano', ano);
     }
+
+    if (banca) {
+      query = query.eq('banca', banca);
+    }
+
+    if (ativo !== undefined) {
+      query = query.eq('ativo', ativo === 'true');
+    }
+
+    if (search) {
+      query = query.or(`nome.ilike.%${search}%,descricao.ilike.%${search}%`);
+    }
+
+    // Calcular offset para paginação
+    const pageNum = Number(page);
+    const limitNum = Number(limit);
+    const offset = (pageNum - 1) * limitNum;
+
+    // Buscar dados com paginação
+    logger.debug('Executando query para concursos', 'backend', { filters: { categoria_id, ano, banca, ativo, search }, offset, limit: limitNum });
+    const { data: concursos, error: concursosError, count } = await query
+      .range(offset, offset + limitNum - 1)
+      .order('criado_em', { ascending: false });
+
+    if (concursosError) {
+      logger.error('Erro ao executar query Supabase para concursos', 'backend', { error: concursosError, details: concursosError.details, hint: concursosError.hint, filters: { categoria_id, ano, banca, ativo, search } });
+      console.error('Erro ao buscar concursos:', concursosError);
+      res.status(500).json({
+        success: false,
+        error: 'Erro interno ao buscar concursos'
+      });
+      return;
+    }
+
+    // Buscar total de registros para paginação
+    let totalCount = 0;
+    if (count === null) {
+      const { count: total } = await supabase
+        .from('concursos')
+        .select('*', { count: 'exact', head: true });
+      totalCount = total || 0;
+    } else {
+      totalCount = count;
+    }
+
+    const totalPages = Math.ceil(totalCount / limitNum);
+
+    logger.info('Resposta de concursos preparada', 'backend', { totalCount, page: pageNum, resultsCount: concursos?.length || 0 });
+    res.json({
+      success: true,
+      data: concursos || [],
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total: totalCount,
+        totalPages
+      }
+    });
+
+  } catch (error) {
+    logger.error('Erro inesperado no endpoint GET /api/concursos', 'backend', { error: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined });
+    console.error('Erro ao processar requisição GET /api/concursos:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro interno no servidor'
+    });
+  }
 });
 // GET /api/concursos/:id - Buscar concurso por ID
 router.get('/:id', validateConcursoId, async (req, res) => {

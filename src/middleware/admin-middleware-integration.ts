@@ -9,12 +9,12 @@ import { createAdminRoutes } from '../routes/admin-example';
  * Integrates admin authentication middleware into the application
  * @param app - Express application
  * @param userRepository - UserRepository instance
- * @param jwtSecret - JWT secret key
+ * @param _jwtSecret - JWT secret key
  */
 export function integrateAdminMiddleware(
   app: Express,
   userRepository: UserRepository,
-  jwtSecret: string
+  _jwtSecret: string
 ): void {
   // Initialize auth middleware with UserRepository
   initAuthMiddleware(userRepository);

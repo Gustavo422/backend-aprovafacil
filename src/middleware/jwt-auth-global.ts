@@ -73,17 +73,18 @@ export const jwtAuthGlobal = async (req: JWTRequest, res: Response, next: NextFu
     const jwtSecret = process.env.JWT_SECRET || 'default-secret';
 
     try {
-      let decoded: any;
+      let decoded: jwt.JwtPayload | string | null;
 
       try {
         // Tentar verificar o token normalmente
         decoded = jwt.verify(token, jwtSecret);
         debug('Token verificado com sucesso');
-      } catch (verifyError: any) {
-        debug('Erro na verificação do token: %s', verifyError.message);
+      } catch (verifyError: unknown) {
+        const errorMessage = verifyError instanceof Error ? verifyError.message : String(verifyError);
+        debug('Erro na verificação do token: %s', errorMessage);
         
         // Se o token expirou, apenas loggar e continuar sem req.user
-        if (verifyError.message === 'jwt expired') {
+        if (errorMessage === 'jwt expired') {
           debug('Token expirado, continuando sem autenticação');
           return next();
         }
@@ -97,15 +98,22 @@ export const jwtAuthGlobal = async (req: JWTRequest, res: Response, next: NextFu
             debug('Token não pôde ser decodificado');
             return next();
           }
-        } catch (decodeError: any) {
-          debug('Erro ao decodificar token: %s', decodeError.message);
+        } catch (decodeError: unknown) {
+          const decodeErrorMessage = decodeError instanceof Error ? decodeError.message : String(decodeError);
+          debug('Erro ao decodificar token: %s', decodeErrorMessage);
           return next();
         }
       }
 
       // Extrair ID do usuário do token
-      const userId = decoded.userId || decoded.id || decoded.sub || 
-                     (decoded.user && decoded.user.id);
+      let userId: string | undefined;
+      
+      if (typeof decoded === 'object' && decoded !== null) {
+        userId = (decoded as jwt.JwtPayload).userId || 
+                 (decoded as jwt.JwtPayload).id || 
+                 (decoded as jwt.JwtPayload).sub || 
+                 ((decoded as jwt.JwtPayload).user && (decoded as jwt.JwtPayload).user?.id);
+      }
 
       if (!userId) {
         debug('Token sem identificação de usuário');
@@ -157,13 +165,15 @@ export const jwtAuthGlobal = async (req: JWTRequest, res: Response, next: NextFu
       debug('Usuário autenticado: %s (%s)', usuario.id, usuario.role);
       next();
 
-    } catch (jwtError: any) {
-      debug('Erro na verificação do JWT: %s', jwtError.message);
+    } catch (jwtError: unknown) {
+      const errorMessage = jwtError instanceof Error ? jwtError.message : String(jwtError);
+      debug('Erro na verificação do JWT: %s', errorMessage);
       // Continuar sem definir req.user em caso de erro
       next();
     }
-  } catch (error: any) {
-    debug('Erro no middleware JWT global: %s', error.message);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    debug('Erro no middleware JWT global: %s', errorMessage);
     // Continuar sem definir req.user em caso de erro
     next();
   }

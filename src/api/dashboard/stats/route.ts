@@ -44,7 +44,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
     };
 
     // Query base para filtrar por concurso se especificado
-    const concursoFilter = concurso_id ? { concurso_id } : {};
+    // const concursoFilter = concurso_id ? { concurso_id } : {};
 
     // Buscar estatísticas de simulados
     let simuladosQuery = supabase

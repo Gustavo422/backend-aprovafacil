@@ -86,7 +86,7 @@ export class PasswordUtils {
     }
 
     // Check for at least one special character
-    if (!/[!@#$%^&*()_+\-=\[\]{};':"|,.<>/?]/.test(password)) {
+    if (!/[!@#$%^&*()_+\-=[\]{};':"|,.<>/?]/.test(password)) {
       return { isValid: false, message: 'A senha deve conter pelo menos um caractere especial' };
     }
 

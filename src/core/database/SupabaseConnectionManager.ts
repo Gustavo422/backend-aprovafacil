@@ -152,9 +152,9 @@ export class SupabaseConnectionManager {
       
       // Verificar conexão
       this.checkConnection();
-      if (this.connectionStatus === 'DISCONNECTED') {
+      if (this.connectionStatus === 'CONNECTING') {
         this.log('aviso', 'Conexão inicial falhou, tentando reconectar');
-        await this.reconnect();
+        this.reconnect();
       }
     }
   }

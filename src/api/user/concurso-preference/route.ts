@@ -1,10 +1,10 @@
-import express, { Request, Response } from 'express';
-import { supabase } from '../../../config/supabase.js';
-import { logger } from '../../../utils/logger.js';
+import express, { Request, Response, Router } from 'express';
+import { supabase } from '../../../config/supabase';
+import { logger } from '../../../utils/logger';
 import jwt from 'jsonwebtoken';
 import { Usuario } from '../../../shared/types';
 
-const router = express.Router();
+const router: Router = express.Router();
 
 // Middleware simples para autenticação JWT
 const authenticateJWT = async (req: Request, res: Response, next: express.NextFunction) => {
@@ -242,126 +242,161 @@ const authenticateJWT = async (req: Request, res: Response, next: express.NextFu
 // Aplicar middleware de autenticação
 router.use(authenticateJWT);
 
-// GET - Buscar preferência do usuário
-router.get('/', async (req: Request, res: Response) => {
+// Função para limpar preferências duplicadas
+async function limparPreferenciasDuplicadas(userId: string) {
   try {
-    console.log('[DEBUG] GET /api/user/concurso-preference - Iniciando');
-    console.log('[DEBUG] req.user:', (req as Request & { user: Usuario }).user);
-
-    const userId = (req as Request & { user: Usuario }).user?.id;
-    console.log('[DEBUG] userId extraído:', userId);
-
-    if (!userId) {
-      console.log('[DEBUG] UserId não encontrado, retornando 401');
-      return res.status(401).json({ error: 'Não autorizado' });
-    }
-
-    // Buscar preferência ativa do usuário
-    const { data: preference, error } = await supabase
+    console.log('[DEBUG] Limpando preferências duplicadas para usuário:', userId);
+    
+    // Buscar todas as preferências ativas do usuário
+    const { data: preferences, error } = await supabase
       .from('preferencias_usuario_concurso')
       .select('*')
       .eq('usuario_id', userId)
       .eq('ativo', true)
+      .order('selecionado_em', { ascending: false });
+
+    if (error) {
+      console.error('[ERROR] Erro ao buscar preferências para limpeza:', error);
+      return;
+    }
+
+    if (!preferences || preferences.length <= 1) {
+      console.log('[DEBUG] Nenhuma preferência duplicada encontrada');
+      return;
+    }
+
+    console.log('[DEBUG] Encontradas', preferences.length, 'preferências ativas');
+
+    // Manter apenas a mais recente (primeira da lista ordenada)
+    const preferenciaMaisRecente = preferences[0];
+    const preferenciasParaDesativar = preferences.slice(1);
+
+    // Desativar todas as outras preferências
+    for (const pref of preferenciasParaDesativar) {
+      await supabase
+        .from('preferencias_usuario_concurso')
+        .update({ ativo: false })
+        .eq('id', pref.id);
+      
+      console.log('[DEBUG] Desativada preferência:', pref.id);
+    }
+
+    console.log('[DEBUG] Limpeza concluída. Mantida preferência:', preferenciaMaisRecente.id);
+  } catch (error) {
+    console.error('[ERROR] Erro ao limpar preferências duplicadas:', error);
+  }
+}
+
+// GET - Buscar preferência do usuário
+router.get('/', async (req: Request, res: Response) => {
+  try {
+    const userId = (req as Request & { user: Usuario }).user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Não autorizado' });
+    }
+
+    console.log('[DEBUG] Buscando preferência para usuário:', userId);
+
+    // PRIMEIRO: Limpar preferências duplicadas e manter apenas a mais recente
+    await limparPreferenciasDuplicadas(userId);
+
+    // SEGUNDO: Buscar a preferência ativa
+    const { data: preference, error } = await supabase
+      .from('preferencias_usuario_concurso')
+      .select(`
+        *,
+        concurso:concursos(
+          id,
+          nome,
+          ano,
+          banca,
+          categoria_id,
+          ativo
+        ),
+        categoria:categorias_concursos(
+          id,
+          nome,
+          slug
+        )
+      `)
+      .eq('usuario_id', userId)
+      .eq('ativo', true)
+      .order('selecionado_em', { ascending: false })
+      .limit(1)
       .single();
 
     if (error) {
       if (error.code === 'PGRST116') {
         // Nenhuma preferência encontrada
-        logger.info('Preferência não encontrada para o usuário', 'backend', {
-          userId: userId,
-          message: 'Nenhuma preferência ativa encontrada'
-        });
-        
-        // Tentar buscar o concurso mais recente do usuário (mesmo que não esteja ativo)
-        const { data: lastPreference, error: lastError } = await supabase
-          .from('preferencias_usuario_concurso')
-          .select('*')
-          .eq('usuario_id', userId)
-          .order('criado_em', { ascending: false })
-          .limit(1)
-          .single();
-          
-        if (!lastError && lastPreference) {
-          logger.info('Usando concurso mais recente como fallback', 'backend', {
-            userId: userId,
-            concursoId: lastPreference.concurso_id
-          });
-          
-          // Retornar a preferência inativa com um flag indicando que é um fallback
-          return res.json({
-            data: lastPreference,
-            canChange: true,
-            daysUntilChange: 0,
-            isFallback: true,
-            message: 'Usando preferência inativa mais recente como fallback'
-          });
-        }
-        
-        // Se não encontrar nenhuma preferência, retornar um objeto vazio com status 200
-        // em vez de erro 404, para evitar que o frontend quebre
-        return res.json({
-          data: null,
+        console.log('[DEBUG] Nenhuma preferência encontrada para usuário:', userId);
+        return res.status(404).json({ 
+          error: 'Preferência não encontrada',
           canChange: true,
-          daysUntilChange: 0,
-          isFallback: true,
-          message: 'Nenhuma preferência encontrada para este usuário'
+          daysUntilChange: 0
         });
       }
-      
-      // Verificar se é um erro de coluna não existente
-      if (error.code === '42703') {
-        logger.error('Erro de esquema de banco de dados', 'backend', {
-          error: error.message,
-          userId: userId,
-          details: 'Coluna não existe na tabela preferencias_usuario_concurso'
-        });
-        return res.status(500).json({ 
-          error: 'Erro de banco de dados',
-          details: 'Problema com a estrutura da tabela de preferências',
-          code: 'DB_SCHEMA_ERROR'
-        });
-      }
+      console.error('[ERROR] Erro ao buscar preferência:', error);
+      return res.status(500).json({ error: 'Erro interno do servidor' });
+    }
 
-      logger.error('Erro ao buscar preferência do usuário', 'backend', {
-        error: error.message,
-        errorCode: error.code,
-        userId: userId,
-        details: error.details || 'Sem detalhes adicionais'
-      });
-      return res.status(500).json({ 
-        error: 'Erro ao buscar preferência',
-        code: 'DB_QUERY_ERROR',
-        message: 'Ocorreu um erro ao consultar as preferências do usuário'
+    if (!preference) {
+      console.log('[DEBUG] Preferência não encontrada para usuário:', userId);
+      return res.status(404).json({ 
+        error: 'Preferência não encontrada',
+        canChange: true,
+        daysUntilChange: 0
       });
     }
 
-    // Calcular se pode trocar de concurso
+    // Verificar se o concurso ainda existe e está ativo
+    if (!preference.concurso || !preference.concurso.ativo) {
+      console.log('[DEBUG] Concurso não existe ou está inativo:', preference.concurso_id);
+      // Desativar a preferência
+      await supabase
+        .from('preferencias_usuario_concurso')
+        .update({ ativo: false })
+        .eq('id', preference.id);
+      
+      return res.status(404).json({ 
+        error: 'Concurso não encontrado ou inativo',
+        canChange: true,
+        daysUntilChange: 0
+      });
+    }
+
+    // Calcular se pode alterar
     const now = new Date();
     const canChangeUntil = new Date(preference.pode_alterar_ate);
     const canChange = now >= canChangeUntil;
     const daysUntilChange = Math.max(0, Math.ceil((canChangeUntil.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
 
-    res.json({
-      data: preference,
+    console.log('[DEBUG] Preferência encontrada:', {
+      id: preference.id,
+      concurso: preference.concurso?.nome,
       canChange,
-      daysUntilChange,
+      daysUntilChange
     });
+
+    res.json({
+      data: {
+        id: preference.id,
+        usuario_id: preference.usuario_id,
+        concurso_id: preference.concurso_id,
+        categoria_id: preference.concurso?.categoria_id,
+        pode_alterar_ate: preference.pode_alterar_ate,
+        selecionado_em: preference.selecionado_em,
+        ativo: preference.ativo,
+        concurso: preference.concurso,
+        categoria: preference.categoria
+      },
+      canChange,
+      daysUntilChange
+    });
+
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    const errorStack = error instanceof Error ? error.stack : undefined;
-    
-    logger.error('Erro interno', 'backend', {
-      error: errorMessage,
-      stack: errorStack,
-      route: 'GET /api/user/concurso-preference',
-      userId: (req as Request & { user: Usuario }).user?.id
-    });
-    
-    res.status(500).json({ 
-      error: 'Erro interno do servidor',
-      code: 'INTERNAL_SERVER_ERROR',
-      message: 'Ocorreu um erro inesperado ao processar sua solicitação'
-    });
+    console.error('[ERROR] Erro ao buscar preferência:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
 
@@ -483,14 +518,17 @@ router.post('/', async (req: Request, res: Response) => {
     }
 
     // Criar nova preferência
+    const preferenceData = {
+      usuario_id: userId,
+      concurso_id: concurso_id,
+      pode_alterar_ate: canChangeUntil.toISOString(),
+      ativo: true,
+      selecionado_em: now.toISOString(),
+    };
+
     const { data: newPreference, error: createError } = await supabase
       .from('preferencias_usuario_concurso')
-      .insert({
-        usuario_id: userId,
-        concurso_id: concurso_id,
-        pode_alterar_ate: canChangeUntil.toISOString(),
-        ativo: true,
-      })
+      .insert(preferenceData)
       .select()
       .single();
 
@@ -510,28 +548,14 @@ router.post('/', async (req: Request, res: Response) => {
         });
       }
       
-      // Verificar se é um erro de violação de chave estrangeira
-      if (createError.code === '23503') {
-        logger.error('Erro de violação de chave estrangeira', 'backend', {
-          error: createError.message,
-          userId: userId,
-          concursoId: concurso_id,
-          details: 'Referência inválida para usuário ou concurso'
-        });
-        return res.status(400).json({ 
-          error: 'Dados inválidos',
-          details: 'O usuário ou concurso informado não existe',
-          code: 'FOREIGN_KEY_VIOLATION'
-        });
-      }
-      
-      logger.error('Erro ao criar preferência:', 'backend', {
+      logger.error('Erro ao criar preferência', 'backend', {
         error: createError.message,
         errorCode: createError.code,
         userId: userId,
         concursoId: concurso_id,
         details: createError.details || 'Sem detalhes adicionais'
       });
+      
       return res.status(500).json({ 
         error: 'Erro ao criar preferência',
         code: 'DB_INSERT_ERROR',

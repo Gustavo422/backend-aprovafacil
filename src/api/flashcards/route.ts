@@ -10,24 +10,35 @@ import { getUserConcurso } from '../../utils/concurso-filter.js';
 
 const router = express.Router();
 
-// GET /api/flashcards - Listar flashcards
+// GET /api/flashcards - Listar flashcards com filtros e paginação
 router.get('/', requireAuth, async (req, res) => {
-  logger.info('Início da requisição GET /api/flashcards', { query: req.query, user: req.user?.id });
+  logger.info('Início da requisição GET /api/flashcards', 'backend', { query: req.query, user: req.user?.id });
 
   try {
-    const { page = 1, limit = 10, disciplina, tema, subtema, ativo } = req.query;
-    const userId = req.user?.id;
+    const { 
+      ativo, 
+      disciplina, 
+      tema, 
+      subtema, 
+      page = 1, 
+      limit = 20 
+    } = req.query;
 
+    // Obter o usuário autenticado
+    const userId = req.user?.id;
     if (!userId) {
-      res.status(401).json({ error: 'Usuário não autenticado' });
+      res.status(401).json({
+        success: false,
+        error: 'Usuário não autenticado'
+      });
       return;
     }
 
-    const offset = (Number(page) - 1) * Number(limit);
-
-    // Buscar concursoId antes
+    // Aplicar filtro automático por concurso do usuário
     const concursoId = await getUserConcurso(supabase, userId);
-    logger.debug('Concurso do usuário obtido', { concursoId });
+    if (concursoId) {
+      logger.debug('Concurso do usuário obtido', 'backend', { concursoId });
+    }
 
     let query = supabase
       .from('flashcards')
@@ -47,53 +58,81 @@ router.get('/', requireAuth, async (req, res) => {
           cor_primaria,
           cor_secundaria
         )
-      `, { count: 'exact' });
+      `);
 
+    // Aplicar filtro automático por concurso do usuário
     if (concursoId) {
       query = query.eq('concurso_id', concursoId);
     }
 
     // Aplicar filtros adicionais
     if (ativo !== undefined) {
-      query = query.eq('ativo', ativo);
+      query = query.eq('ativo', ativo === 'true');
     }
+
     if (disciplina) {
       query = query.ilike('disciplina', `%${disciplina}%`);
     }
+
     if (tema) {
       query = query.ilike('tema', `%${tema}%`);
     }
+
     if (subtema) {
       query = query.ilike('subtema', `%${subtema}%`);
     }
 
-    logger.debug('Executando query para flashcards', { filters: { ativo, disciplina, tema, subtema }, offset, limit: Number(limit) });
+    // Calcular offset para paginação
+    const pageNum = Number(page);
+    const limitNum = Number(limit);
+    const offset = (pageNum - 1) * limitNum;
+
+    // Buscar dados com paginação
+    logger.debug('Executando query para flashcards', 'backend', { filters: { ativo, disciplina, tema, subtema }, offset, limit: Number(limit) });
     const { data: flashcards, error, count } = await query
       .order('criado_em', { ascending: false })
-      .range(offset, offset + Number(limit) - 1);
+      .range(offset, offset + limitNum - 1);
 
     if (error) {
-      logger.error('Erro ao executar query Supabase para flashcards', { error: error.message, details: error.details, hint: error.hint, filters: { ativo, disciplina, tema, subtema } });
-      res.status(500).json({ error: 'Erro interno do servidor' });
+      logger.error('Erro ao executar query Supabase para flashcards', 'backend', { error: error.message, details: error.details, hint: error.hint, filters: { ativo, disciplina, tema, subtema } });
+      res.status(500).json({
+        success: false,
+        error: 'Erro interno ao buscar flashcards'
+      });
       return;
     }
 
-    const totalPages = Math.ceil((count || 0) / Number(limit));
+    // Buscar total de registros para paginação
+    let totalCount = 0;
+    if (count === null) {
+      const { count: total } = await supabase
+        .from('flashcards')
+        .select('*', { count: 'exact', head: true });
+      totalCount = total || 0;
+    } else {
+      totalCount = count;
+    }
 
-    logger.info('Resposta de flashcards preparada', { total: count || 0, page: Number(page), resultsCount: flashcards?.length || 0 });
+    const totalPages = Math.ceil(totalCount / limitNum);
+
+    logger.info('Resposta de flashcards preparada', 'backend', { total: count || 0, page: Number(page), resultsCount: flashcards?.length || 0 });
     res.json({
       success: true,
-      data: flashcards,
+      data: flashcards || [],
       pagination: {
-        page: Number(page),
-        limit: Number(limit),
-        total: count || 0,
+        page: pageNum,
+        limit: limitNum,
+        total: totalCount,
         totalPages
       }
     });
+
   } catch (error) {
-    logger.error('Erro inesperado no endpoint GET /api/flashcards', { error: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined });
-    res.status(500).json({ error: 'Erro interno do servidor' });
+    logger.error('Erro inesperado no endpoint GET /api/flashcards', 'backend', { error: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined });
+    res.status(500).json({
+      success: false,
+      error: 'Erro interno no servidor'
+    });
   }
 });
 
