@@ -28,7 +28,7 @@ router.use(rateLimit); // 100 requests por 15 minutos
 
 // GET /api/apostilas - Listar apostilas com filtros e paginação
 router.get('/', validateApostilaFilters, requireAuth, async (req: Request, res: Response) => {
-  logger.info('Início da requisição GET /api/apostilas', { query: req.query, user: req.user?.id });
+  logger.info('Início da requisição GET /api/apostilas', 'backend', { query: req.query, user: req.user?.id });
 
   try {
     const { 
@@ -74,7 +74,7 @@ router.get('/', validateApostilaFilters, requireAuth, async (req: Request, res: 
     const concursoId = await getUserConcurso(supabase, userId);
     if (concursoId) {
       query = query.eq('concurso_id', concursoId);
-      logger.debug('Filtro por concurso do usuário aplicado', { concursoId });
+      logger.debug('Filtro por concurso do usuário aplicado', 'backend', { concursoId });
     }
 
     // Aplicar filtros adicionais
@@ -96,13 +96,13 @@ router.get('/', validateApostilaFilters, requireAuth, async (req: Request, res: 
     const offset = (pageNum - 1) * limitNum;
 
     // Buscar dados com paginação
-    logger.debug('Executando query para apostilas', { filters: { categoria_id, ativo, search, page, limit }, offset });
+    logger.debug('Executando query para apostilas', 'backend', { filters: { categoria_id, ativo, search, page, limit }, offset });
     const { data: apostilas, error: apostilasError, count } = await query
       .range(offset, offset + limitNum - 1)
       .order('criado_em', { ascending: false });
 
     if (apostilasError) {
-      logger.error('Erro ao executar query Supabase para apostilas', { error: apostilasError, details: apostilasError.details, hint: apostilasError.hint, filters: { categoria_id, ativo, search, page, limit } });
+      logger.error('Erro ao executar query Supabase para apostilas', 'backend', { error: apostilasError, details: apostilasError.details, hint: apostilasError.hint, filters: { categoria_id, ativo, search, page, limit } });
       console.error('Erro ao buscar apostilas:', apostilasError);
       res.status(500).json({
         success: false,
@@ -124,7 +124,7 @@ router.get('/', validateApostilaFilters, requireAuth, async (req: Request, res: 
 
     const totalPages = Math.ceil(totalCount / limitNum);
 
-    logger.info('Resposta de apostilas preparada', { totalCount, page: pageNum, resultsCount: apostilas?.length || 0 });
+    logger.info('Resposta de apostilas preparada', 'backend', { totalCount, page: pageNum, resultsCount: apostilas?.length || 0 });
     res.json({
       success: true,
       data: apostilas || [],
@@ -137,7 +137,7 @@ router.get('/', validateApostilaFilters, requireAuth, async (req: Request, res: 
     });
 
   } catch (error) {
-    logger.error('Erro inesperado no endpoint GET /api/apostilas', { error: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined });
+    logger.error('Erro inesperado no endpoint GET /api/apostilas', 'backend', { error: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined });
     console.error('Erro ao processar requisição GET /api/apostilas:', error);
     res.status(500).json({
       success: false,
