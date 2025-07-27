@@ -177,4 +177,4 @@ export const jwtAuthGlobal = async (req: JWTRequest, res: Response, next: NextFu
     // Continuar sem definir req.user em caso de erro
     next();
   }
-}; 
+};

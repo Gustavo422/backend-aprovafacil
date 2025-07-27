@@ -106,8 +106,8 @@ class AprovaFacilApp {
     // Inicializar sistema avançado de autenticação
     this.enhancedAuthService = new EnhancedAuthService(supabase as ReturnType<typeof createClient>, {
       jwtSecret: process.env.JWT_SECRET!,
-          accessTokenExpiry: parseInt(process.env.JWT_ACCESS_EXPIRY || '2592000', 10), // 30 dias por padrão
-    refreshTokenExpiry: parseInt(process.env.JWT_REFRESH_EXPIRY || '7776000', 10) // 90 dias por padrão
+      accessTokenExpiry: parseInt(process.env.JWT_ACCESS_EXPIRY || '2592000', 10), // 25 minutos
+      refreshTokenExpiry: parseInt(process.env.JWT_REFRESH_EXPIRY || '7776000', 10) // 7 dias
     });
 
     // Inicializar middleware avançado de autenticação

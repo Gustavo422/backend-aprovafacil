@@ -314,7 +314,7 @@ router.get('/', async (req: Request, res: Response) => {
           categoria_id,
           ativo
         ),
-        categoria:categorias_concursos(
+        categoria:concursos(
           id,
           nome,
           slug
