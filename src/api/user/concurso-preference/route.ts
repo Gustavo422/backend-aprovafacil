@@ -6,10 +6,13 @@ import jwt from 'jsonwebtoken';
 // Interface para request com usuário autenticado
 interface AuthenticatedRequest extends Request {
   user?: {
-    usuarioId: string;
+    id: string;
     email: string;
     role: string;
-    [key: string]: unknown;
+    nome?: string;
+    ativo?: boolean;
+    primeiro_login?: boolean;
+    is_admin?: boolean;
   };
 }
 
@@ -21,7 +24,7 @@ function verifyJWTToken(token: string): any {
   } catch (error) {
     logger.error('Erro ao verificar token JWT:', { 
       component: 'backend',
-      error: error instanceof Error ? error.message : String(error)
+      error: error instanceof Error ? error.message : String(error),
     });
     return null;
   }
@@ -35,7 +38,7 @@ export const getConcursoPreferenceHandler = async (req: AuthenticatedRequest, re
       logger.warn('Token de autenticação não fornecido', { 
         component: 'backend',
         url: req.url,
-        method: req.method 
+        method: req.method, 
       });
       return res.status(401).json({
         success: false,
@@ -48,11 +51,11 @@ export const getConcursoPreferenceHandler = async (req: AuthenticatedRequest, re
     // Verificar token JWT em vez de Supabase Auth
     const decoded = verifyJWTToken(token);
     
-    if (!decoded || !decoded.usuarioId) {
+    if (!decoded || !decoded.id) {
       logger.warn('Token JWT inválido ou expirado', { 
         component: 'backend',
         url: req.url,
-        method: req.method 
+        method: req.method, 
       });
       return res.status(401).json({
         success: false,
@@ -60,12 +63,12 @@ export const getConcursoPreferenceHandler = async (req: AuthenticatedRequest, re
       });
     }
 
-    const userId = decoded.usuarioId;
+    const userId = decoded.id;
 
     logger.info('Buscando preferências do usuário', { 
       component: 'backend',
       userId: userId,
-      url: req.url 
+      url: req.url, 
     });
 
     // Buscar preferências do usuário
@@ -90,7 +93,7 @@ export const getConcursoPreferenceHandler = async (req: AuthenticatedRequest, re
       logger.error('Erro ao buscar preferências:', { 
         component: 'backend',
         error: preferencesError,
-        userId: userId 
+        userId: userId, 
       });
       return res.status(500).json({
         success: false,
@@ -101,7 +104,7 @@ export const getConcursoPreferenceHandler = async (req: AuthenticatedRequest, re
     logger.info('Preferências encontradas', { 
       component: 'backend',
       userId: userId,
-      count: preferences?.length || 0 
+      count: preferences?.length || 0, 
     });
 
     return res.json({
@@ -113,7 +116,7 @@ export const getConcursoPreferenceHandler = async (req: AuthenticatedRequest, re
     logger.error('Erro ao processar requisição:', { 
       component: 'backend',
       error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined 
+      stack: error instanceof Error ? error.stack : undefined, 
     });
     return res.status(500).json({
       success: false,
@@ -130,7 +133,7 @@ export const postConcursoPreferenceHandler = async (req: AuthenticatedRequest, r
       logger.warn('Token de autenticação não fornecido', { 
         component: 'backend',
         url: req.url,
-        method: req.method 
+        method: req.method, 
       });
       return res.status(401).json({
         success: false,
@@ -143,11 +146,11 @@ export const postConcursoPreferenceHandler = async (req: AuthenticatedRequest, r
     // Verificar token JWT em vez de Supabase Auth
     const decoded = verifyJWTToken(token);
     
-    if (!decoded || !decoded.usuarioId) {
+    if (!decoded || !decoded.id) {
       logger.warn('Token JWT inválido ou expirado', { 
         component: 'backend',
         url: req.url,
-        method: req.method 
+        method: req.method, 
       });
       return res.status(401).json({
         success: false,
@@ -155,7 +158,7 @@ export const postConcursoPreferenceHandler = async (req: AuthenticatedRequest, r
       });
     }
 
-    const userId = decoded.usuarioId;
+    const userId = decoded.id;
     const body = req.body;
     const { concurso_id, preferencias } = body;
 
@@ -163,7 +166,7 @@ export const postConcursoPreferenceHandler = async (req: AuthenticatedRequest, r
       logger.warn('ID do concurso não fornecido', { 
         component: 'backend',
         userId: userId,
-        body 
+        body, 
       });
       return res.status(400).json({
         success: false,
@@ -174,7 +177,7 @@ export const postConcursoPreferenceHandler = async (req: AuthenticatedRequest, r
     logger.info('Salvando preferências do usuário', { 
       component: 'backend',
       userId: userId,
-      concursoId: concurso_id 
+      concursoId: concurso_id, 
     });
 
     // Criar/atualizar preferências
@@ -207,7 +210,7 @@ export const postConcursoPreferenceHandler = async (req: AuthenticatedRequest, r
         component: 'backend',
         error: createError,
         userId: userId,
-        concursoId: concurso_id 
+        concursoId: concurso_id, 
       });
       return res.status(500).json({
         success: false,
@@ -218,7 +221,7 @@ export const postConcursoPreferenceHandler = async (req: AuthenticatedRequest, r
     logger.info('Preferências salvas com sucesso', { 
       component: 'backend',
       userId: userId,
-      concursoId: concurso_id 
+      concursoId: concurso_id, 
     });
 
     return res.json({
@@ -231,7 +234,7 @@ export const postConcursoPreferenceHandler = async (req: AuthenticatedRequest, r
     logger.error('Erro ao processar requisição:', { 
       component: 'backend',
       error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined 
+      stack: error instanceof Error ? error.stack : undefined, 
     });
     return res.status(500).json({
       success: false,

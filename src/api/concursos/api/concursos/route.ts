@@ -5,6 +5,7 @@ import { rateLimit } from '../../../../middleware/rateLimit.js';
 import { requireAuth } from '../../../../middleware/auth.js';
 import { validateCreateConcurso, validateUpdateConcurso, validateConcursoFilters, validateConcursoId } from '../../../../validation/concursos.validation.js';
 import { logger } from '../../../../lib/logger.js';
+import { getUserConcurso } from '../../../../utils/concurso-filter.js';
 
 const router = express.Router();
 
@@ -26,6 +27,31 @@ router.get('/', validateConcursoFilters, async (req: Request, res: Response) => 
       limit = 20, 
     } = req.query;
 
+    // Verificar se o usuário está autenticado para aplicar filtro por preferência
+    let usuarioId: string | null = null;
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      try {
+        const token = authHeader.substring(7);
+        const { data: { user }, error } = await supabase.auth.getUser(token);
+        if (!error && user) {
+          usuarioId = user.id;
+          logger.debug('Usuário autenticado encontrado', { usuarioId });
+        }
+      } catch (error) {
+        logger.debug('Erro ao verificar autenticação, continuando sem filtro de usuário', { error });
+      }
+    }
+
+    // Aplicar filtro automático por concurso do usuário
+    let concursoId: string | null = null;
+    if (usuarioId) {
+      concursoId = await getUserConcurso(supabase, usuarioId);
+      if (concursoId) {
+        logger.debug('Concurso do usuário obtido', { concursoId });
+      }
+    }
+
     let query = supabase
       .from('concursos')
       .select(`
@@ -40,7 +66,13 @@ router.get('/', validateConcursoFilters, async (req: Request, res: Response) => 
         )
       `);
 
-    // Aplicar filtros
+    // Aplicar filtro automático por concurso do usuário
+    if (concursoId) {
+      query = query.eq('id', concursoId);
+      logger.debug('Filtro por concurso do usuário aplicado', { concursoId });
+    }
+
+    // Aplicar filtros adicionais
     if (categoria_id) {
       query = query.eq('categoria_id', categoria_id);
     }
@@ -67,13 +99,13 @@ router.get('/', validateConcursoFilters, async (req: Request, res: Response) => 
     const offset = (pageNum - 1) * limitNum;
 
     // Buscar dados com paginação
-    logger.debug('Executando query para concursos', { component: 'backend', filters: { categoria_id, ano, banca, ativo, search }, offset, limit: limitNum });
+    logger.debug('Executando query para concursos', { component: 'backend', filters: { categoria_id, ano, banca, ativo, search, concursoId }, offset, limit: limitNum });
     const { data: concursos, error: concursosError, count } = await query
       .range(offset, offset + limitNum - 1)
       .order('criado_em', { ascending: false });
 
     if (concursosError) {
-      logger.error('Erro ao executar query Supabase para concursos', { component: 'backend', error: concursosError, details: concursosError.details, hint: concursosError.hint, filters: { categoria_id, ano, banca, ativo, search } });
+      logger.error('Erro ao executar query Supabase para concursos', { component: 'backend', error: concursosError, details: concursosError.details, hint: concursosError.hint, filters: { categoria_id, ano, banca, ativo, search, concursoId } });
       logger.error('Erro ao buscar concursos:', { error: concursosError.message, code: concursosError.code, details: concursosError.details });
       res.status(500).json({
         success: false,
@@ -95,7 +127,7 @@ router.get('/', validateConcursoFilters, async (req: Request, res: Response) => 
 
     const totalPages = Math.ceil(totalCount / limitNum);
 
-    logger.info('Resposta de concursos preparada', { component: 'backend', totalCount, page: pageNum, resultsCount: concursos?.length || 0 });
+    logger.info('Resposta de concursos preparada', { component: 'backend', totalCount, page: pageNum, resultsCount: concursos?.length || 0, concursoId });
     res.json({
       success: true,
       data: concursos || [],

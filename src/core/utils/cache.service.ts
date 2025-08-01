@@ -54,13 +54,13 @@ export class CacheService implements ICacheService {
           await this.logService.logarOperacaoCache('GET_PERSISTENT', chave, true);
           return data.dados_cache as T;
         }
-             } catch (dbError) {
-         // Se há erro de banco (tabela não existe, etc.), apenas logar e continuar
-         await this.logService.logarOperacaoCache('GET_PERSISTENT', chave, false);
-       }
+      } catch (dbError) {
+        // Se há erro de banco (tabela não existe, etc.), apenas logar e continuar
+        await this.logService.logarOperacaoCache('GET_PERSISTENT', chave, false);
+      }
 
-       await this.logService.logarOperacaoCache('GET', chave, false);
-       return null;
+      await this.logService.logarOperacaoCache('GET', chave, false);
+      return null;
     } catch (error) {
       await this.logService.erro('Erro ao obter cache', error as Error, { chave });
       return null;

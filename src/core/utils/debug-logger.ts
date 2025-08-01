@@ -80,7 +80,7 @@ export class DebugLogger {
       params: info.params,
       headers: this.sanitizeHeaders(info.headers),
       payload: this.sanitizePayload(info.payload),
-      duration: `${info.duration}ms`
+      duration: `${info.duration}ms`,
     };
 
     debugSupabase('🚀 Supabase Request:', JSON.stringify(logData, null, 2));
@@ -96,7 +96,7 @@ export class DebugLogger {
       method: info.method,
       response: this.sanitizeResponse(info.response),
       error: info.error,
-      duration: `${info.duration}ms`
+      duration: `${info.duration}ms`,
     };
 
     if (info.error) {
@@ -115,7 +115,7 @@ export class DebugLogger {
       route: info.route,
       method: info.method,
       payload: this.sanitizePayload(info.payload),
-      duration: `${info.duration}ms`
+      duration: `${info.duration}ms`,
     };
 
     debugFrontend('📤 Frontend Request:', JSON.stringify(logData, null, 2));
@@ -131,7 +131,7 @@ export class DebugLogger {
       method: info.method,
       response: this.sanitizeResponse(info.response),
       error: info.error,
-      duration: `${info.duration}ms`
+      duration: `${info.duration}ms`,
     };
 
     if (info.error) {
@@ -146,7 +146,7 @@ export class DebugLogger {
 
     const logData = {
       type: 'BACKEND_REQUEST',
-      ...context
+      ...context,
     };
 
     debugBackend('🔄 Backend Request:', JSON.stringify(logData, null, 2));
@@ -157,11 +157,11 @@ export class DebugLogger {
 
     const logData = {
       type: 'BACKEND_RESPONSE',
-      ...context
+      ...context,
     };
 
     const emoji = context.statusCode >= 500 ? '💥' : 
-                  context.statusCode >= 400 ? '⚠️' : '✅';
+      context.statusCode >= 400 ? '⚠️' : '✅';
 
     debugBackend(`${emoji} Backend Response:`, JSON.stringify(logData, null, 2));
   }
@@ -228,7 +228,7 @@ export class DebugLogger {
       return {
         count: response.data.length,
         sample: response.data.slice(0, 3), // Mostrar apenas 3 primeiros registros
-        structure: this.getDataStructure(response.data[0])
+        structure: this.getDataStructure(response.data[0]),
       };
     }
     
@@ -260,20 +260,20 @@ export function debugRequestMiddleware(req: Request, res: Response, next: NextFu
     requestId,
     method: req.method,
     url: req.originalUrl || req.url,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   };
 
   logger.logBackendRequest(context);
 
   // Interceptar resposta
   const originalEnd = res.end;
-  res.end = function(chunk?: any, encoding?: any): any {
+  res.end = function (chunk?: any, encoding?: any): any {
     const duration = Date.now() - startTime;
     
     logger.logBackendResponse({
       ...context,
       statusCode: res.statusCode,
-      duration
+      duration,
     });
 
     return originalEnd.call(this, chunk, encoding);
@@ -291,7 +291,7 @@ export function createSupabaseDebugWrapper(supabaseClient: any) {
       const value = target[prop];
       
       if (typeof value === 'function') {
-        return function(...args: any[]) {
+        return function (...args: any[]) {
           const startTime = Date.now();
           const method = prop as string;
           
@@ -300,7 +300,7 @@ export function createSupabaseDebugWrapper(supabaseClient: any) {
             endpoint: method,
             method: 'SUPABASE',
             params: args,
-            duration: 0
+            duration: 0,
           });
 
           try {
@@ -315,7 +315,7 @@ export function createSupabaseDebugWrapper(supabaseClient: any) {
                   endpoint: method,
                   method: 'SUPABASE',
                   response,
-                  duration
+                  duration,
                 });
                 
                 return response;
@@ -326,7 +326,7 @@ export function createSupabaseDebugWrapper(supabaseClient: any) {
                   endpoint: method,
                   method: 'SUPABASE',
                   error,
-                  duration
+                  duration,
                 });
                 
                 throw error;
@@ -339,7 +339,7 @@ export function createSupabaseDebugWrapper(supabaseClient: any) {
                 endpoint: method,
                 method: 'SUPABASE',
                 response: result,
-                duration
+                duration,
               });
               
               return result;
@@ -351,7 +351,7 @@ export function createSupabaseDebugWrapper(supabaseClient: any) {
               endpoint: method,
               method: 'SUPABASE',
               error,
-              duration
+              duration,
             });
             
             throw error;
@@ -360,7 +360,7 @@ export function createSupabaseDebugWrapper(supabaseClient: any) {
       }
       
       return value;
-    }
+    },
   });
 }
 

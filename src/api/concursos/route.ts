@@ -54,7 +54,7 @@ export const getConcursosHandler = async (req: Request, res: Response) => {
     logger.info('Início da requisição GET /api/concursos', { 
       component: 'backend', 
       query: req.query,
-      url: req.url 
+      url: req.url, 
     });
 
     const {
@@ -140,12 +140,12 @@ export const getConcursosHandler = async (req: Request, res: Response) => {
         error: error.message, 
         code: error.code,
         details: error.details,
-        hint: error.hint 
+        hint: error.hint, 
       });
       return res.status(500).json({
         success: false,
         error: 'Error retrieving concursos',
-        details: error.message
+        details: error.message,
       });
     }
 
@@ -165,7 +165,7 @@ export const getConcursosHandler = async (req: Request, res: Response) => {
       component: 'backend', 
       totalCount: count || 0, 
       page: pageNum, 
-      resultsCount: formattedConcursos.length 
+      resultsCount: formattedConcursos.length, 
     });
 
     return res.json({
@@ -181,7 +181,7 @@ export const getConcursosHandler = async (req: Request, res: Response) => {
   } catch (error) {
     logger.error('Error in getConcursosHandler', { 
       error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined
+      stack: error instanceof Error ? error.stack : undefined,
     });
     return res.status(500).json({
       success: false,
