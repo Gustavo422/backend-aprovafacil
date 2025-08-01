@@ -1,9 +1,9 @@
-import { ConsoleTransport } from './logging-service';
-import { EnhancedLoggingService, getEnhancedLoggingService } from './enhanced-logging-service';
-import { FileLogTransport } from './file-transport';
-import { SupabaseLogTransport } from './supabase-transport';
-import { getLoggingConfig, LoggingConfig } from './logging-config';
-import { getErrorLogger } from './error-logger';
+import { ConsoleTransport } from './logging-service.js';
+import { EnhancedLoggingService, getEnhancedLoggingService } from './enhanced-logging-service.js';
+import { FileLogTransport } from './file-transport.js';
+import { SupabaseLogTransport } from './supabase-transport.js';
+import { getLoggingConfig, LoggingConfig } from './logging-config.js';
+import { getErrorLogger } from './error-logger.js';
 
 /**
  * Initialize the logging service
@@ -25,7 +25,7 @@ export function initializeLoggingService(config?: LoggingConfig): EnhancedLoggin
     loggingService.addTransport(new ConsoleTransport({
       minLevel: loggingConfig.console.level,
       includeTimestamp: loggingConfig.console.includeTimestamp,
-      includeLoggerName: loggingConfig.console.includeLoggerName
+      includeLoggerName: loggingConfig.console.includeLoggerName,
     }));
   }
   
@@ -35,7 +35,7 @@ export function initializeLoggingService(config?: LoggingConfig): EnhancedLoggin
       filePath: loggingConfig.file.filePath,
       minLevel: loggingConfig.file.level,
       maxFileSize: loggingConfig.file.maxFileSize,
-      maxFiles: loggingConfig.file.maxFiles
+      maxFiles: loggingConfig.file.maxFiles,
     }));
   }
   
@@ -47,14 +47,14 @@ export function initializeLoggingService(config?: LoggingConfig): EnhancedLoggin
       tableName: loggingConfig.supabase.tableName,
       minLevel: loggingConfig.supabase.level,
       maxBufferSize: loggingConfig.supabase.maxBufferSize,
-      flushIntervalMs: loggingConfig.supabase.flushIntervalMs
+      flushIntervalMs: loggingConfig.supabase.flushIntervalMs,
     }));
   }
   
   // Initialize error logger
   getErrorLogger({
     includeStack: loggingConfig.error.includeStack,
-    includeCause: loggingConfig.error.includeCause
+    includeCause: loggingConfig.error.includeCause,
   });
   
   return loggingService;

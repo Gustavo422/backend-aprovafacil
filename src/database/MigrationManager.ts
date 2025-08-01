@@ -7,7 +7,7 @@ import {
   MigrationOptions, 
   MigrationRecord, 
   MigrationResult, 
-  MigrationStatus 
+  MigrationStatus, 
 } from './types';
 import { Console } from 'console';
 
@@ -107,7 +107,7 @@ export class MigrationManager {
           name,
           version,
           up,
-          down
+          down,
         });
       }
       
@@ -152,7 +152,7 @@ export class MigrationManager {
     const appliedVersions = new Set(
       appliedMigrations
         .filter(m => m.status === MigrationStatus.APPLIED)
-        .map(m => m.version)
+        .map(m => m.version),
     );
     
     return allMigrations.filter(migration => !appliedVersions.has(migration.version));
@@ -191,7 +191,7 @@ export class MigrationManager {
             name: migration.name,
             version: migration.version,
             status: MigrationStatus.APPLIED,
-            applied_at: new Date().toISOString()
+            applied_at: new Date().toISOString(),
           });
         
         if (recordError) {
@@ -212,14 +212,14 @@ export class MigrationManager {
             name: migration.name,
             version: migration.version,
             status: MigrationStatus.FAILED,
-            error_message: error instanceof Error ? error.message : String(error)
+            error_message: error instanceof Error ? error.message : String(error),
           });
       }
       
       return { 
         success: false, 
         migration, 
-        error: error instanceof Error ? error : new Error(String(error)) 
+        error: error instanceof Error ? error : new Error(String(error)), 
       };
     }
   }
@@ -254,7 +254,7 @@ export class MigrationManager {
           .from(this.migrationTableName)
           .update({
             status: MigrationStatus.ROLLED_BACK,
-            rolled_back_at: new Date().toISOString()
+            rolled_back_at: new Date().toISOString(),
           })
           .eq('version', migration.version)
           .eq('status', MigrationStatus.APPLIED);
@@ -270,7 +270,7 @@ export class MigrationManager {
       return { 
         success: false, 
         migration, 
-        error: error instanceof Error ? error : new Error(String(error)) 
+        error: error instanceof Error ? error : new Error(String(error)), 
       };
     }
   }
@@ -358,14 +358,14 @@ export class MigrationManager {
     const appliedVersions = new Set(
       appliedMigrations
         .filter(m => m.status === MigrationStatus.APPLIED)
-        .map(m => m.version)
+        .map(m => m.version),
     );
     
     const pendingMigrations = allMigrations.filter(migration => !appliedVersions.has(migration.version));
     
     return {
       pending: pendingMigrations,
-      applied: appliedMigrations
+      applied: appliedMigrations,
     };
   }
 

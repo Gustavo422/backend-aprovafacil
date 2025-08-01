@@ -46,7 +46,7 @@ export interface UpdateQuestoesSemanaDTO {
 
 export interface UserQuestoesSemanaProgressDTO {
   id: string;
-  user_id: string;
+  usuario_id: string;
   questoes_semanais_id: string;
   score: number;
   respostas_corretas: number;

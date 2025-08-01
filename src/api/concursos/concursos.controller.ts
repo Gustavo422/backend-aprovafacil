@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { logger } from '../../utils/logger.js';
+import { logger } from '../../lib/logger.js';
 import { ConcursosService } from '../../core/concursos.service.js';
 
 function getStringParam(param: unknown): string | undefined {
@@ -31,7 +31,7 @@ export class ConcursosController {
         ano,
         banca,
         ativo,
-        search
+        search,
       } = req.query;
       const result = await ConcursosService.listar({
         page: Number(page),
@@ -40,20 +40,20 @@ export class ConcursosController {
         ano: getNumberParam(ano),
         banca: getStringParam(banca),
         ativo: getBooleanOrStringParam(ativo),
-        search: getStringParam(search)
+        search: getStringParam(search),
       });
       res.json({
         success: true,
         data: result.concursos,
-        pagination: result.pagination
+        pagination: result.pagination,
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-      logger.error('Erro ao processar requisição GET /api/concursos:', undefined, { error: errorMessage });
+      logger.error('Erro ao processar requisição GET /api/concursos:', { error: errorMessage });
       res.status(500).json({
         success: false,
         error: 'Erro interno no servidor',
-        details: errorMessage
+        details: errorMessage,
       });
     }
   }
@@ -64,7 +64,7 @@ export class ConcursosController {
       const concurso = await ConcursosService.buscarPorId(id);
       res.json({
         success: true,
-        data: concurso
+        data: concurso,
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
@@ -73,15 +73,15 @@ export class ConcursosController {
       if (errorCode === 'PGRST116') {
         res.status(404).json({
           success: false,
-          error: 'Concurso não encontrado'
+          error: 'Concurso não encontrado',
         });
         return;
       }
-      logger.error('Erro ao buscar concurso:', undefined, { error: errorMessage });
+      logger.error('Erro ao buscar concurso:', { error: errorMessage });
       res.status(500).json({
         success: false,
         error: 'Erro interno ao buscar concurso',
-        details: errorMessage
+        details: errorMessage,
       });
     }
   }
@@ -92,7 +92,7 @@ export class ConcursosController {
       const concurso = await ConcursosService.criar(concursoData);
       res.status(201).json({
         success: true,
-        data: concurso
+        data: concurso,
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
@@ -101,15 +101,69 @@ export class ConcursosController {
       if (errorCode === '23505') {
         res.status(400).json({
           success: false,
-          error: 'Concurso já existe com esses dados'
+          error: 'Concurso já existe com esses dados',
         });
         return;
       }
-      logger.error('Erro ao criar concurso:', undefined, { error: errorMessage });
+      logger.error('Erro ao criar concurso:', { error: errorMessage });
       res.status(500).json({
         success: false,
         error: 'Erro interno ao criar concurso',
-        details: errorMessage
+        details: errorMessage,
+      });
+    }
+  }
+
+  static async atualizar(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const concursoData = req.body;
+      const concurso = await ConcursosService.atualizar(id, concursoData);
+      res.json({
+        success: true,
+        data: concurso,
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      const errorCode = (error as { code?: string }).code;
+      
+      if (errorCode === 'PGRST116') {
+        res.status(404).json({
+          success: false,
+          error: 'Concurso não encontrado para atualização',
+        });
+        return;
+      }
+      logger.error('Erro ao atualizar concurso:', { error: errorMessage });
+      res.status(500).json({
+        success: false,
+        error: 'Erro interno ao atualizar concurso',
+        details: errorMessage,
+      });
+    }
+  }
+
+  static async excluir(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      await ConcursosService.excluir(id);
+      res.status(204).send();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      const errorCode = (error as { code?: string }).code;
+
+      if (errorCode === 'PGRST116') {
+        res.status(404).json({
+          success: false,
+          error: 'Concurso não encontrado para exclusão',
+        });
+        return;
+      }
+      logger.error('Erro ao excluir concurso:', { error: errorMessage });
+      res.status(500).json({
+        success: false,
+        error: 'Erro interno ao excluir concurso',
+        details: errorMessage,
       });
     }
   }
@@ -118,7 +172,8 @@ export class ConcursosController {
 export const getConcursos = ConcursosController.listar;
 export const getConcursoById = ConcursosController.buscarPorId;
 export const createConcurso = ConcursosController.criar;
-// Se existirem métodos de update, patch e delete, exporte-os também (adicionar depois se necessário) 
+export const updateConcurso = ConcursosController.atualizar;
+export const deleteConcurso = ConcursosController.excluir; 
 
 
 

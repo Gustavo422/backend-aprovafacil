@@ -8,6 +8,6 @@ export const UserSchema: OpenAPIV3.SchemaObject = {
     nome: { type: 'string', example: 'João Silva' },
     role: { type: 'string', enum: ['user', 'admin'], example: 'user' },
     createdAt: { type: 'string', format: 'date-time', example: '2024-01-01T00:00:00Z' },
-    updatedAt: { type: 'string', format: 'date-time', example: '2024-01-01T00:00:00Z' }
-  }
+    updatedAt: { type: 'string', format: 'date-time', example: '2024-01-01T00:00:00Z' },
+  },
 }; 

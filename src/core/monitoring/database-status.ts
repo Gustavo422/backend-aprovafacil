@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '../../config/supabase-unified.js';
 
 export interface DatabaseStatus {
   status: 'healthy' | 'warning' | 'error';
@@ -21,7 +21,7 @@ export async function getDatabaseStatus(): Promise<DatabaseStatus> {
   let connected = false;
   let responseTime = 0;
   let tables = { count: 0, list: [] as string[] };
-  let connectionPool = { active: 0, idle: 0, total: 0 };
+  const connectionPool = { active: 0, idle: 0, total: 0 };
   
   try {
     const supabaseUrl = process.env.SUPABASE_URL;
@@ -30,9 +30,7 @@ export async function getDatabaseStatus(): Promise<DatabaseStatus> {
     if (!supabaseUrl || !supabaseKey) {
       throw new Error('Variáveis de ambiente do Supabase não configuradas');
     }
-    
-    const supabase = createClient(supabaseUrl, supabaseKey);
-    
+
     // Testar conexão e medir tempo de resposta
     const startTime = Date.now();
     const { error } = await supabase
@@ -60,7 +58,7 @@ export async function getDatabaseStatus(): Promise<DatabaseStatus> {
     } else {
       tables = {
         count: tablesData?.length || 0,
-        list: tablesData?.map(t => t.table_nome) || []
+        list: tablesData?.map(t => t.table_nome) || [],
       };
     }
     
@@ -81,9 +79,7 @@ export async function getDatabaseStatus(): Promise<DatabaseStatus> {
     responseTime,
     tables,
     connectionPool,
-    errors
+    errors,
   };
 } 
-
-
 

@@ -27,14 +27,14 @@ export async function getLogStatus(): Promise<LogStatus> {
   const errors: string[] = [];
   let recentLogs: LogStatus['recentLogs'] = [];
   let logStats = { total: 0, errors: 0, warnings: 0, info: 0 };
-  let logFiles: LogStatus['logFiles'] = [];
+  const logFiles: LogStatus['logFiles'] = [];
   
   try {
     // Tentar encontrar arquivos de log
     const logDirs = [
       path.join(process.cwd(), 'logs'),
       path.join(process.cwd(), 'log'),
-      path.join(process.cwd(), '.logs')
+      path.join(process.cwd(), '.logs'),
     ];
     
     for (const logDir of logDirs) {
@@ -49,7 +49,7 @@ export async function getLogStatus(): Promise<LogStatus> {
             logFiles.push({
               name: entry.name,
               size: stats.size,
-              lastModified: stats.mtime.toISOString()
+              lastModified: stats.mtime.toISOString(),
             });
             
             // Ler logs recentes do arquivo
@@ -74,12 +74,12 @@ export async function getLogStatus(): Promise<LogStatus> {
       total: recentLogs.length,
       errors: recentLogs.filter(log => log.level === 'error').length,
       warnings: recentLogs.filter(log => log.level === 'warning').length,
-      info: recentLogs.filter(log => log.level === 'info').length
+      info: recentLogs.filter(log => log.level === 'info').length,
     };
     
-        } catch {
-        errors.push('Erro ao processar logs');
-      }
+  } catch {
+    errors.push('Erro ao processar logs');
+  }
   
   // Status baseado na presença de erros recentes
   const status = logStats.errors > 5 ? 'error' : logStats.warnings > 10 ? 'warning' : 'healthy';
@@ -89,7 +89,7 @@ export async function getLogStatus(): Promise<LogStatus> {
     recentLogs,
     logStats,
     logFiles,
-    errors
+    errors,
   };
 }
 
@@ -113,20 +113,20 @@ function parseLogFile(content: string): LogStatus['recentLogs'] {
           timestamp: parsed.timestamp,
           level: parsed.level,
           message: parsed.message,
-          service: parsed.service
+          service: parsed.service,
         });
       }
-          } catch {
-        // Se não for JSON, tentar parsear formato comum de log
-        const logMatch = line.match(/(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z)\s+(\w+)\s+(.+)/);
-        if (logMatch) {
-          logs.push({
-            timestamp: logMatch[1],
-            level: logMatch[2] as 'info' | 'warning' | 'error' | 'debug',
-            message: logMatch[3]
-          });
-        }
+    } catch {
+      // Se não for JSON, tentar parsear formato comum de log
+      const logMatch = line.match(/(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z)\s+(\w+)\s+(.+)/);
+      if (logMatch) {
+        logs.push({
+          timestamp: logMatch[1],
+          level: logMatch[2] as 'info' | 'warning' | 'error' | 'debug',
+          message: logMatch[3],
+        });
       }
+    }
   }
   
   return logs;

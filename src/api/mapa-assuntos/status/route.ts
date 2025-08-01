@@ -46,7 +46,7 @@ export async function PUT(request: Request) {
     // const { data, error } = await supabase
     //   .from('progresso_usuario_mapa_assuntos')
     //   .upsert({
-    //     user_id: user.id,
+    //     usuario_id: user.id,
     //     mapa_assunto_id: assuntoId,
     //     status,
     //     atualizado_em: new Date().toISOString(),

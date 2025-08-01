@@ -7,7 +7,7 @@ export {
   createApiHandler, 
   type HttpMethod, 
   type RequestContext, 
-  type ApiResponse as EnhancedApiResponse 
+  type ApiResponse as EnhancedApiResponse, 
 } from './api-handler';
 
 // Response formatter utilities

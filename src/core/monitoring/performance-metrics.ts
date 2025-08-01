@@ -91,6 +91,7 @@ class PerformanceMetricsCollector {
       await this.collectSystemMetrics();
     }, intervalMs);
     
+    // eslint-disable-next-line no-console
     console.log(`Performance metrics collection started (interval: ${intervalMs}ms)`);
   }
 
@@ -102,6 +103,7 @@ class PerformanceMetricsCollector {
       clearInterval(this.collectionInterval);
       this.collectionInterval = null;
       this.isCollecting = false;
+      // eslint-disable-next-line no-console
       console.log('Performance metrics collection stopped');
     }
   }
@@ -131,7 +133,7 @@ class PerformanceMetricsCollector {
           responseTime,
           statusCode: res.statusCode,
           memoryUsage,
-          cpuUsage
+          cpuUsage,
         };
 
         this.metrics.push(metric);
@@ -159,29 +161,30 @@ class PerformanceMetricsCollector {
       const [systemMetrics, dbStatus, logStatus] = await Promise.all([
         getSystemMetrics(),
         getDatabaseStatus(),
-        getLogStatus()
+        getLogStatus(),
       ]);
 
       // Add metrics to the store
       metricsStore.addSystemMetric(
         systemMetrics.cpu.usage, 
-        systemMetrics.memory.usage
+        systemMetrics.memory.usage,
       );
       
       metricsStore.addDatabaseMetric(
-        dbStatus.responseTime
+        dbStatus.responseTime,
       );
       
       metricsStore.addLogsMetric(
         logStatus.logStats.info,
         logStatus.logStats.warnings,
-        logStatus.logStats.errors
+        logStatus.logStats.errors,
       );
 
       // Check for system alerts
       this.checkForSystemAlerts(systemMetrics, dbStatus);
       
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Error collecting system metrics:', error);
     }
   }
@@ -197,7 +200,7 @@ class PerformanceMetricsCollector {
         category: 'endpoint',
         message: `Critical response time for ${metric.method} ${metric.endpoint}`,
         value: metric.responseTime,
-        threshold: THRESHOLDS.RESPONSE_TIME_CRITICAL
+        threshold: THRESHOLDS.RESPONSE_TIME_CRITICAL,
       });
     } else if (metric.responseTime > THRESHOLDS.RESPONSE_TIME_WARNING) {
       this.createAlert({
@@ -205,7 +208,7 @@ class PerformanceMetricsCollector {
         category: 'endpoint',
         message: `Slow response time for ${metric.method} ${metric.endpoint}`,
         value: metric.responseTime,
-        threshold: THRESHOLDS.RESPONSE_TIME_WARNING
+        threshold: THRESHOLDS.RESPONSE_TIME_WARNING,
       });
     }
 
@@ -216,7 +219,7 @@ class PerformanceMetricsCollector {
         category: 'error',
         message: `Server error ${metric.statusCode} on ${metric.method} ${metric.endpoint}`,
         value: metric.statusCode,
-        threshold: 500
+        threshold: 500,
       });
     } else if (metric.statusCode >= 400) {
       this.createAlert({
@@ -224,7 +227,7 @@ class PerformanceMetricsCollector {
         category: 'error',
         message: `Client error ${metric.statusCode} on ${metric.method} ${metric.endpoint}`,
         value: metric.statusCode,
-        threshold: 400
+        threshold: 400,
       });
     }
 
@@ -235,7 +238,7 @@ class PerformanceMetricsCollector {
         category: 'system',
         message: `High memory usage (${metric.memoryUsage.toFixed(2)}MB) for ${metric.method} ${metric.endpoint}`,
         value: metric.memoryUsage,
-        threshold: 50
+        threshold: 50,
       });
     }
   }
@@ -254,7 +257,7 @@ class PerformanceMetricsCollector {
           category: 'system',
           message: `Critical CPU usage: ${metrics.cpu.usage.toFixed(1)}%`,
           value: metrics.cpu.usage,
-          threshold: THRESHOLDS.CPU_CRITICAL
+          threshold: THRESHOLDS.CPU_CRITICAL,
         });
       } else if (metrics.cpu.usage > THRESHOLDS.CPU_WARNING) {
         this.createAlert({
@@ -262,7 +265,7 @@ class PerformanceMetricsCollector {
           category: 'system',
           message: `High CPU usage: ${metrics.cpu.usage.toFixed(1)}%`,
           value: metrics.cpu.usage,
-          threshold: THRESHOLDS.CPU_WARNING
+          threshold: THRESHOLDS.CPU_WARNING,
         });
       }
     }
@@ -274,7 +277,7 @@ class PerformanceMetricsCollector {
           category: 'system',
           message: `Critical memory usage: ${metrics.memory.usage.toFixed(1)}%`,
           value: metrics.memory.usage,
-          threshold: THRESHOLDS.MEMORY_CRITICAL
+          threshold: THRESHOLDS.MEMORY_CRITICAL,
         });
       } else if (metrics.memory.usage > THRESHOLDS.MEMORY_WARNING) {
         this.createAlert({
@@ -282,7 +285,7 @@ class PerformanceMetricsCollector {
           category: 'system',
           message: `High memory usage: ${metrics.memory.usage.toFixed(1)}%`,
           value: metrics.memory.usage,
-          threshold: THRESHOLDS.MEMORY_WARNING
+          threshold: THRESHOLDS.MEMORY_WARNING,
         });
       }
     }
@@ -295,7 +298,7 @@ class PerformanceMetricsCollector {
           category: 'database',
           message: `Critical DB response time: ${db.responseTime.toFixed(1)}ms`,
           value: db.responseTime,
-          threshold: THRESHOLDS.DB_RESPONSE_CRITICAL
+          threshold: THRESHOLDS.DB_RESPONSE_CRITICAL,
         });
       } else if (db.responseTime > THRESHOLDS.DB_RESPONSE_WARNING) {
         this.createAlert({
@@ -303,7 +306,7 @@ class PerformanceMetricsCollector {
           category: 'database',
           message: `High DB response time: ${db.responseTime.toFixed(1)}ms`,
           value: db.responseTime,
-          threshold: THRESHOLDS.DB_RESPONSE_WARNING
+          threshold: THRESHOLDS.DB_RESPONSE_WARNING,
         });
       }
     }
@@ -320,7 +323,7 @@ class PerformanceMetricsCollector {
       ...alert,
       id,
       timestamp,
-      status: 'active'
+      status: 'active',
     };
     
     // Check if a similar alert already exists
@@ -328,7 +331,7 @@ class PerformanceMetricsCollector {
       a.category === alert.category && 
       a.type === alert.type && 
       a.message === alert.message &&
-      a.status === 'active'
+      a.status === 'active',
     );
     
     if (similarAlertIndex >= 0) {
@@ -339,6 +342,7 @@ class PerformanceMetricsCollector {
       this.alerts.push(newAlert);
       
       // Log the alert
+      // eslint-disable-next-line no-console
       console.log(`[${alert.type.toUpperCase()}] ${alert.message}`);
     }
     
@@ -429,7 +433,7 @@ class PerformanceMetricsCollector {
         count,
         avgResponseTime,
         p95ResponseTime,
-        errorRate
+        errorRate,
       };
     }).sort((a, b) => b.avgResponseTime - a.avgResponseTime);
   }
@@ -446,7 +450,7 @@ class PerformanceMetricsCollector {
         memoryUsage: 0,
         loadAverage: [0, 0, 0],
         activeConnections: 0,
-        uptime: process.uptime()
+        uptime: process.uptime(),
       };
     }
     
@@ -461,7 +465,7 @@ class PerformanceMetricsCollector {
         ? (process as unknown as { loadavg: () => number[] }).loadavg()
         : [0, 0, 0], // Compatível com Windows
       activeConnections: this.getActiveConnections(),
-      uptime: process.uptime()
+      uptime: process.uptime(),
     };
   }
 
@@ -477,7 +481,7 @@ class PerformanceMetricsCollector {
         maxResponseTime: 0,
         errorRate: 0,
         connectionPoolUsage: 0,
-        activeQueries: 0
+        activeQueries: 0,
       };
     }
     
@@ -490,7 +494,7 @@ class PerformanceMetricsCollector {
       maxResponseTime,
       errorRate: 0, // Would need to be tracked separately
       connectionPoolUsage: 0, // Would need to be tracked separately
-      activeQueries: 0 // Would need to be tracked separately
+      activeQueries: 0, // Would need to be tracked separately
     };
   }
 
@@ -519,7 +523,7 @@ class PerformanceMetricsCollector {
       database: this.getDatabasePerformance(),
       endpoints: this.getEndpointPerformance(timeRangeMs),
       alerts: this.getActiveAlerts(),
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
   }
 }

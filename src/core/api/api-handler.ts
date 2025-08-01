@@ -1,11 +1,11 @@
-import { NextRequest } from 'next/server';
+import { Request, Response } from 'express';
 import { z } from 'zod';
 import { getLogger } from '../../lib/logging';
 import { BaseError } from '../../lib/errors/base-error';
 import { ValidationError, AuthError } from '../../lib/errors';
 import { ErrorCategory } from '../../lib/errors/error-category';
-import { RequestValidator } from './request-validator';
-import { ResponseFormatter } from './response-formatter';
+import { RequestValidator } from './request-validator.js';
+import { ResponseFormatter } from './response-formatter.js';
 import { performance } from 'perf_hooks';
 
 /**
@@ -147,7 +147,7 @@ export interface ApiHandlerOptions {
  * API handler function type
  */
 export type ApiHandlerFunction = (
-  request: NextRequest,
+  req: Request,
   context: RequestContext
 ) => Promise<unknown>;
 
@@ -276,26 +276,26 @@ export class ApiHandler {
    */
   createHandler(
     handlers: Partial<Record<HttpMethod, ApiHandlerFunction>>,
-    options: ApiHandlerOptions = {}
+    options: ApiHandlerOptions = {},
   ) {
-    return async (request: NextRequest, { params }: { params?: Record<string, unknown> } = {}) => {
+    return async (req: Request, _res: Response, _next: (err?: unknown) => void) => {
       const startTime = performance.now();
       const requestId = this.generateRequestId();
-      const method = request.method as HttpMethod;
+      const method = req.method as HttpMethod;
       
       // Create logger with request context
       const requestLogger = this.logger.child({
         requestId,
         method,
-        url: request.url,
-        userAgent: request.headers.get('user-agent') || 'unknown'
+        url: req.url,
+        userAgent: req.headers['user-agent'] || 'unknown',
       });
       
       try {
         requestLogger.info('Processing API request', {
           method,
-          url: request.url,
-          hasBody: request.headers.get('content-length') !== '0'
+          url: req.url,
+          hasBody: req.headers['content-length'] !== '0',
         });
         
         // Check if method is supported
@@ -309,24 +309,24 @@ export class ApiHandler {
         }
         
         // Get client IP
-        const clientIp = this.getClientIp(request);
+        const clientIp = this.getClientIp(req);
         
         // Apply rate limiting if configured
         if (options.rateLimit) {
-          const rateLimitKey = `${clientIp}:${request.nextUrl.pathname}`;
+          const rateLimitKey = `${clientIp}:${req.originalUrl}`;
           if (!rateLimitCache.isAllowed(
             rateLimitKey, 
             options.rateLimit.requests, 
-            options.rateLimit.windowMs
+            options.rateLimit.windowMs,
           )) {
             requestLogger.warn('Rate limit exceeded', { 
               clientIp, 
-              rateLimit: options.rateLimit 
+              rateLimit: options.rateLimit, 
             });
             
             return ResponseFormatter.rateLimitError(
               'Too many requests. Please try again later.',
-              requestId
+              requestId,
             );
           }
         }
@@ -335,15 +335,15 @@ export class ApiHandler {
         const context: RequestContext = {
           requestId,
           clientIp,
-          userAgent: request.headers.get('user-agent') || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
           timestamp: new Date(),
-          logger: requestLogger
+          logger: requestLogger,
         };
         
         // Handle authentication if required
         if (options.requireAuth) {
           try {
-            const authResult = await this.authenticateRequest(request, requestLogger);
+            const authResult = await this.authenticateRequest(req, requestLogger);
             context.user = authResult;
             
             // Check role-based access if roles are specified
@@ -351,12 +351,12 @@ export class ApiHandler {
               if (!authResult.role || !options.allowedRoles.includes(authResult.role)) {
                 requestLogger.warn('Access denied due to insufficient permissions', {
                   userRole: authResult.role,
-                  allowedRoles: options.allowedRoles
+                  allowedRoles: options.allowedRoles,
                 });
                 
                 return ResponseFormatter.forbiddenError(
                   'You do not have permission to access this resource',
-                  requestId
+                  requestId,
                 );
               }
             }
@@ -366,7 +366,7 @@ export class ApiHandler {
             }
             
             requestLogger.error('Authentication error', {
-              error: error instanceof Error ? error.message : String(error)
+              error: error instanceof Error ? error.message : String(error),
             });
             
             return ResponseFormatter.authError('Authentication failed', requestId);
@@ -376,20 +376,20 @@ export class ApiHandler {
         // Validate request body
         if (options.validateBody && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
           try {
-            context.body = await RequestValidator.validateBody(request, options.validateBody);
+            context.body = await RequestValidator.validateBody(req, options.validateBody);
           } catch (error) {
             if (error instanceof ValidationError) {
               return ResponseFormatter.validationError(
                 'Invalid request body',
                 error.details,
-                requestId
+                requestId,
               );
             }
             
             return ResponseFormatter.validationError(
               'Failed to parse request body',
               undefined,
-              requestId
+              requestId,
             );
           }
         }
@@ -397,41 +397,41 @@ export class ApiHandler {
         // Validate query parameters
         if (options.validateQuery) {
           try {
-            context.query = RequestValidator.validateQuery(request, options.validateQuery);
+            context.query = RequestValidator.validateQuery(req, options.validateQuery);
           } catch (error) {
             if (error instanceof ValidationError) {
               return ResponseFormatter.validationError(
                 'Invalid query parameters',
                 error.details,
-                requestId
+                requestId,
               );
             }
             
             return ResponseFormatter.validationError(
               'Failed to parse query parameters',
               undefined,
-              requestId
+              requestId,
             );
           }
         }
         
         // Validate path parameters
-        if (options.validateParams && params) {
+        if (options.validateParams && req.params) {
           try {
-            context.params = RequestValidator.validateParams(params as Record<string, string | string[]>, options.validateParams);
+            context.params = RequestValidator.validateParams(req.params as Record<string, string | string[]>, options.validateParams);
           } catch (error) {
             if (error instanceof ValidationError) {
               return ResponseFormatter.validationError(
                 'Invalid path parameters',
                 error.details,
-                requestId
+                requestId,
               );
             }
             
             return ResponseFormatter.validationError(
               'Failed to parse path parameters',
               undefined,
-              requestId
+              requestId,
             );
           }
         }
@@ -448,19 +448,19 @@ export class ApiHandler {
         
         try {
           // Execute handler with timeout
-          const handlerPromise = handler(request, context);
+          const handlerPromise = handler(req, context);
           const result = await Promise.race([handlerPromise, timeoutPromise]);
           
           const executionTime = performance.now() - startTime;
           
           requestLogger.info('Request processed successfully', {
             executionTimeMs: Math.round(executionTime),
-            statusCode: 200
+            statusCode: 200,
           });
           
           // Format successful response
           return ResponseFormatter.success(result, {
-            requestId
+            requestId,
           });
         } finally {
           if (timeoutId) {
@@ -474,42 +474,42 @@ export class ApiHandler {
         requestLogger.error('Error processing request', {
           error: error instanceof Error ? error.message : String(error),
           stack: error instanceof Error ? error.stack : undefined,
-          executionTimeMs: Math.round(executionTime)
+          executionTimeMs: Math.round(executionTime),
         });
         
         // Handle different error types
         if (error instanceof BaseError) {
           // Handle specific error categories
           switch (error.category) {
-            case ErrorCategory.VALIDATION:
-              return ResponseFormatter.validationError(
-                error.message,
-                error.details,
-                requestId
-              );
+          case ErrorCategory.VALIDATION:
+            return ResponseFormatter.validationError(
+              error.message,
+              error.details,
+              requestId,
+            );
               
-            case ErrorCategory.AUTH:
-              return ResponseFormatter.authError(error.message, requestId);
+          case ErrorCategory.AUTH:
+            return ResponseFormatter.authError(error.message, requestId);
               
-            case ErrorCategory.PERMISSION:
-              return ResponseFormatter.forbiddenError(error.message, requestId);
+          case ErrorCategory.PERMISSION:
+            return ResponseFormatter.forbiddenError(error.message, requestId);
               
-            case ErrorCategory.DATABASE:
-              return ResponseFormatter.error(error.message, {
-                status: error.statusCode || 500,
-                code: error.code || 'DATABASE_ERROR',
-                requestId,
-              });
+          case ErrorCategory.DATABASE:
+            return ResponseFormatter.error(error.message, {
+              status: error.statusCode || 500,
+              code: error.code || 'DATABASE_ERROR',
+              requestId,
+            });
               
-            case ErrorCategory.RATE_LIMIT:
-              return ResponseFormatter.rateLimitError(error.message, requestId);
+          case ErrorCategory.RATE_LIMIT:
+            return ResponseFormatter.rateLimitError(error.message, requestId);
               
-            default:
-              return ResponseFormatter.error(error.message, {
-                status: error.statusCode || 500,
-                code: error.code || 'INTERNAL_SERVER_ERROR',
-                requestId,
-              });
+          default:
+            return ResponseFormatter.error(error.message, {
+              status: error.statusCode || 500,
+              code: error.code || 'INTERNAL_SERVER_ERROR',
+              requestId,
+            });
           }
         }
         
@@ -533,16 +533,19 @@ export class ApiHandler {
   /**
    * Get client IP address from request
    */
-  private getClientIp(request: NextRequest): string {
-    const forwarded = request.headers.get('x-forwarded-for');
-    const realIp = request.headers.get('x-real-ip');
+  private getClientIp(req: Request): string {
+    const forwarded = req.headers['x-forwarded-for'];
+    const realIp = req.headers['x-real-ip'];
     
     if (forwarded) {
-      return forwarded.split(',')[0].trim();
+      const forwardedStr = Array.isArray(forwarded) ? forwarded[0] : forwarded;
+      const ips = forwardedStr.split(',');
+      return ips[0].trim();
     }
     
     if (realIp) {
-      return realIp;
+      const realIpStr = Array.isArray(realIp) ? realIp[0] : realIp;
+      return realIpStr;
     }
     
     return 'unknown';
@@ -553,10 +556,10 @@ export class ApiHandler {
    * This is a placeholder implementation that should be replaced with actual authentication logic
    */
   private async authenticateRequest(
-    request: NextRequest,
-    _logger: ReturnType<typeof getLogger>
+    req: Request,
+    _logger: ReturnType<typeof getLogger>,
   ): Promise<{ id: string; email: string; role: string }> {
-    const authHeader = request.headers.get('authorization');
+    const authHeader = req.headers.authorization;
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       throw new AuthError('Authentication required', {
@@ -600,7 +603,7 @@ export class ApiHandler {
 export function createApiHandler(
   name: string,
   handlers: Partial<Record<HttpMethod, ApiHandlerFunction>>,
-  options: ApiHandlerOptions = {}
+  options: ApiHandlerOptions = {},
 ) {
   const apiHandler = new ApiHandler(name);
   return apiHandler.createHandler(handlers, options);

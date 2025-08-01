@@ -13,12 +13,12 @@ export class NetworkError extends BaseError {
       retryable?: boolean;
       details?: Record<string, unknown>;
       cause?: Error;
-    } = {}
+    } = {},
   ) {
     super(message, {
       ...options,
       category: ErrorCategory.NETWORK,
-      retryable: options.retryable !== undefined ? options.retryable : true // Network errors are retryable by default
+      retryable: options.retryable !== undefined ? options.retryable : true, // Network errors are retryable by default
     });
     
     // Set the prototype explicitly to maintain instanceof checks
@@ -38,12 +38,12 @@ export class AuthError extends BaseError {
       retryable?: boolean;
       details?: Record<string, unknown>;
       cause?: Error;
-    } = {}
+    } = {},
   ) {
     super(message, {
       ...options,
       category: ErrorCategory.AUTH,
-      statusCode: options.statusCode || 401
+      statusCode: options.statusCode || 401,
     });
     
     // Set the prototype explicitly to maintain instanceof checks
@@ -63,12 +63,12 @@ export class PermissionError extends BaseError {
       retryable?: boolean;
       details?: Record<string, unknown>;
       cause?: Error;
-    } = {}
+    } = {},
   ) {
     super(message, {
       ...options,
       category: ErrorCategory.PERMISSION,
-      statusCode: options.statusCode || 403
+      statusCode: options.statusCode || 403,
     });
     
     // Set the prototype explicitly to maintain instanceof checks
@@ -88,11 +88,11 @@ export class DatabaseError extends BaseError {
       retryable?: boolean;
       details?: Record<string, unknown>;
       cause?: Error;
-    } = {}
+    } = {},
   ) {
     super(message, {
       ...options,
-      category: ErrorCategory.DATABASE
+      category: ErrorCategory.DATABASE,
     });
     
     // Set the prototype explicitly to maintain instanceof checks
@@ -118,7 +118,7 @@ export class ValidationError extends BaseError {
       retryable?: boolean;
       details?: Record<string, unknown>;
       cause?: Error;
-    } = {}
+    } = {},
   ) {
     super(message, {
       ...options,
@@ -126,8 +126,8 @@ export class ValidationError extends BaseError {
       statusCode: options.statusCode || 422,
       details: {
         ...options.details,
-        validationErrors
-      }
+        validationErrors,
+      },
     });
     
     // Set the prototype explicitly to maintain instanceof checks
@@ -150,12 +150,12 @@ export class NotFoundError extends BaseError {
       retryable?: boolean;
       details?: Record<string, unknown>;
       cause?: Error;
-    } = {}
+    } = {},
   ) {
     super(message, {
       ...options,
       category: ErrorCategory.UNKNOWN,
-      statusCode: options.statusCode || 404
+      statusCode: options.statusCode || 404,
     });
     
     // Set the prototype explicitly to maintain instanceof checks
@@ -181,13 +181,13 @@ export class RateLimitError extends BaseError {
       details?: Record<string, unknown>;
       cause?: Error;
       resetAt?: Date;
-    } = {}
+    } = {},
   ) {
     super(message, {
       ...options,
       category: ErrorCategory.RATE_LIMIT,
       statusCode: options.statusCode || 429,
-      retryable: options.retryable !== undefined ? options.retryable : true // Rate limit errors are retryable by default
+      retryable: options.retryable !== undefined ? options.retryable : true, // Rate limit errors are retryable by default
     });
     
     // Set the prototype explicitly to maintain instanceof checks
@@ -210,13 +210,13 @@ export class TimeoutError extends BaseError {
       retryable?: boolean;
       details?: Record<string, unknown>;
       cause?: Error;
-    } = {}
+    } = {},
   ) {
     super(message, {
       ...options,
       category: ErrorCategory.NETWORK,
       statusCode: options.statusCode || 408,
-      retryable: options.retryable !== undefined ? options.retryable : true // Timeout errors are retryable by default
+      retryable: options.retryable !== undefined ? options.retryable : true, // Timeout errors are retryable by default
     });
     
     // Set the prototype explicitly to maintain instanceof checks
@@ -236,12 +236,12 @@ export class ConfigError extends BaseError {
       retryable?: boolean;
       details?: Record<string, unknown>;
       cause?: Error;
-    } = {}
+    } = {},
   ) {
     super(message, {
       ...options,
       category: ErrorCategory.CONFIG,
-      retryable: false // Configuration errors are not retryable by default
+      retryable: false, // Configuration errors are not retryable by default
     });
     
     // Set the prototype explicitly to maintain instanceof checks

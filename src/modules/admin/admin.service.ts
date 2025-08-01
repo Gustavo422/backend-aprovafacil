@@ -3,7 +3,7 @@ import {
   IAdminService, 
   ILogService, 
   ICacheService, 
-  IUsuarioRepository 
+  IUsuarioRepository, 
 } from '../../core/interfaces/index.js';
 import { ApiResponse } from '../../shared/types/index.js';
 import { SupabaseClient } from '@supabase/supabase-js';
@@ -18,7 +18,7 @@ export class AdminService implements IAdminService {
     logService: ILogService,
     cacheService: ICacheService,
     usuarioRepository: IUsuarioRepository,
-    supabase: SupabaseClient
+    supabase: SupabaseClient,
   ) {
     this.logService = logService;
     this.cacheService = cacheService;
@@ -38,7 +38,7 @@ export class AdminService implements IAdminService {
         flashcards: await this.obterEstatisticasFlashcards(),
         apostilas: await this.obterEstatisticasApostilas(),
         sistema: await this.obterEstatisticasSistemaGeral(),
-        performance: await this.obterEstatisticasPerformance()
+        performance: await this.obterEstatisticasPerformance(),
       };
 
       await this.logService.logarFimOperacao('obterEstatisticasSistema', true);
@@ -46,7 +46,7 @@ export class AdminService implements IAdminService {
       return {
         success: true,
         data: estatisticas,
-        message: 'Estatísticas do sistema obtidas'
+        message: 'Estatísticas do sistema obtidas',
       };
     } catch (error) {
       await this.logService.erro('Erro ao obter estatísticas do sistema', error as Error);
@@ -67,7 +67,7 @@ export class AdminService implements IAdminService {
         usuarios_ativos: usuariosAtivos.length,
         usuarios_primeiro_login: usuariosPrimeiroLogin.length,
         usuarios_recentes: usuarios.data.slice(0, 10), // 10 mais recentes
-        estatisticas_por_mes: await this.obterEstatisticasUsuariosPorMes()
+        estatisticas_por_mes: await this.obterEstatisticasUsuariosPorMes(),
       };
 
       await this.logService.logarFimOperacao('gerenciarUsuarios', true);
@@ -75,7 +75,7 @@ export class AdminService implements IAdminService {
       return {
         success: true,
         data: gerenciamento,
-        message: 'Dados de gerenciamento de usuários obtidos'
+        message: 'Dados de gerenciamento de usuários obtidos',
       };
     } catch (error) {
       await this.logService.erro('Erro ao gerenciar usuários', error as Error);
@@ -93,7 +93,7 @@ export class AdminService implements IAdminService {
         questoes_semanais: await this.obterResumoConteudo('questoes_semanais'),
         flashcards: await this.obterResumoConteudo('cartoes_memorizacao'),
         apostilas: await this.obterResumoConteudo('apostilas'),
-        conteudo_apostila: await this.obterResumoConteudo('conteudo_apostila')
+        conteudo_apostila: await this.obterResumoConteudo('conteudo_apostila'),
       };
 
       await this.logService.logarFimOperacao('gerenciarConteudo', true);
@@ -101,7 +101,7 @@ export class AdminService implements IAdminService {
       return {
         success: true,
         data: conteudo,
-        message: 'Dados de gerenciamento de conteúdo obtidos'
+        message: 'Dados de gerenciamento de conteúdo obtidos',
       };
     } catch (error) {
       await this.logService.erro('Erro ao gerenciar conteúdo', error as Error);
@@ -118,7 +118,7 @@ export class AdminService implements IAdminService {
         cache: await this.testarCache(),
         logs: await this.testarLogs(),
         apis: await this.testarAPIs(),
-        integridade_dados: await this.testarIntegridadeDados()
+        integridade_dados: await this.testarIntegridadeDados(),
       };
 
       const todosPassaram = Object.values(resultados).every(teste => teste.sucesso);
@@ -130,9 +130,9 @@ export class AdminService implements IAdminService {
         data: {
           status_geral: todosPassaram ? 'PASSOU' : 'FALHOU',
           resultados,
-          executado_em: new Date().toISOString()
+          executado_em: new Date().toISOString(),
         },
-        message: 'Testes executados'
+        message: 'Testes executados',
       };
     } catch (error) {
       await this.logService.erro('Erro ao executar testes', error as Error);
@@ -151,14 +151,14 @@ export class AdminService implements IAdminService {
       const registrosRemovidos = await this.cacheService.limparCacheExpiradoBanco();
 
       await this.logService.info('Cache limpo pelo administrador', { 
-        registros_removidos: registrosRemovidos 
+        registros_removidos: registrosRemovidos, 
       });
       await this.logService.logarFimOperacao('limparCacheAdmin', true);
 
       return {
         success: true,
         data: true,
-        message: `Cache limpo com sucesso. ${registrosRemovidos} registros expirados removidos.`
+        message: `Cache limpo com sucesso. ${registrosRemovidos} registros expirados removidos.`,
       };
     } catch (error) {
       await this.logService.erro('Erro ao limpar cache', error as Error);
@@ -177,7 +177,7 @@ export class AdminService implements IAdminService {
         logs: logs.logs,
         total: logs.total,
         estatisticas: estatisticasLogs,
-        filtros_aplicados: filtro || {}
+        filtros_aplicados: filtro || {},
       };
 
       await this.logService.logarFimOperacao('obterLogsAdmin', true);
@@ -185,7 +185,7 @@ export class AdminService implements IAdminService {
       return {
         success: true,
         data: resultado,
-        message: 'Logs obtidos'
+        message: 'Logs obtidos',
       };
     } catch (error) {
       await this.logService.erro('Erro ao obter logs', error as Error, { filtro });
@@ -202,7 +202,7 @@ export class AdminService implements IAdminService {
         banco_dados: await this.obterMetricasBancoDados(),
         performance: await this.obterMetricasPerformance(),
         uso_recursos: await this.obterMetricasUsoRecursos(),
-        atividade_usuarios: await this.obterMetricasAtividadeUsuarios()
+        atividade_usuarios: await this.obterMetricasAtividadeUsuarios(),
       };
 
       await this.logService.logarFimOperacao('obterMetricasAdmin', true);
@@ -210,7 +210,7 @@ export class AdminService implements IAdminService {
       return {
         success: true,
         data: metricas,
-        message: 'Métricas obtidas'
+        message: 'Métricas obtidas',
       };
     } catch (error) {
       await this.logService.erro('Erro ao obter métricas', error as Error);
@@ -241,7 +241,7 @@ export class AdminService implements IAdminService {
           ...dados,
           slug,
           criado_em: new Date().toISOString(),
-          atualizado_em: new Date().toISOString()
+          atualizado_em: new Date().toISOString(),
         })
         .select()
         .single();
@@ -256,7 +256,7 @@ export class AdminService implements IAdminService {
       return {
         success: true,
         data,
-        message: 'Concurso criado com sucesso'
+        message: 'Concurso criado com sucesso',
       };
     } catch (error) {
       await this.logService.erro('Erro ao criar concurso', error as Error, { dados });
@@ -299,7 +299,7 @@ export class AdminService implements IAdminService {
           tempo_minutos: dados.tempo_minutos,
           dificuldade: dados.dificuldade,
           criado_em: new Date().toISOString(),
-          atualizado_em: new Date().toISOString()
+          atualizado_em: new Date().toISOString(),
         })
         .select()
         .single();
@@ -322,7 +322,7 @@ export class AdminService implements IAdminService {
           dificuldade: questao.dificuldade || dados.dificuldade,
           ordem: index + 1,
           criado_em: new Date().toISOString(),
-          atualizado_em: new Date().toISOString()
+          atualizado_em: new Date().toISOString(),
         }));
 
         const { error: erroQuestoes } = await this.supabase
@@ -342,7 +342,7 @@ export class AdminService implements IAdminService {
       return {
         success: true,
         data: simulado,
-        message: 'Simulado criado com sucesso'
+        message: 'Simulado criado com sucesso',
       };
     } catch (error) {
       await this.logService.erro('Erro ao criar simulado', error as Error, { dados });
@@ -371,7 +371,7 @@ export class AdminService implements IAdminService {
       await this.logService.logarInicioOperacao('criarQuestoesSemana', { 
         titulo: dados.titulo,
         semana: dados.numero_semana,
-        ano: dados.ano
+        ano: dados.ano,
       });
 
       const { data, error } = await this.supabase
@@ -379,7 +379,7 @@ export class AdminService implements IAdminService {
         .insert({
           ...dados,
           questoes: dados.questoes,
-          criado_em: new Date().toISOString()
+          criado_em: new Date().toISOString(),
         })
         .select()
         .single();
@@ -394,7 +394,7 @@ export class AdminService implements IAdminService {
       return {
         success: true,
         data,
-        message: 'Questões semanais criadas com sucesso'
+        message: 'Questões semanais criadas com sucesso',
       };
     } catch (error) {
       await this.logService.erro('Erro ao criar questões semanais', error as Error, { dados });
@@ -415,14 +415,14 @@ export class AdminService implements IAdminService {
     try {
       await this.logService.logarInicioOperacao('criarFlashcards', { 
         concurso_id: dados.concurso_id,
-        quantidade: dados.flashcards.length
+        quantidade: dados.flashcards.length,
       });
 
       const flashcardsFormatados = dados.flashcards.map(flashcard => ({
         ...flashcard,
         concurso_id: dados.concurso_id,
         criado_em: new Date().toISOString(),
-        atualizado_em: new Date().toISOString()
+        atualizado_em: new Date().toISOString(),
       }));
 
       const { data, error } = await this.supabase
@@ -440,7 +440,7 @@ export class AdminService implements IAdminService {
       return {
         success: true,
         data,
-        message: `${data.length} flashcards criados com sucesso`
+        message: `${data.length} flashcards criados com sucesso`,
       };
     } catch (error) {
       await this.logService.erro('Erro ao criar flashcards', error as Error, { dados });
@@ -473,7 +473,7 @@ export class AdminService implements IAdminService {
           descricao: dados.descricao,
           concurso_id: dados.concurso_id,
           criado_em: new Date().toISOString(),
-          atualizado_em: new Date().toISOString()
+          atualizado_em: new Date().toISOString(),
         })
         .select()
         .single();
@@ -490,7 +490,7 @@ export class AdminService implements IAdminService {
           numero_modulo: modulo.numero_modulo,
           titulo: modulo.titulo,
           conteudo_json: modulo.conteudo_json,
-          criado_em: new Date().toISOString()
+          criado_em: new Date().toISOString(),
         }));
 
         const { error: erroConteudo } = await this.supabase
@@ -510,7 +510,7 @@ export class AdminService implements IAdminService {
       return {
         success: true,
         data: apostila,
-        message: 'Apostila criada com sucesso'
+        message: 'Apostila criada com sucesso',
       };
     } catch (error) {
       await this.logService.erro('Erro ao criar apostila', error as Error, { dados });
@@ -536,7 +536,7 @@ export class AdminService implements IAdminService {
         primeiro_login: primeiroLogin,
         ultimo_cadastro: data && data.length > 0 
           ? new Date(Math.max(...data.map(u => new Date(u.criado_em).getTime())))
-          : null
+          : null,
       };
     } catch (error) {
       await this.logService.erro('Erro ao obter estatísticas de usuários', error as Error);
@@ -555,7 +555,7 @@ export class AdminService implements IAdminService {
       return {
         total: count || 0,
         ativos,
-        inativos: (count || 0) - ativos
+        inativos: (count || 0) - ativos,
       };
     } catch {
       return { total: 0, ativos: 0, inativos: 0 };
@@ -575,7 +575,7 @@ export class AdminService implements IAdminService {
         total: count || 0,
         ativos,
         publicos,
-        privados: ativos - publicos
+        privados: ativos - publicos,
       };
     } catch {
       return { total: 0, ativos: 0, publicos: 0, privados: 0 };
@@ -592,7 +592,7 @@ export class AdminService implements IAdminService {
 
       return {
         total: count || 0,
-        ativos
+        ativos,
       };
     } catch {
       return { total: 0, ativos: 0 };
@@ -609,7 +609,7 @@ export class AdminService implements IAdminService {
 
       return {
         total: count || 0,
-        ativos
+        ativos,
       };
     } catch {
       return { total: 0, ativos: 0 };
@@ -626,7 +626,7 @@ export class AdminService implements IAdminService {
 
       return {
         total: count || 0,
-        ativos
+        ativos,
       };
     } catch {
       return { total: 0, ativos: 0 };
@@ -648,14 +648,14 @@ export class AdminService implements IAdminService {
         atividade_mes_atual: atividadeMes?.length || 0,
         uptime: process.uptime(),
         memoria_uso: process.memoryUsage(),
-        versao_node: process.version
+        versao_node: process.version,
       };
     } catch {
       return {
         atividade_mes_atual: 0,
         uptime: process.uptime(),
         memoria_uso: process.memoryUsage(),
-        versao_node: process.version
+        versao_node: process.version,
       };
     }
   }
@@ -670,7 +670,7 @@ export class AdminService implements IAdminService {
 
       return {
         metricas_recentes: data || [],
-        total_metricas: data?.length || 0
+        total_metricas: data?.length || 0,
       };
     } catch {
       return { metricas_recentes: [], total_metricas: 0 };
@@ -693,7 +693,7 @@ export class AdminService implements IAdminService {
 
       return Object.entries(porMes).map(([mes, quantidade]) => ({
         mes,
-        quantidade
+        quantidade,
       }));
     } catch {
       return [];
@@ -710,7 +710,7 @@ export class AdminService implements IAdminService {
 
       return {
         total: count || 0,
-        recentes: data || []
+        recentes: data || [],
       };
     } catch {
       return { total: 0, recentes: [] };
@@ -789,7 +789,7 @@ export class AdminService implements IAdminService {
       if ((usuariosSemEmail?.length || 0) > 0 || (concursosSemNome?.length || 0) > 0) {
         return { 
           sucesso: false, 
-          detalhes: `Dados inconsistentes encontrados: ${usuariosSemEmail?.length || 0} usuários sem email, ${concursosSemNome?.length || 0} concursos sem nome` 
+          detalhes: `Dados inconsistentes encontrados: ${usuariosSemEmail?.length || 0} usuários sem email, ${concursosSemNome?.length || 0} concursos sem nome`, 
         };
       }
 
@@ -803,7 +803,7 @@ export class AdminService implements IAdminService {
     try {
       const tabelas = [
         'usuarios', 'concursos', 'simulados', 'questoes_simulado',
-        'questoes_semanais', 'cartoes_memorizacao', 'apostilas'
+        'questoes_semanais', 'cartoes_memorizacao', 'apostilas',
       ];
 
       const metricas: Record<string, number> = {};
@@ -826,7 +826,7 @@ export class AdminService implements IAdminService {
     return {
       uptime: process.uptime(),
       memoria: process.memoryUsage(),
-      cpu: process.cpuUsage()
+      cpu: process.cpuUsage(),
     };
   }
 
@@ -835,7 +835,7 @@ export class AdminService implements IAdminService {
       memoria_heap_usada: process.memoryUsage().heapUsed,
       memoria_heap_total: process.memoryUsage().heapTotal,
       memoria_externa: process.memoryUsage().external,
-      uptime_segundos: process.uptime()
+      uptime_segundos: process.uptime(),
     };
   }
 
@@ -862,14 +862,14 @@ export class AdminService implements IAdminService {
         usuarios_ativos_24h: usuariosAtivosOntem,
         usuarios_ativos_7d: usuariosAtivosSemana,
         atividades_24h: atividadeOntem?.length || 0,
-        atividades_7d: atividadeSemana?.length || 0
+        atividades_7d: atividadeSemana?.length || 0,
       };
     } catch {
       return {
         usuarios_ativos_24h: 0,
         usuarios_ativos_7d: 0,
         atividades_24h: 0,
-        atividades_7d: 0
+        atividades_7d: 0,
       };
     }
   }
@@ -907,7 +907,7 @@ export class AdminService implements IAdminService {
           slug,
           ativo: true,
           criado_em: new Date().toISOString(),
-          atualizado_em: new Date().toISOString()
+          atualizado_em: new Date().toISOString(),
         })
         .select()
         .single();
@@ -988,7 +988,7 @@ export class AdminService implements IAdminService {
           ...dados,
           ativo: true,
           criado_em: new Date().toISOString(),
-          atualizado_em: new Date().toISOString()
+          atualizado_em: new Date().toISOString(),
         })
         .select()
         .single();
@@ -1210,7 +1210,7 @@ export class AdminService implements IAdminService {
         dificuldade: questao.dificuldade,
         ordem: questao.ordem || index + 1,
         criado_em: new Date().toISOString(),
-        atualizado_em: new Date().toISOString()
+        atualizado_em: new Date().toISOString(),
       }));
 
       const { data, error } = await this.supabase
@@ -1580,7 +1580,7 @@ export class AdminService implements IAdminService {
         numero_modulo: modulo.numero_modulo,
         titulo: modulo.titulo,
         conteudo_json: modulo.conteudo_json,
-        criado_em: new Date().toISOString()
+        criado_em: new Date().toISOString(),
       }));
 
       const { data, error } = await this.supabase
@@ -1660,7 +1660,7 @@ export class AdminService implements IAdminService {
           ...dados,
           ativo: true,
           criado_em: new Date().toISOString(),
-          atualizado_em: new Date().toISOString()
+          atualizado_em: new Date().toISOString(),
         })
         .select()
         .single();
@@ -1851,7 +1851,7 @@ export class AdminService implements IAdminService {
         .insert({
           ...dados,
           criado_em: new Date().toISOString(),
-          atualizado_em: new Date().toISOString()
+          atualizado_em: new Date().toISOString(),
         })
         .select()
         .single();
@@ -1921,20 +1921,20 @@ export class AdminService implements IAdminService {
       await this.logService.logarInicioOperacao('importarDadosLote', { tipo, quantidade: dados.length });
       let resultado: unknown;
       switch (tipo) {
-        case 'concursos':
-          resultado = await this.importarConcursosLote(dados as Array<{ nome: string; descricao?: string; categoria_id: string; ano?: number; banca?: string; nivel_dificuldade?: string; multiplicador_questoes?: number }>);
-          break;
-        case 'simulados':
-          resultado = await this.importarSimuladosLote(dados as Array<{ titulo: string; descricao?: string; concurso_id: string; numero_questoes: number; tempo_minutos: number; dificuldade: string }>);
-          break;
-        case 'flashcards':
-          resultado = await this.importarFlashcardsLote(dados as Array<{ concurso_id: string; flashcards: Array<{ frente: string; verso: string; disciplina: string; tema: string; subtema?: string }> }>);
-          break;
-        case 'apostilas':
-          resultado = await this.importarApostilasLote(dados as Array<{ titulo: string; descricao?: string; concurso_id: string; conteudo: Array<{ numero_modulo: number; titulo: string; conteudo_json: unknown }> }>);
-          break;
-        default:
-          throw new Error(`Tipo de importação não suportado: ${tipo}`);
+      case 'concursos':
+        resultado = await this.importarConcursosLote(dados as Array<{ nome: string; descricao?: string; categoria_id: string; ano?: number; banca?: string; nivel_dificuldade?: string; multiplicador_questoes?: number }>);
+        break;
+      case 'simulados':
+        resultado = await this.importarSimuladosLote(dados as Array<{ titulo: string; descricao?: string; concurso_id: string; numero_questoes: number; tempo_minutos: number; dificuldade: string }>);
+        break;
+      case 'flashcards':
+        resultado = await this.importarFlashcardsLote(dados as Array<{ concurso_id: string; flashcards: Array<{ frente: string; verso: string; disciplina: string; tema: string; subtema?: string }> }>);
+        break;
+      case 'apostilas':
+        resultado = await this.importarApostilasLote(dados as Array<{ titulo: string; descricao?: string; concurso_id: string; conteudo: Array<{ numero_modulo: number; titulo: string; conteudo_json: unknown }> }>);
+        break;
+      default:
+        throw new Error(`Tipo de importação não suportado: ${tipo}`);
       }
       await this.logService.logarFimOperacao('importarDadosLote', true);
       return { success: true, data: resultado, message: `Importação de ${tipo} concluída` };
@@ -1949,17 +1949,17 @@ export class AdminService implements IAdminService {
       let dados: unknown;
 
       switch (tipo) {
-        case 'concursos':
-          dados = await this.exportarConcursos(filtro);
-          break;
-        case 'simulados':
-          dados = await this.exportarSimulados(filtro);
-          break;
-        case 'usuarios':
-          dados = await this.exportarUsuarios(filtro);
-          break;
-        default:
-          throw new Error(`Tipo de exportação não suportado: ${tipo}`);
+      case 'concursos':
+        dados = await this.exportarConcursos(filtro);
+        break;
+      case 'simulados':
+        dados = await this.exportarSimulados(filtro);
+        break;
+      case 'usuarios':
+        dados = await this.exportarUsuarios(filtro);
+        break;
+      default:
+        throw new Error(`Tipo de exportação não suportado: ${tipo}`);
       }
 
       return { success: true, data: dados, message: `Exportação de ${tipo} concluída` };
@@ -1991,13 +1991,13 @@ export class AdminService implements IAdminService {
       return {
         success: erros.length === 0,
         data: { valido: erros.length === 0, erros },
-        message: erros.length === 0 ? 'JSON válido' : 'JSON inválido'
+        message: erros.length === 0 ? 'JSON válido' : 'JSON inválido',
       };
     } catch {
       return {
         success: false,
         data: { valido: false, erros: ['Erro ao validar JSON'] },
-        message: 'Erro na validação'
+        message: 'Erro na validação',
       };
     }
   }
@@ -2015,13 +2015,13 @@ export class AdminService implements IAdminService {
       return {
         success: erros.length === 0,
         data: { valido: erros.length === 0, erros },
-        message: erros.length === 0 ? 'JSON válido' : 'JSON inválido'
+        message: erros.length === 0 ? 'JSON válido' : 'JSON inválido',
       };
     } catch {
       return {
         success: false,
         data: { valido: false, erros: ['Erro ao validar JSON'] },
-        message: 'Erro na validação'
+        message: 'Erro na validação',
       };
     }
   }
@@ -2037,13 +2037,13 @@ export class AdminService implements IAdminService {
       return {
         success: erros.length === 0,
         data: { valido: erros.length === 0, erros },
-        message: erros.length === 0 ? 'JSON válido' : 'JSON inválido'
+        message: erros.length === 0 ? 'JSON válido' : 'JSON inválido',
       };
     } catch {
       return {
         success: false,
         data: { valido: false, erros: ['Erro ao validar JSON'] },
-        message: 'Erro na validação'
+        message: 'Erro na validação',
       };
     }
   }
@@ -2057,10 +2057,10 @@ export class AdminService implements IAdminService {
           total_simulados: await this.contarRegistros('simulados'),
           total_questoes_semanais: await this.contarRegistros('questoes_semanais'),
           total_flashcards: await this.contarRegistros('cartoes_memorizacao'),
-          total_apostilas: await this.contarRegistros('apostilas')
+          total_apostilas: await this.contarRegistros('apostilas'),
         },
         por_concurso: await this.obterEstatisticasPorConcurso(),
-        atividade_recente: await this.obterAtividadeRecenteConteudo()
+        atividade_recente: await this.obterAtividadeRecenteConteudo(),
       };
 
       return { success: true, data: relatorio, message: 'Relatório de conteúdo gerado' };
@@ -2076,7 +2076,7 @@ export class AdminService implements IAdminService {
         resumo: await this.obterEstatisticasUsuarios(),
         atividade_mensal: await this.obterAtividadeMensalUsuarios(),
         usuarios_mais_ativos: await this.obterUsuariosMaisAtivos(),
-        estatisticas_uso: await this.obterEstatisticasUsoSistema()
+        estatisticas_uso: await this.obterEstatisticasUsoSistema(),
       };
 
       return { success: true, data: relatorio, message: 'Relatório de usuários gerado' };
@@ -2103,8 +2103,8 @@ export class AdminService implements IAdminService {
           cartoes_memorizacao: await this.exportarTabela('cartoes_memorizacao'),
           apostilas: await this.exportarTabela('apostilas'),
           conteudo_apostila: await this.exportarTabela('conteudo_apostila'),
-          mapa_assuntos: await this.exportarTabela('mapa_assuntos')
-        }
+          mapa_assuntos: await this.exportarTabela('mapa_assuntos'),
+        },
       };
 
       // Salvar backup no banco
@@ -2113,7 +2113,7 @@ export class AdminService implements IAdminService {
         .insert({
           nome: `backup_${new Date().toISOString().split('T')[0]}`,
           dados_backup: backup,
-          criado_em: new Date().toISOString()
+          criado_em: new Date().toISOString(),
         })
         .select()
         .single();
@@ -2140,7 +2140,7 @@ export class AdminService implements IAdminService {
       return {
         success: false,
         data: null,
-        message: 'Restauração de backup deve ser implementada com cuidado especial'
+        message: 'Restauração de backup deve ser implementada com cuidado especial',
       };
     } catch (error) {
       await this.logService.erro('Erro ao restaurar backup', error as Error);
@@ -2269,12 +2269,12 @@ export class AdminService implements IAdminService {
 
       return {
         simulados_realizados_mes: simuladosRealizados?.length || 0,
-        questoes_respondidas_mes: questoesRespondidas?.length || 0
+        questoes_respondidas_mes: questoesRespondidas?.length || 0,
       };
     } catch {
       return {
         simulados_realizados_mes: 0,
-        questoes_respondidas_mes: 0
+        questoes_respondidas_mes: 0,
       };
     }
   }
@@ -2285,7 +2285,7 @@ export class AdminService implements IAdminService {
       ...concurso,
       slug: this.gerarSlug(concurso.nome),
       criado_em: new Date().toISOString(),
-      atualizado_em: new Date().toISOString()
+      atualizado_em: new Date().toISOString(),
     }));
 
     const { data, error } = await this.supabase
@@ -2302,7 +2302,7 @@ export class AdminService implements IAdminService {
       ...simulado,
       slug: this.gerarSlug(simulado.titulo),
       criado_em: new Date().toISOString(),
-      atualizado_em: new Date().toISOString()
+      atualizado_em: new Date().toISOString(),
     }));
 
     const { data, error } = await this.supabase
@@ -2318,7 +2318,7 @@ export class AdminService implements IAdminService {
     const flashcardsFormatados = dados.map(flashcard => ({
       ...flashcard,
       criado_em: new Date().toISOString(),
-      atualizado_em: new Date().toISOString()
+      atualizado_em: new Date().toISOString(),
     }));
 
     const { data, error } = await this.supabase
@@ -2335,7 +2335,7 @@ export class AdminService implements IAdminService {
       ...apostila,
       slug: this.gerarSlug(apostila.titulo),
       criado_em: new Date().toISOString(),
-      atualizado_em: new Date().toISOString()
+      atualizado_em: new Date().toISOString(),
     }));
 
     const { data, error } = await this.supabase
@@ -2392,7 +2392,7 @@ export class AdminService implements IAdminService {
         resumo: await this.obterEstatisticasUsuarios(),
         atividade_mensal: await this.obterAtividadeMensalUsuarios(),
         usuarios_mais_ativos: await this.obterUsuariosMaisAtivos(),
-        estatisticas_uso: await this.obterEstatisticasUsoSistema()
+        estatisticas_uso: await this.obterEstatisticasUsoSistema(),
       };
 
       return { success: true, data: relatorio, message: 'Relatório de usuários gerado' };
@@ -2410,10 +2410,10 @@ export class AdminService implements IAdminService {
           total_simulados: await this.contarRegistros('simulados'),
           total_questoes_semanais: await this.contarRegistros('questoes_semanais'),
           total_flashcards: await this.contarRegistros('cartoes_memorizacao'),
-          total_apostilas: await this.contarRegistros('apostilas')
+          total_apostilas: await this.contarRegistros('apostilas'),
         },
         por_concurso: await this.obterEstatisticasPorConcurso(),
-        atividade_recente: await this.obterAtividadeRecenteConteudo()
+        atividade_recente: await this.obterAtividadeRecenteConteudo(),
       };
 
       return { success: true, data: relatorio, message: 'Relatório de conteúdo gerado' };
@@ -2427,7 +2427,7 @@ export class AdminService implements IAdminService {
     try {
       const relatorio = {
         total_simulados: await this.contarRegistros('simulados'),
-        atividade_recente: await this.obterAtividadeRecenteConteudo()
+        atividade_recente: await this.obterAtividadeRecenteConteudo(),
       };
 
       return { success: true, data: relatorio, message: 'Relatório de simulados gerado' };
@@ -2441,7 +2441,7 @@ export class AdminService implements IAdminService {
     try {
       const relatorio = {
         total_apostilas: await this.contarRegistros('apostilas'),
-        atividade_recente: await this.obterAtividadeRecenteConteudo()
+        atividade_recente: await this.obterAtividadeRecenteConteudo(),
       };
 
       return { success: true, data: relatorio, message: 'Relatório de apostilas gerado' };

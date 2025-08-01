@@ -1,7 +1,7 @@
 // DTO de Audit Log - Atualizado para corresponder ao schema real
 export interface AuditLogDTO {
   id: string;
-  user_id?: string;
+  usuario_id?: string; // CORRIGIDO
   action: string;
   table_nome: string;
   record_id?: string;
@@ -13,7 +13,7 @@ export interface AuditLogDTO {
 }
 
 export interface CreateAuditLogDTO {
-  user_id?: string;
+  usuario_id?: string; // CORRIGIDO
   action: string;
   table_nome: string;
   record_id?: string;
@@ -24,7 +24,7 @@ export interface CreateAuditLogDTO {
 }
 
 export interface UpdateAuditLogDTO {
-  user_id?: string;
+  usuario_id?: string; // CORRIGIDO
   action?: string;
   table_nome?: string;
   record_id?: string;

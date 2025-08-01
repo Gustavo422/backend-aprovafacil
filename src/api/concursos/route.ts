@@ -1,603 +1,622 @@
+import { Request, Response } from 'express';
 import { z } from 'zod';
-import { CrudRouteHandler } from '../../core/api/crud-route-handler';
-import { ResponseFormatter } from '../../core/api/response-formatter';
-import { SupabaseConfig } from '../../core/database/supabase.js';
-import { requestLoggingMiddleware, corsMiddleware } from '../../core/api';
-import express from 'express';
-import * as concursosController from './concursos.controller';
+import { supabase } from '../../config/supabase-unified.js';
+import { logger } from '../../lib/logger.js';
 
-// Create Supabase client
-const supabaseClient = SupabaseConfig.getInstance();
-
-// Define concurso interface
-interface Concurso {
-  id: string;
-  nome: string;
-  organizador: string;
-  data_prova: string;
-  inscricoes_inicio: string;
-  inscricoes_fim: string;
-  status: 'ativo' | 'inativo' | 'encerrado' | 'cancelado';
-  descricao?: string;
-  edital_url?: string;
-  created_at: string;
-  updated_at: string;
-  [key: string]: unknown; // Index signature para compatibilidade com CrudRouteHandler
+// Interface para request com usuário autenticado
+interface AuthenticatedRequest extends Request {
+  user?: {
+    id: string;
+    email: string;
+    role: string;
+    [key: string]: unknown;
+  };
 }
+
+// Validation schemas
+const createConcursoSchema = z.object({
+  nome: z.string().min(3).max(200),
+  slug: z.string().min(3).max(200),
+  descricao: z.string().max(2000).optional(),
+  ano: z.number().int().min(2000).max(2030),
+  banca: z.string().min(2).max(100),
+  categoria_id: z.string().uuid().optional(),
+  url_edital: z.string().url().optional(),
+  data_prova: z.string().optional(),
+  vagas: z.number().int().min(0).optional(),
+  salario: z.number().min(0).optional(),
+  nivel_dificuldade: z.enum(['facil', 'medio', 'dificil']).default('medio'),
+  multiplicador_questoes: z.number().min(0.1).max(2.0).default(1.0),
+  ativo: z.boolean().default(true),
+});
+
+const updateConcursoSchema = z.object({
+  nome: z.string().min(3).max(200).optional(),
+  slug: z.string().min(3).max(200).optional(),
+  descricao: z.string().max(2000).optional(),
+  ano: z.number().int().min(2000).max(2030).optional(),
+  banca: z.string().min(2).max(100).optional(),
+  categoria_id: z.string().uuid().optional(),
+  url_edital: z.string().url().optional(),
+  data_prova: z.string().optional(),
+  vagas: z.number().int().min(0).optional(),
+  salario: z.number().min(0).optional(),
+  nivel_dificuldade: z.enum(['facil', 'medio', 'dificil']).optional(),
+  multiplicador_questoes: z.number().min(0.1).max(2.0).optional(),
+  ativo: z.boolean().optional(),
+});
 
 /**
- * Concurso API route handler
+ * GET /api/concursos - List concursos with pagination and filters
  */
-export class ConcursoRouteHandler extends CrudRouteHandler<Record<string, unknown>> {
-  constructor() {
-    super('concursos');
-    
-    // Add middleware
-    this.use(requestLoggingMiddleware)
-      .use(corsMiddleware);
-  }
-
-  /**
-   * Get validation schema for concurso creation
-   */
-  protected getCreateSchema(): z.ZodSchema {
-    return z.object({
-      nome: z.string().min(3).max(200),
-      organizador: z.string().min(2).max(100),
-      data_prova: z.string().datetime(),
-      inscricoes_inicio: z.string().datetime(),
-      inscricoes_fim: z.string().datetime(),
-      status: z.enum(['ativo', 'inativo', 'encerrado', 'cancelado']).default('ativo'),
-      descricao: z.string().max(2000).optional(),
-      edital_url: z.string().url().optional(),
+export const getConcursosHandler = async (req: Request, res: Response) => {
+  try {
+    logger.info('Início da requisição GET /api/concursos', { 
+      component: 'backend', 
+      query: req.query,
+      url: req.url 
     });
-  }
 
-  /**
-   * Get validation schema for concurso update
-   */
-  protected getUpdateSchema(): z.ZodSchema {
-    return z.object({
-      nome: z.string().min(3).max(200).optional(),
-      organizador: z.string().min(2).max(100).optional(),
-      data_prova: z.string().datetime().optional(),
-      inscricoes_inicio: z.string().datetime().optional(),
-      inscricoes_fim: z.string().datetime().optional(),
-      status: z.enum(['ativo', 'inativo', 'encerrado', 'cancelado']).optional(),
-      descricao: z.string().max(2000).optional(),
-      edital_url: z.string().url().optional(),
-    });
-  }
-
-  /**
-   * Get validation schema for query parameters
-   */
-  protected getQuerySchema(): z.ZodSchema {
-    return z.object({
-      page: z.string().optional().transform(val => val ? parseInt(val, 10) : 1),
-      limit: z.string().optional().transform(val => val ? parseInt(val, 10) : 10),
-      sort: z.string().optional(),
-      order: z.enum(['asc', 'desc']).optional().default('asc'),
-      status: z.enum(['ativo', 'inativo', 'encerrado', 'cancelado']).optional(),
-      search: z.string().optional(),
-      organizador: z.string().optional(),
-      data_inicio: z.string().datetime().optional(),
-      data_fim: z.string().datetime().optional(),
-    });
-  }
-
-  /**
-   * Check if POST/PUT/DELETE methods require admin role
-   */
-  protected isPOSTAuthRequired(): boolean {
-    return true;
-  }
-
-  protected isPUTAuthRequired(): boolean {
-    return true;
-  }
-
-  protected isDELETEAuthRequired(): boolean {
-    return true;
-  }
-
-  /**
-   * Handle getting a list of concursos
-   */
-  protected async handleGetList(
-    query: {
-      page?: number;
-      limit?: number;
+    const {
+      page = 1,
+      limit = 10,
+      sort = 'criado_em',
+      order = 'desc',
+      ativo,
+      search,
+      categoria_id,
+      ano,
+      banca,
+    } = req.query as {
+      page?: string;
+      limit?: string;
       sort?: string;
       order?: 'asc' | 'desc';
-      status?: 'ativo' | 'inativo' | 'encerrado' | 'cancelado';
+      ativo?: string;
       search?: string;
-      organizador?: string;
-      data_inicio?: string;
-      data_fim?: string;
-    },
-    context: { requestId: string }
-  ): Promise<unknown> {
-    try {
-      const {
-        page = 1,
-        limit = 10,
-        sort = 'data_prova',
-        order = 'asc',
-        status,
-        search,
-        organizador,
-        data_inicio,
-        data_fim,
-      } = query;
+      categoria_id?: string;
+      ano?: string;
+      banca?: string;
+    };
 
-      // Start building the query
-      let concursosQuery = supabaseClient
-        .from('concursos')
-        .select('*, concurso_categorias(*)');
+    // Start building the query
+    let concursosQuery = supabase
+      .from('concursos')
+      .select(`
+        *,
+        categorias_concursos (
+          id,
+          nome,
+          slug,
+          descricao,
+          cor_primaria,
+          cor_secundaria
+        )
+      `);
 
-      // Apply filters
-      if (status) {
-        concursosQuery = concursosQuery.eq('status', status);
-      }
+    // Apply filters
+    if (ativo !== undefined) {
+      concursosQuery = concursosQuery.eq('ativo', ativo === 'true');
+    }
 
-      if (search) {
-        concursosQuery = concursosQuery.ilike('nome', `%${search}%`);
-      }
+    if (search) {
+      concursosQuery = concursosQuery.or(`nome.ilike.%${search}%,descricao.ilike.%${search}%`);
+    }
 
-      if (organizador) {
-        concursosQuery = concursosQuery.eq('organizador', organizador);
-      }
+    if (categoria_id) {
+      concursosQuery = concursosQuery.eq('categoria_id', categoria_id);
+    }
 
-      if (data_inicio) {
-        concursosQuery = concursosQuery.gte('data_prova', data_inicio);
-      }
+    if (ano) {
+      concursosQuery = concursosQuery.eq('ano', parseInt(ano));
+    }
 
-      if (data_fim) {
-        concursosQuery = concursosQuery.lte('data_prova', data_fim);
-      }
+    if (banca) {
+      concursosQuery = concursosQuery.eq('banca', banca);
+    }
 
-      // Get total count for pagination
-      const { count, error: countError } = await supabaseClient
-        .from('concursos')
-        .select('*', { count: 'exact', head: true });
+    // Get total count for pagination
+    const { count, error: countError } = await supabase
+      .from('concursos')
+      .select('*', { count: 'exact', head: true });
 
-      if (countError) {
-        this.logger.error('Error counting concursos', {
-          requestId: context.requestId,
-          error: countError.message,
-        });
-
-        return ResponseFormatter.error('Error retrieving concursos', {
-          status: 500,
-          requestId: context.requestId,
-        });
-      }
-
-      // Apply pagination and sorting
-      const { data, error }: { data: unknown; error: unknown } = await concursosQuery
-        .order(sort, { ascending: order === 'asc' })
-        .range((page - 1) * limit, page * limit - 1);
-
-      if (error) {
-        this.logger.error('Error fetching concursos', {
-          requestId: context.requestId,
-          error: error && typeof error === 'object' && 'message' in error ? (error as { message: string }).message : String(error),
-        });
-
-        return ResponseFormatter.error('Error retrieving concursos', {
-          status: 500,
-          requestId: context.requestId,
-        });
-      }
-
-      // Format concursos with categories
-      const formattedConcursos = (Array.isArray(data) ? data : []).map((concurso: Record<string, unknown>) => {
-        const { concurso_categorias, ...concursoData } = concurso;
-        return {
-          ...concursoData,
-          categorias: concurso_categorias,
-        };
+    if (countError) {
+      logger.error('Error counting concursos', { error: countError.message });
+      return res.status(500).json({
+        success: false,
+        error: 'Error retrieving concursos',
       });
+    }
 
-      // Calculate pagination info
-      const totalPages = Math.ceil((count || 0) / limit);
+    // Apply pagination and sorting
+    const pageNum = Number(page);
+    const limitNum = Number(limit);
+    const { data, error } = await concursosQuery
+      .order(sort, { ascending: order === 'asc' })
+      .range((pageNum - 1) * limitNum, pageNum * limitNum - 1);
 
-      return ResponseFormatter.paginated(formattedConcursos, {
-        page,
-        limit,
+    if (error) {
+      logger.error('Error fetching concursos', { 
+        error: error.message, 
+        code: error.code,
+        details: error.details,
+        hint: error.hint 
+      });
+      return res.status(500).json({
+        success: false,
+        error: 'Error retrieving concursos',
+        details: error.message
+      });
+    }
+
+    // Format concursos with categories
+    const formattedConcursos = (Array.isArray(data) ? data : []).map((concurso: Record<string, unknown>) => {
+      const { categorias_concursos, ...concursoData } = concurso;
+      return {
+        ...concursoData,
+        categoria: categorias_concursos,
+      };
+    });
+
+    // Calculate pagination info
+    const totalPages = Math.ceil((count || 0) / limitNum);
+
+    logger.info('Resposta de concursos preparada', { 
+      component: 'backend', 
+      totalCount: count || 0, 
+      page: pageNum, 
+      resultsCount: formattedConcursos.length 
+    });
+
+    return res.json({
+      success: true,
+      data: formattedConcursos,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
         total: count || 0,
         totalPages,
-      }, context.requestId);
-    } catch (error) {
-      this.logger.error('Error handling concurso list request', {
-        requestId: context.requestId,
-        error: error instanceof Error ? error.message : String(error),
-      });
+      },
+    });
+  } catch (error) {
+    logger.error('Error in getConcursosHandler', { 
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    });
+    return res.status(500).json({
+      success: false,
+      error: 'Error retrieving concursos',
+    });
+  }
+};
 
-      return ResponseFormatter.error('Error retrieving concursos', {
-        status: 500,
-        requestId: context.requestId,
+/**
+ * GET /api/concursos/:id - Get concurso by ID
+ */
+export const getConcursoByIdHandler = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // Get concurso data with category
+    const { data, error } = await supabase
+      .from('concursos')
+      .select(`
+        *,
+        categorias_concursos (
+          id,
+          nome,
+          slug,
+          descricao,
+          cor_primaria,
+          cor_secundaria
+        )
+      `)
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return res.status(404).json({
+          success: false,
+          error: 'Concurso not found',
+        });
+      }
+
+      logger.error('Error fetching concurso', { concursoId: id, error: error.message });
+      return res.status(500).json({
+        success: false,
+        error: 'Error retrieving concurso',
       });
     }
+
+    // Format response
+    const { categorias_concursos, ...concursoData } = data;
+    const formattedConcurso = {
+      ...concursoData,
+      categoria: categorias_concursos,
+    };
+
+    return res.json({
+      success: true,
+      data: formattedConcurso,
+    });
+  } catch (error) {
+    logger.error('Error in getConcursoByIdHandler', { error: error instanceof Error ? error.message : String(error) });
+    return res.status(500).json({
+      success: false,
+      error: 'Error retrieving concurso',
+    });
   }
+};
 
-  /**
-   * Handle getting a single concurso
-   */
-  protected async handleGetOne(
-    id: string,
-    context: { requestId: string }
-  ): Promise<unknown> {
-    try {
-      // Get concurso data
-      const { data, error } = await supabaseClient
-        .from('concursos')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      if (error) {
-        if (error.code === 'PGRST116') {
-          return ResponseFormatter.notFoundError('Concurso not found', context.requestId);
-        }
-
-        this.logger.error('Error fetching concurso', {
-          requestId: context.requestId,
-          concursoId: id,
-          error: error.message,
-        });
-
-        return ResponseFormatter.error('Error retrieving concurso', {
-          status: 500,
-          requestId: context.requestId,
-        });
-      }
-
-      // Get related categories
-      const { data: categorias } = await supabaseClient
-        .from('concurso_categorias')
-        .select('*')
-        .eq('concurso_id', id);
-
-      // Return concurso with categories
-      return ResponseFormatter.success({
-        ...data,
-        categorias: categorias || [],
-      }, { requestId: context.requestId });
-    } catch (error) {
-      this.logger.error('Error handling get concurso request', {
-        requestId: context.requestId,
-        concursoId: id,
-        error: error instanceof Error ? error.message : String(error),
-      });
-
-      return ResponseFormatter.error('Error retrieving concurso', {
-        status: 500,
-        requestId: context.requestId,
+/**
+ * POST /api/concursos - Create new concurso
+ */
+export const createConcursoHandler = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    // Check if user has admin role
+    const user = req.user;
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        error: 'Only admins can create concursos',
       });
     }
-  }
 
-  /**
-   * Handle creating a concurso
-   */
-  protected async handleCreate(
-    data: Concurso,
-    context: { requestId: string }
-  ): Promise<unknown> {
-    try {
-      // Check if user has admin role
-      // TODO: Adapte para buscar o usuário autenticado do contexto, se necessário
-      const user = undefined;
-      if (!user || user.role !== 'admin') {
-        return ResponseFormatter.forbiddenError('Only admins can create concursos', context.requestId);
-      }
-
-      // Create concurso in database
-      const { data: newConcurso, error } = await supabaseClient
-        .from('concursos')
-        .insert({
-          nome: data.nome,
-          organizador: data.organizador,
-          data_prova: data.data_prova,
-          inscricoes_inicio: data.inscricoes_inicio,
-          inscricoes_fim: data.inscricoes_fim,
-          status: data.status,
-          descricao: data.descricao,
-          edital_url: data.edital_url,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
-
-      if (error) {
-        this.logger.error('Error creating concurso', {
-          requestId: context.requestId,
-          error: error.message,
-        });
-
-        return ResponseFormatter.error('Error creating concurso', {
-          status: 500,
-          requestId: context.requestId,
-        });
-      }
-
-      return ResponseFormatter.success(
-        newConcurso,
-        {
-          status: 201,
-          requestId: context.requestId,
-          message: 'Concurso created successfully',
-        }
-      );
-    } catch (error) {
-      this.logger.error('Error handling create concurso request', {
-        requestId: context.requestId,
-        error: error instanceof Error ? error.message : String(error),
-      });
-
-      return ResponseFormatter.error('Error creating concurso', {
-        status: 500,
-        requestId: context.requestId,
+    // Validate request body
+    const validationResult = createConcursoSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid request data',
+        details: validationResult.error.format(),
       });
     }
-  }
 
-  /**
-   * Handle updating a concurso
-   */
-  protected async handleUpdate(
-    id: string,
-    data: Concurso,
-    context: { requestId: string }
-  ): Promise<unknown> {
-    try {
-      // Check if user has admin role
-      // TODO: Adapte para buscar o usuário autenticado do contexto, se necessário
-      const user = undefined;
-      if (!user || user.role !== 'admin') {
-        return ResponseFormatter.forbiddenError('Only admins can update concursos', context.requestId);
-      }
+    const data = validationResult.data;
 
-      // Check if concurso exists
-      const { data: existingConcurso, error: checkError } = await supabaseClient
-        .from('concursos')
-        .select('id')
-        .eq('id', id)
-        .single();
+    // Create concurso in database
+    const { data: newConcurso, error } = await supabase
+      .from('concursos')
+      .insert({
+        nome: data.nome,
+        slug: data.slug,
+        descricao: data.descricao,
+        ano: data.ano,
+        banca: data.banca,
+        categoria_id: data.categoria_id,
+        url_edital: data.url_edital,
+        data_prova: data.data_prova,
+        vagas: data.vagas,
+        salario: data.salario,
+        nivel_dificuldade: data.nivel_dificuldade,
+        multiplicador_questoes: data.multiplicador_questoes,
+        ativo: data.ativo,
+      })
+      .select(`
+        *,
+        categorias_concursos (
+          id,
+          nome,
+          slug,
+          descricao,
+          cor_primaria,
+          cor_secundaria
+        )
+      `)
+      .single();
 
-      if (checkError || !existingConcurso) {
-        return ResponseFormatter.notFoundError('Concurso not found', context.requestId);
-      }
-
-      // Update concurso in database
-      const { data: updatedConcurso, error } = await supabaseClient
-        .from('concursos')
-        .update({
-          nome: data.nome,
-          organizador: data.organizador,
-          data_prova: data.data_prova,
-          inscricoes_inicio: data.inscricoes_inicio,
-          inscricoes_fim: data.inscricoes_fim,
-          status: data.status,
-          descricao: data.descricao,
-          edital_url: data.edital_url,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) {
-        this.logger.error('Error updating concurso', {
-          requestId: context.requestId,
-          concursoId: id,
-          error: error.message,
-        });
-
-        return ResponseFormatter.error('Error updating concurso', {
-          status: 500,
-          requestId: context.requestId,
-        });
-      }
-
-      return ResponseFormatter.success(
-        updatedConcurso,
-        {
-          requestId: context.requestId,
-          message: 'Concurso updated successfully',
-        }
-      );
-    } catch (error) {
-      this.logger.error('Error handling update concurso request', {
-        requestId: context.requestId,
-        concursoId: id,
-        error: error instanceof Error ? error.message : String(error),
-      });
-
-      return ResponseFormatter.error('Error updating concurso', {
-        status: 500,
-        requestId: context.requestId,
+    if (error) {
+      logger.error('Error creating concurso', { error: error.message });
+      return res.status(500).json({
+        success: false,
+        error: 'Error creating concurso',
       });
     }
+
+    // Format response
+    const { categorias_concursos, ...concursoData } = newConcurso;
+    const formattedConcurso = {
+      ...concursoData,
+      categoria: categorias_concursos,
+    };
+
+    return res.status(201).json({
+      success: true,
+      data: formattedConcurso,
+      message: 'Concurso created successfully',
+    });
+  } catch (error) {
+    logger.error('Error in createConcursoHandler', { error: error instanceof Error ? error.message : String(error) });
+    return res.status(500).json({
+      success: false,
+      error: 'Error creating concurso',
+    });
   }
+};
 
-  /**
-   * Handle partial update of a concurso
-   */
-  protected async handlePartialUpdate(
-    id: string,
-    data: Partial<Concurso>,
-    context: { requestId: string }
-  ): Promise<unknown> {
-    try {
-      // Check if user has admin role
-      // TODO: Adapte para buscar o usuário autenticado do contexto, se necessário
-      const user = undefined;
-      if (!user || user.role !== 'admin') {
-        return ResponseFormatter.forbiddenError('Only admins can update concursos', context.requestId);
-      }
+/**
+ * PUT /api/concursos/:id - Update concurso (full update)
+ */
+export const updateConcursoHandler = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params;
 
-      // Check if concurso exists
-      const { data: existingConcurso, error: checkError } = await supabaseClient
-        .from('concursos')
-        .select('id')
-        .eq('id', id)
-        .single();
-
-      if (checkError || !existingConcurso) {
-        return ResponseFormatter.notFoundError('Concurso not found', context.requestId);
-      }
-
-      // Prepare update data
-      const updateData: Record<string, unknown> = {
-        updated_at: new Date().toISOString(),
-      };
-
-      // Add fields to update
-      if (data.nome !== undefined) updateData.nome = data.nome;
-      if (data.organizador !== undefined) updateData.organizador = data.organizador;
-      if (data.data_prova !== undefined) updateData.data_prova = data.data_prova;
-      if (data.inscricoes_inicio !== undefined) updateData.inscricoes_inicio = data.inscricoes_inicio;
-      if (data.inscricoes_fim !== undefined) updateData.inscricoes_fim = data.inscricoes_fim;
-      if (data.status !== undefined) updateData.status = data.status;
-      if (data.descricao !== undefined) updateData.descricao = data.descricao;
-      if (data.edital_url !== undefined) updateData.edital_url = data.edital_url;
-
-      // Update concurso in database
-      const { data: updatedConcurso, error } = await supabaseClient
-        .from('concursos')
-        .update(updateData)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) {
-        this.logger.error('Error updating concurso', {
-          requestId: context.requestId,
-          concursoId: id,
-          error: error.message,
-        });
-
-        return ResponseFormatter.error('Error updating concurso', {
-          status: 500,
-          requestId: context.requestId,
-        });
-      }
-
-      return ResponseFormatter.success(
-        updatedConcurso,
-        {
-          requestId: context.requestId,
-          message: 'Concurso updated successfully',
-        }
-      );
-    } catch (error) {
-      this.logger.error('Error handling partial update concurso request', {
-        requestId: context.requestId,
-        concursoId: id,
-        error: error instanceof Error ? error.message : String(error),
-      });
-
-      return ResponseFormatter.error('Error updating concurso', {
-        status: 500,
-        requestId: context.requestId,
+    // Check if user has admin role
+    const user = req.user;
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        error: 'Only admins can update concursos',
       });
     }
-  }
 
-  /**
-   * Handle removing a concurso
-   */
-  protected async handleRemove(
-    id: string,
-    context: { requestId: string }
-  ): Promise<unknown> {
-    try {
-      // Check if user has admin role
-      // TODO: Adapte para buscar o usuário autenticado do contexto, se necessário
-      const user = undefined;
-      if (!user || user.role !== 'admin') {
-        return ResponseFormatter.forbiddenError('Only admins can delete concursos', context.requestId);
-      }
-
-      // Check if concurso exists
-      const { data: existingConcurso, error: checkError } = await supabaseClient
-        .from('concursos')
-        .select('id')
-        .eq('id', id)
-        .single();
-
-      if (checkError || !existingConcurso) {
-        return ResponseFormatter.notFoundError('Concurso not found', context.requestId);
-      }
-
-      // Delete related categories first
-      await supabaseClient
-        .from('concurso_categorias')
-        .delete()
-        .eq('concurso_id', id);
-
-      // Delete concurso from database
-      const { error } = await supabaseClient
-        .from('concursos')
-        .delete()
-        .eq('id', id);
-
-      if (error) {
-        this.logger.error('Error deleting concurso', {
-          requestId: context.requestId,
-          concursoId: id,
-          error: error.message,
-        });
-
-        return ResponseFormatter.error('Error deleting concurso', {
-          status: 500,
-          requestId: context.requestId,
-        });
-      }
-
-      return ResponseFormatter.success(
-        { deleted: true },
-        {
-          requestId: context.requestId,
-          message: 'Concurso deleted successfully',
-        }
-      );
-    } catch (error) {
-      this.logger.error('Error handling delete concurso request', {
-        requestId: context.requestId,
-        concursoId: id,
-        error: error instanceof Error ? error.message : String(error),
-      });
-
-      return ResponseFormatter.error('Error deleting concurso', {
-        status: 500,
-        requestId: context.requestId,
+    // Validate request body
+    const validationResult = updateConcursoSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid request data',
+        details: validationResult.error.format(),
       });
     }
+
+    const data = validationResult.data;
+
+    // Check if concurso exists
+    const { data: existingConcurso, error: checkError } = await supabase
+      .from('concursos')
+      .select('id')
+      .eq('id', id)
+      .single();
+
+    if (checkError || !existingConcurso) {
+      return res.status(404).json({
+        success: false,
+        error: 'Concurso not found',
+      });
+    }
+
+    // Update concurso in database
+    const { data: updatedConcurso, error } = await supabase
+      .from('concursos')
+      .update({
+        nome: data.nome,
+        slug: data.slug,
+        descricao: data.descricao,
+        ano: data.ano,
+        banca: data.banca,
+        categoria_id: data.categoria_id,
+        url_edital: data.url_edital,
+        data_prova: data.data_prova,
+        vagas: data.vagas,
+        salario: data.salario,
+        nivel_dificuldade: data.nivel_dificuldade,
+        multiplicador_questoes: data.multiplicador_questoes,
+        ativo: data.ativo,
+        atualizado_em: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .select(`
+        *,
+        categorias_concursos (
+          id,
+          nome,
+          slug,
+          descricao,
+          cor_primaria,
+          cor_secundaria
+        )
+      `)
+      .single();
+
+    if (error) {
+      logger.error('Error updating concurso', { concursoId: id, error: error.message });
+      return res.status(500).json({
+        success: false,
+        error: 'Error updating concurso',
+      });
+    }
+
+    // Format response
+    const { categorias_concursos, ...concursoData } = updatedConcurso;
+    const formattedConcurso = {
+      ...concursoData,
+      categoria: categorias_concursos,
+    };
+
+    return res.json({
+      success: true,
+      data: formattedConcurso,
+      message: 'Concurso updated successfully',
+    });
+  } catch (error) {
+    logger.error('Error in updateConcursoHandler', { error: error instanceof Error ? error.message : String(error) });
+    return res.status(500).json({
+      success: false,
+      error: 'Error updating concurso',
+    });
   }
-}
+};
 
-// Create route handler
-const concursoRouteHandler = new ConcursoRouteHandler();
-const routeHandlers = concursoRouteHandler.createRouteHandlers();
+/**
+ * PATCH /api/concursos/:id - Update concurso (partial update)
+ */
+export const patchConcursoHandler = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params;
 
-// Export route handlers for Next.js App Router
-export const GET = routeHandlers.GET;
-export const POST = routeHandlers.POST;
-export const PUT = routeHandlers.PUT;
-export const PATCH = routeHandlers.PATCH;
-export const DELETE = routeHandlers.DELETE;
+    // Check if user has admin role
+    const user = req.user;
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        error: 'Only admins can update concursos',
+      });
+    }
 
-// Rotas Express tradicionais para concursos
-const router = express.Router();
+    // Validate request body
+    const validationResult = updateConcursoSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid request data',
+        details: validationResult.error.format(),
+      });
+    }
 
-router.get('/', concursosController.getConcursos);
-router.get('/:id', concursosController.getConcursoById);
-router.post('/', concursosController.createConcurso);
-// Rotas de update, patch e delete só devem ser adicionadas quando existirem no controller
+    const data = validationResult.data;
 
-export default router;
+    // Check if concurso exists
+    const { data: existingConcurso, error: checkError } = await supabase
+      .from('concursos')
+      .select('id')
+      .eq('id', id)
+      .single();
+
+    if (checkError || !existingConcurso) {
+      return res.status(404).json({
+        success: false,
+        error: 'Concurso not found',
+      });
+    }
+
+    // Prepare update data
+    const updateData: Record<string, unknown> = {
+      atualizado_em: new Date().toISOString(),
+    };
+
+    // Add fields to update
+    if (data.nome !== undefined) updateData.nome = data.nome;
+    if (data.slug !== undefined) updateData.slug = data.slug;
+    if (data.descricao !== undefined) updateData.descricao = data.descricao;
+    if (data.ano !== undefined) updateData.ano = data.ano;
+    if (data.banca !== undefined) updateData.banca = data.banca;
+    if (data.categoria_id !== undefined) updateData.categoria_id = data.categoria_id;
+    if (data.url_edital !== undefined) updateData.url_edital = data.url_edital;
+    if (data.data_prova !== undefined) updateData.data_prova = data.data_prova;
+    if (data.vagas !== undefined) updateData.vagas = data.vagas;
+    if (data.salario !== undefined) updateData.salario = data.salario;
+    if (data.nivel_dificuldade !== undefined) updateData.nivel_dificuldade = data.nivel_dificuldade;
+    if (data.multiplicador_questoes !== undefined) updateData.multiplicador_questoes = data.multiplicador_questoes;
+    if (data.ativo !== undefined) updateData.ativo = data.ativo;
+
+    // Update concurso in database
+    const { data: updatedConcurso, error } = await supabase
+      .from('concursos')
+      .update(updateData)
+      .eq('id', id)
+      .select(`
+        *,
+        categorias_concursos (
+          id,
+          nome,
+          slug,
+          descricao,
+          cor_primaria,
+          cor_secundaria
+        )
+      `)
+      .single();
+
+    if (error) {
+      logger.error('Error updating concurso', { concursoId: id, error: error.message });
+      return res.status(500).json({
+        success: false,
+        error: 'Error updating concurso',
+      });
+    }
+
+    // Format response
+    const { categorias_concursos, ...concursoData } = updatedConcurso;
+    const formattedConcurso = {
+      ...concursoData,
+      categoria: categorias_concursos,
+    };
+
+    return res.json({
+      success: true,
+      data: formattedConcurso,
+      message: 'Concurso updated successfully',
+    });
+  } catch (error) {
+    logger.error('Error in patchConcursoHandler', { error: error instanceof Error ? error.message : String(error) });
+    return res.status(500).json({
+      success: false,
+      error: 'Error updating concurso',
+    });
+  }
+};
+
+/**
+ * DELETE /api/concursos/:id - Delete concurso
+ */
+export const deleteConcursoHandler = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // Check if user has admin role
+    const user = req.user;
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        error: 'Only admins can delete concursos',
+      });
+    }
+
+    // Check if concurso exists
+    const { data: existingConcurso, error: checkError } = await supabase
+      .from('concursos')
+      .select('id')
+      .eq('id', id)
+      .single();
+
+    if (checkError || !existingConcurso) {
+      return res.status(404).json({
+        success: false,
+        error: 'Concurso not found',
+      });
+    }
+
+    // Delete concurso from database
+    const { error } = await supabase
+      .from('concursos')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      logger.error('Error deleting concurso', { concursoId: id, error: error.message });
+      return res.status(500).json({
+        success: false,
+        error: 'Error deleting concurso',
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: { deleted: true },
+      message: 'Concurso deleted successfully',
+    });
+  } catch (error) {
+    logger.error('Error in deleteConcursoHandler', { error: error instanceof Error ? error.message : String(error) });
+    return res.status(500).json({
+      success: false,
+      error: 'Error deleting concurso',
+    });
+  }
+};
+
+// Criar router Express
+import { Router } from 'express';
+
+const router = Router();
+
+// Registrar rotas
+router.get('/', getConcursosHandler);
+router.get('/:id', getConcursoByIdHandler);
+router.post('/', createConcursoHandler);
+router.put('/:id', updateConcursoHandler);
+router.patch('/:id', patchConcursoHandler);
+router.delete('/:id', deleteConcursoHandler);
+
+export { router };

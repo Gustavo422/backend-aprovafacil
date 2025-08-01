@@ -1,5 +1,5 @@
 import { SupabaseClient, Session } from '@supabase/supabase-js';
-import { getLogger } from '../../lib/logging';
+import { getLogger } from '../../lib/logging/logging-service.js';
 // import { AuthError } from '../../lib/errors';
 
 export interface SessionOptions {
@@ -32,7 +32,7 @@ export class SessionManager {
   
   constructor(
     private supabaseClient: SupabaseClient,
-    private options: SessionOptions = {}
+    private options: SessionOptions = {},
   ) {
     this.logger = getLogger('SessionManager');
     
@@ -71,7 +71,7 @@ export class SessionManager {
       }
     } catch (error) {
       this.logger.error('Error initializing session', { 
-        error: error instanceof Error ? error.message : String(error) 
+        error: error instanceof Error ? error.message : String(error), 
       });
     }
   }
@@ -91,11 +91,12 @@ export class SessionManager {
     const expiresAt = new Date(this.currentSession.expires_at || '').getTime();
     const now = Date.now();
     const timeUntilExpiry = expiresAt - now;
-    const refreshTime = Math.max(0, timeUntilExpiry - this.options.refreshThreshold!);
+    const refreshThreshold = this.options.refreshThreshold || 5 * 60 * 1000; // 5 minutos padrão
+    const refreshTime = Math.max(0, timeUntilExpiry - refreshThreshold);
     
     this.logger.debug('Setting up refresh timer', { 
       expiresAt: new Date(expiresAt).toISOString(),
-      refreshIn: Math.floor(refreshTime / 1000) + ' seconds'
+      refreshIn: Math.floor(refreshTime / 1000) + ' seconds',
     });
     
     this.refreshTimer = setTimeout(() => this.refreshToken(), refreshTime);
@@ -134,7 +135,7 @@ export class SessionManager {
       return false;
     } catch (error) {
       this.logger.error('Error refreshing token', { 
-        error: error instanceof Error ? error.message : String(error) 
+        error: error instanceof Error ? error.message : String(error), 
       });
       return false;
     }
@@ -195,7 +196,7 @@ export class SessionManager {
       return false;
     } catch (error) {
       this.logger.error('Error setting session', { 
-        error: error instanceof Error ? error.message : String(error) 
+        error: error instanceof Error ? error.message : String(error), 
       });
       return false;
     }
@@ -224,7 +225,7 @@ export class SessionManager {
       return true;
     } catch (error) {
       this.logger.error('Error signing out', { 
-        error: error instanceof Error ? error.message : String(error) 
+        error: error instanceof Error ? error.message : String(error), 
       });
       return false;
     }
@@ -261,7 +262,7 @@ export class SessionManager {
       };
     } catch (error) {
       this.logger.error('Error validating token', { 
-        error: error instanceof Error ? error.message : String(error) 
+        error: error instanceof Error ? error.message : String(error), 
       });
       
       return {

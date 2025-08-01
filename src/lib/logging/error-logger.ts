@@ -1,4 +1,4 @@
-import { EnhancedLogger, getEnhancedLogger } from './enhanced-logging-service';
+import { EnhancedLogger, getEnhancedLogger } from './enhanced-logging-service.js';
 
 /**
  * Error logger options
@@ -73,8 +73,8 @@ export class ErrorLogger {
       ...context,
       error: {
         name: error.name,
-        message: error.message
-      }
+        message: error.message,
+      },
     };
     
     // Add stack trace if enabled
@@ -87,9 +87,9 @@ export class ErrorLogger {
       const causes: Array<{ name: string; message: string; stack?: string }> = [];
       let currentCause: unknown = (error as { cause?: unknown }).cause;
       while (currentCause) {
-        let causeInfo: { name: string; message: string; stack?: string } = {
+        const causeInfo: { name: string; message: string; stack?: string } = {
           name: 'Unknown',
-          message: ''
+          message: '',
         };
         if (typeof currentCause === 'object' && currentCause !== null) {
           if ('name' in currentCause && typeof (currentCause as { name?: unknown }).name === 'string') {
@@ -130,7 +130,7 @@ export class ErrorLogger {
       logger: this.logger,
       includeStack: this.includeStack,
       includeCause: this.includeCause,
-      context: { ...this.context, ...context }
+      context: { ...this.context, ...context },
     });
   }
 }

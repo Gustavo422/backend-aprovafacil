@@ -79,7 +79,7 @@ export class ConsoleTransport implements LogTransport {
        * Format function for log messages
        */
       format?: (entry: LogEntry) => string;
-    } = {}
+    } = {},
   ) {
     // Set default options
     this.options = {
@@ -87,7 +87,7 @@ export class ConsoleTransport implements LogTransport {
       includeTimestamp: true,
       includeLoggerName: true,
       format: this.defaultFormat,
-      ...options
+      ...options,
     };
   }
   
@@ -102,23 +102,28 @@ export class ConsoleTransport implements LogTransport {
     }
     
     // Format log message
-    const message = this.options.format!(entry);
+    const format = this.options.format || this.defaultFormat;
+    const message = format(entry);
     const meta = entry.meta && Object.keys(entry.meta).length > 0 ? entry.meta : undefined;
     
     // Log to console
     switch (entry.level) {
-      case LogLevel.DEBUG:
-        console.debug(message, meta);
-        break;
-      case LogLevel.INFO:
-        console.info(message, meta);
-        break;
-      case LogLevel.WARN:
-        console.warn(message, meta);
-        break;
-      case LogLevel.ERROR:
-        console.error(message, meta);
-        break;
+    case LogLevel.DEBUG:
+      // eslint-disable-next-line no-console
+      console.debug(message, meta);
+      break;
+    case LogLevel.INFO:
+      // eslint-disable-next-line no-console
+      console.info(message, meta);
+      break;
+    case LogLevel.WARN:
+      // eslint-disable-next-line no-console
+      console.warn(message, meta);
+      break;
+    case LogLevel.ERROR:
+      // eslint-disable-next-line no-console
+      console.error(message, meta);
+      break;
     }
   }
   
@@ -129,7 +134,8 @@ export class ConsoleTransport implements LogTransport {
    */
   private isLevelEnabled(level: LogLevel): boolean {
     const levels = [LogLevel.DEBUG, LogLevel.INFO, LogLevel.WARN, LogLevel.ERROR, LogLevel.SILENT];
-    const minLevelIndex = levels.indexOf(this.options.minLevel!);
+    const minLevel = this.options.minLevel || LogLevel.DEBUG;
+    const minLevelIndex = levels.indexOf(minLevel);
     const levelIndex = levels.indexOf(level);
     
     return levelIndex >= minLevelIndex;
@@ -140,7 +146,7 @@ export class ConsoleTransport implements LogTransport {
    * @param entry Log entry
    * @returns Formatted log message
    */
-  private defaultFormat(entry: LogEntry): string {
+  private defaultFormat = (entry: LogEntry): string => {
     const parts: string[] = [];
     
     // Add timestamp
@@ -158,7 +164,7 @@ export class ConsoleTransport implements LogTransport {
     parts.push(entry.message);
     
     return parts.join(' ');
-  }
+  };
 }
 
 /**
@@ -190,16 +196,16 @@ export class MemoryTransport implements LogTransport {
        * Maximum number of entries to keep
        */
       maxEntries?: number;
-    } = {}
+    } = {},
   ) {
     // Set default options
     this.options = {
       minLevel: LogLevel.DEBUG,
       maxEntries: 1000,
-      ...options
+      ...options,
     };
     
-    this.maxEntries = this.options.maxEntries!;
+    this.maxEntries = this.options.maxEntries || 1000;
   }
   
   /**
@@ -243,7 +249,8 @@ export class MemoryTransport implements LogTransport {
    */
   private isLevelEnabled(level: LogLevel): boolean {
     const levels = [LogLevel.DEBUG, LogLevel.INFO, LogLevel.WARN, LogLevel.ERROR, LogLevel.SILENT];
-    const minLevelIndex = levels.indexOf(this.options.minLevel!);
+    const minLevel = this.options.minLevel || LogLevel.DEBUG;
+    const minLevelIndex = levels.indexOf(minLevel);
     const levelIndex = levels.indexOf(level);
     
     return levelIndex >= minLevelIndex;
@@ -303,7 +310,7 @@ export class LoggerImpl implements Logger {
   constructor(
     private readonly name: string,
     private readonly transports: LogTransport[] = [],
-    private readonly context: Record<string, unknown> = {}
+    private readonly context: Record<string, unknown> = {},
   ) {}
   
   /**
@@ -351,7 +358,7 @@ export class LoggerImpl implements Logger {
     return new LoggerImpl(
       this.name,
       this.transports,
-      { ...this.context, ...context }
+      { ...this.context, ...context },
     );
   }
   
@@ -368,7 +375,7 @@ export class LoggerImpl implements Logger {
       message,
       name: this.name,
       timestamp: new Date(),
-      meta: { ...this.context, ...meta }
+      meta: { ...this.context, ...meta },
     };
     
     // Log to all transports
@@ -417,14 +424,16 @@ export class LoggingService {
   getLogger(name: string, context: Record<string, unknown> = {}): Logger {
     // Check if logger already exists
     if (this.loggers.has(name)) {
-      const logger = this.loggers.get(name)!;
+      const logger = this.loggers.get(name);
       
-      // If context is provided, create a child logger
-      if (Object.keys(context).length > 0) {
-        return logger.child(context);
+      if (logger) {
+        // If context is provided, create a child logger
+        if (Object.keys(context).length > 0) {
+          return logger.child(context);
+        }
+        
+        return logger;
       }
-      
-      return logger;
     }
     
     // Create new logger

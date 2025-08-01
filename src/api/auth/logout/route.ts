@@ -1,14 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { Request, Response } from 'express';
 import { EnhancedAuthService } from '../../../auth/enhanced-auth.service.js';
-import { createClient } from '@supabase/supabase-js';
-import { getEnhancedLogger } from '../../../lib/logging/enhanced-logging-service';
-import { withRateLimit, createRateLimiter } from '../../../middleware/rate-limiter';
-
-// Create a more lenient rate limiter for logout
-const logoutRateLimiter = createRateLimiter(
-  15 * 60 * 1000, // 15 minutes
-  20 // 20 requests per window
-);
+import { supabase } from '../../../config/supabase-unified.js';
+import { logger } from '../../../lib/logger.js';
 
 /**
  * POST /api/auth/logout - User logout endpoint
@@ -19,25 +12,25 @@ const logoutRateLimiter = createRateLimiter(
  * Rate limiting is applied but with a more lenient limit than login:
  * - 20 attempts per 15 minutes per IP address
  */
-async function handler(request: NextRequest) {
-  const logger = getEnhancedLogger('auth-logout');
+export const logoutHandler = async (req: Request, res: Response) => {
+  const authLogger = logger;
   
   try {
-    logger.debug('Iniciando processo de logout');
+    authLogger.debug('Iniciando processo de logout');
     
     // Extract token from Authorization header or cookies
     let token: string | undefined;
-    let userId: string | undefined;
+    let usuarioId: string | undefined;
     
     // Try to get token from Authorization header
-    const authHeader = request.headers.get('authorization');
+    const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith('Bearer ')) {
       token = authHeader.substring(7);
     }
     
     // If no token in header, try to get from cookies
     if (!token) {
-      const cookieToken = request.cookies.get('accessToken')?.value;
+      const cookieToken = req.cookies?.accessToken;
       if (cookieToken) {
         token = cookieToken;
       }
@@ -45,63 +38,50 @@ async function handler(request: NextRequest) {
     
     // If no token found, still proceed but log warning
     if (!token) {
-      logger.warn('Token não fornecido para logout');
+      authLogger.warn('Token não fornecido para logout');
     } else {
       // Initialize dependencies
-      const supabase = createClient(
-        process.env.SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-      );
-      
-      const authService = new EnhancedAuthService(supabase as ReturnType<typeof createClient>, {
-        jwtSecret: process.env.JWT_SECRET!,
-            accessTokenExpiry: parseInt(process.env.JWT_ACCESS_EXPIRY || '2592000', 10), // 30 dias
-    refreshTokenExpiry: parseInt(process.env.JWT_REFRESH_EXPIRY || '7776000', 10) // 90 dias
+
+      const authService = new EnhancedAuthService(supabase, {
+        jwtSecret: process.env.JWT_SECRET || '',
+        accessTokenExpiry: parseInt(process.env.JWT_ACCESS_EXPIRY || '2592000', 10),
+        refreshTokenExpiry: parseInt(process.env.JWT_REFRESH_EXPIRY || '7776000', 10),
       });
       
       try {
         // Try to validate token to get user ID
         const tokenData = await authService.validateAccessToken(token);
         if (tokenData.valid && tokenData.user) {
-          userId = tokenData.user.id;
+          usuarioId = tokenData.user.id;
         }
         
         // Invalidate the session
-        await authService.logout(userId, token);
-        logger.info('Sessão invalidada com sucesso', { userId });
+        await authService.logout(usuarioId, token);
+        authLogger.info('Sessão invalidada com sucesso', { usuarioId });
       } catch (error) {
         // If token validation fails, just log and continue with logout
-        logger.warn('Falha ao validar token durante logout', { error: error.message });
+        authLogger.warn('Falha ao validar token durante logout', { error: error.message });
       }
     }
     
-    // Create response with cleared cookies
-    const response = NextResponse.json({
-      success: true,
-      message: 'Logout realizado com sucesso'
-    });
-    
     // Clear authentication cookies
-    response.cookies.delete('accessToken');
-    response.cookies.delete('refreshToken');
+    res.clearCookie('accessToken');
+    res.clearCookie('refreshToken');
     
-    return response;
+    return res.json({
+      success: true,
+      message: 'Logout realizado com sucesso',
+    });
   } catch (error) {
-    logger.error('Erro no processo de logout', { error: error.message });
+    authLogger.error('Erro no processo de logout', { error: error.message });
     
     // Return success even if there was an error to ensure client side logout
-    const response = NextResponse.json({
+    res.clearCookie('accessToken');
+    res.clearCookie('refreshToken');
+    
+    return res.json({
       success: true,
-      message: 'Logout realizado com sucesso'
+      message: 'Logout realizado com sucesso',
     });
-    
-    // Clear authentication cookies
-    response.cookies.delete('accessToken');
-    response.cookies.delete('refreshToken');
-    
-    return response;
   }
-}
-
-// Apply rate limiting to the logout endpoint
-export const POST = withRateLimit(handler, logoutRateLimiter);
+};

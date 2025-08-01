@@ -12,7 +12,7 @@ export interface LogContext {
   /**
    * User ID
    */
-  userId?: string;
+  usuarioId?: string;
   
   /**
    * Session ID
@@ -151,7 +151,7 @@ export class EnhancedLoggerImpl implements EnhancedLogger {
   constructor(
     private readonly name: string,
     private readonly transports: LogTransport[] = [],
-    private context: LogContext = {}
+    private context: LogContext = {},
   ) {}
   
   /**
@@ -203,7 +203,7 @@ export class EnhancedLoggerImpl implements EnhancedLogger {
     return new EnhancedLoggerImpl(
       this.name,
       this.transports,
-      { ...this.context, ...context }
+      { ...this.context, ...context },
     );
   }
   
@@ -236,10 +236,10 @@ export class EnhancedLoggerImpl implements EnhancedLogger {
         const duration = Date.now() - start;
         this.info(`Operation ${operation} completed in ${duration}ms`, {
           operation,
-          duration
+          duration,
         });
         return duration;
-      }
+      },
     };
   }
   
@@ -267,7 +267,7 @@ export class EnhancedLoggerImpl implements EnhancedLogger {
       context: { ...this.context },
       error,
       stack,
-      source
+      source,
     };
     
     // Log to all transports
@@ -317,7 +317,7 @@ export class EnhancedLoggerImpl implements EnhancedLogger {
     return {
       file: fileName,
       line: lineNumber,
-      function: functionName
+      function: functionName,
     };
   }
 }
@@ -397,21 +397,23 @@ export class EnhancedLoggingService {
   getLogger(name: string, context: LogContext = {}): EnhancedLogger {
     // Check if logger already exists
     if (this.loggers.has(name)) {
-      const logger = this.loggers.get(name)!;
+      const logger = this.loggers.get(name);
       
-      // If context is provided, create a child logger
-      if (Object.keys(context).length > 0) {
-        return logger.child(context);
+      if (logger) {
+        // If context is provided, create a child logger
+        if (Object.keys(context).length > 0) {
+          return logger.child(context);
+        }
+        
+        return logger;
       }
-      
-      return logger;
     }
     
     // Create new logger with global context
     const logger = new EnhancedLoggerImpl(
       name,
       this.transports,
-      { ...this.globalContext, ...context }
+      { ...this.globalContext, ...context },
     );
     
     // Store logger

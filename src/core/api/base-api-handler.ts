@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { Request, Response } from 'express';
 import { z } from 'zod';
 import { getLogger } from '../../lib/logging';
 import { BaseError } from '../../lib/errors/base-error';
 import { ValidationError, AuthError } from '../../lib/errors';
-import { URL } from 'url';
+// import { URL } from 'url';
 
 export interface ApiResponse<T = unknown> {
   success: boolean;
@@ -41,40 +41,41 @@ export abstract class BaseApiHandler {
    * Main handler method that wraps the actual handler with error handling
    */
   public async handle(
-    request: NextRequest,
-    options: ApiHandlerOptions = {}
-  ): Promise<NextResponse> {
+    req: Request,
+    res: Response,
+    options: ApiHandlerOptions = {},
+  ): Promise<void> {
     const requestId = this.generateRequestId();
     const startTime = Date.now();
 
     try {
       // Log incoming request
       this.logger.info('API request received', {
-        method: request.method,
-        url: request.url,
+        method: req.method,
+        url: req.url,
         requestId,
-        userAgent: request.headers.get('user-agent'),
+        userAgent: req.headers['user-agent'],
       });
 
       // Validate authentication if required
       if (options.requireAuth) {
-        await this.validateAuthentication(request);
+        await this.validateAuthentication(req);
       }
 
       // Validate request body if schema provided
       let validatedBody;
-      if (options.validateBody && request.method !== 'GET') {
-        validatedBody = await this.validateRequestBody(request, options.validateBody);
+      if (options.validateBody && req.method !== 'GET') {
+        validatedBody = this.validateRequestBody(req, options.validateBody);
       }
 
       // Validate query parameters if schema provided
       let validatedQuery;
       if (options.validateQuery) {
-        validatedQuery = this.validateQueryParams(request, options.validateQuery);
+        validatedQuery = this.validateQueryParams(req, options.validateQuery);
       }
 
       // Execute the actual handler
-      const result = await this.executeHandler(request, {
+      const result = await this.executeHandler(req, {
         body: validatedBody,
         query: validatedQuery,
         requestId,
@@ -91,12 +92,12 @@ export abstract class BaseApiHandler {
         status: 200,
       });
 
-      return NextResponse.json(response, { status: 200 });
+      res.status(200).json(response);
 
     } catch (error) {
       // Handle and format error response
       const duration = Date.now() - startTime;
-      return this.handleError(error, requestId, duration);
+      this.handleError(error, req, res, requestId, duration);
     }
   }
 
@@ -104,7 +105,7 @@ export abstract class BaseApiHandler {
    * Abstract method to be implemented by concrete handlers
    */
   protected abstract executeHandler(
-    request: NextRequest,
+    req: Request,
     context: {
       body?: unknown;
       query?: unknown;
@@ -115,8 +116,8 @@ export abstract class BaseApiHandler {
   /**
    * Validate authentication token
    */
-  protected async validateAuthentication(request: NextRequest): Promise<void> {
-    const authHeader = request.headers.get('authorization');
+  protected async validateAuthentication(req: Request): Promise<void> {
+    const authHeader = req.headers.authorization;
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       throw new AuthError('Missing or invalid authorization header');
@@ -136,13 +137,12 @@ export abstract class BaseApiHandler {
   /**
    * Validate request body against schema
    */
-  protected async validateRequestBody(
-    request: NextRequest,
-    schema: z.ZodSchema
-  ): Promise<unknown> {
+  protected validateRequestBody(
+    req: Request,
+    schema: z.ZodSchema,
+  ): unknown {
     try {
-      const body = await request.json();
-      return schema.parse(body);
+      return schema.parse(req.body);
     } catch (error) {
       if (error instanceof z.ZodError) {
         throw new ValidationError('Invalid request body');
@@ -155,13 +155,11 @@ export abstract class BaseApiHandler {
    * Validate query parameters against schema
    */
   protected validateQueryParams(
-    request: NextRequest,
-    schema: z.ZodSchema
+    req: Request,
+    schema: z.ZodSchema,
   ): unknown {
     try {
-      const url = new URL(request.url);
-      const queryParams = Object.fromEntries(url.searchParams.entries());
-      return schema.parse(queryParams);
+      return schema.parse(req.query);
     } catch (error) {
       if (error instanceof z.ZodError) {
         throw new ValidationError('Invalid query parameters');
@@ -190,9 +188,11 @@ export abstract class BaseApiHandler {
    */
   protected handleError(
     error: unknown,
+    req: Request,
+    res: Response,
     requestId: string,
-    duration: number
-  ): NextResponse {
+    duration: number,
+  ): void {
     let statusCode = 500;
     let errorCode = 'INTERNAL_SERVER_ERROR';
     let message = 'An unexpected error occurred';
@@ -234,7 +234,7 @@ export abstract class BaseApiHandler {
       },
     };
 
-    return NextResponse.json(response, { status: statusCode });
+    res.status(statusCode).json(response);
   }
 
   /**

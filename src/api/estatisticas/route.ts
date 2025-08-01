@@ -1,6 +1,6 @@
 import express from 'express';
 import { z } from 'zod';
-import { supabase } from '../../config/supabase.js';
+import { supabase } from '../../config/supabase-unified.js';
 import { requireAuth } from '../../middleware/auth.js';
 import { logger } from '../../utils/logger.js';
 import { asyncHandler } from '../../utils/routeWrapper.js';
@@ -36,7 +36,7 @@ const estatisticasFiltrosSchema = z.object({
   data_fim: z.string().datetime().optional(),
   concurso_id: z.string().uuid().optional(),
   categoria_id: z.string().uuid().optional(),
-  disciplina: z.string().optional()
+  disciplina: z.string().optional(),
 });
 
 // Middleware de validação Express local
@@ -48,12 +48,12 @@ const createValidationMiddleware = (schema: z.ZodTypeAny, field: 'body' | 'query
       if (!result.success) {
         const errors = result.error.errors.map(err => ({
           field: err.path.join('.'),
-          message: err.message
+          message: err.message,
         }));
         res.status(400).json({
           error: 'Dados inválidos',
           details: errors,
-          code: 'VALIDATION_ERROR'
+          code: 'VALIDATION_ERROR',
         });
         return;
       }
@@ -68,7 +68,7 @@ const createValidationMiddleware = (schema: z.ZodTypeAny, field: 'body' | 'query
     } catch {
       res.status(500).json({
         error: 'Erro interno do servidor',
-        code: 'VALIDATION_ERROR'
+        code: 'VALIDATION_ERROR',
       });
     }
   };
@@ -77,9 +77,9 @@ const createValidationMiddleware = (schema: z.ZodTypeAny, field: 'body' | 'query
 // GET /api/estatisticas/geral - Estatísticas gerais do usuário
 router.get('/geral', requireAuth, asyncHandler(async (req, res) => {
   try {
-    const userId = req.user?.id;
+    const usuarioId = req.user?.id;
 
-    if (!userId) {
+    if (!usuarioId) {
       return res.status(401).json({ error: 'Usuário não autenticado' });
     }
 
@@ -87,32 +87,32 @@ router.get('/geral', requireAuth, asyncHandler(async (req, res) => {
     const { data: flashcardsStats, error: flashcardsError } = await supabase
       .from('progresso_usuario_flashcard')
       .select('acertos, erros, tempo_gasto_minutos')
-      .eq('user_id', userId);
+      .eq('usuario_id', usuarioId);
 
     // Buscar estatísticas de simulados
     const { data: simuladosStats, error: simuladosError } = await supabase
       .from('progresso_usuario_simulado')
       .select('acertos, erros, pontuacao, tempo_gasto_minutos, is_concluido')
-      .eq('user_id', userId);
+      .eq('usuario_id', usuarioId);
 
     // Buscar estatísticas de questões semanais
     const { data: questoesStats, error: questoesError } = await supabase
       .from('questao_semanal_respostas')
       .select('is_correta, pontos_ganhos, tempo_gasto_segundos')
-      .eq('user_id', userId);
+      .eq('usuario_id', usuarioId);
 
     // Buscar estatísticas de mapa de assuntos
     const { data: assuntosStats, error: assuntosError } = await supabase
       .from('mapa_assuntos')
       .select('status, progresso_percentual')
-      .eq('user_id', userId);
+      .eq('usuario_id', usuarioId);
 
     if (flashcardsError || simuladosError || questoesError || assuntosError) {
-      logger.error('Erro ao buscar estatísticas:', undefined, {
+      logger.error('Erro ao buscar estatísticas', {
         flashcardsError: flashcardsError?.message,
         simuladosError: simuladosError?.message,
         questoesError: questoesError?.message,
-        assuntosError: assuntosError?.message
+        assuntosError: assuntosError?.message,
       });
       return res.status(500).json({ error: 'Erro interno do servidor' });
     }
@@ -155,7 +155,7 @@ router.get('/geral', requireAuth, asyncHandler(async (req, res) => {
         acertos: flashcardsAcertos,
         erros: flashcardsErros,
         tempoTotalMinutos: flashcardsTempo,
-        taxaAcerto: Math.round(flashcardsTaxaAcerto * 100) / 100
+        taxaAcerto: Math.round(flashcardsTaxaAcerto * 100) / 100,
       },
       simulados: {
         total: simuladosTotal,
@@ -164,32 +164,32 @@ router.get('/geral', requireAuth, asyncHandler(async (req, res) => {
         erros: simuladosErros,
         pontuacaoTotal: simuladosPontuacao,
         tempoTotalMinutos: simuladosTempo,
-        taxaAcerto: Math.round(simuladosTaxaAcerto * 100) / 100
+        taxaAcerto: Math.round(simuladosTaxaAcerto * 100) / 100,
       },
       questoesSemanais: {
         total: questoesTotal,
         acertos: questoesAcertos,
         pontosTotal: questoesPontos,
         tempoTotalSegundos: questoesTempo,
-        taxaAcerto: Math.round(questoesTaxaAcerto * 100) / 100
+        taxaAcerto: Math.round(questoesTaxaAcerto * 100) / 100,
       },
       mapaAssuntos: {
         total: assuntosTotal,
         concluidos: assuntosConcluidos,
         emAndamento: assuntosEmAndamento,
         pendentes: assuntosPendentes,
-        progressoMedio: Math.round(assuntosProgressoMedio * 100) / 100
+        progressoMedio: Math.round(assuntosProgressoMedio * 100) / 100,
       },
       geral: {
         tempoTotalEstudo: flashcardsTempo + simuladosTempo + (questoesTempo / 60),
         taxaAcertoGeral: Math.round(((flashcardsAcertos + simuladosAcertos + questoesAcertos) / 
-          (flashcardsAcertos + flashcardsErros + simuladosAcertos + simuladosErros + questoesTotal)) * 100 * 100) / 100
-      }
+          (flashcardsAcertos + flashcardsErros + simuladosAcertos + simuladosErros + questoesTotal)) * 100 * 100) / 100,
+      },
     };
 
     return res.json({ success: true, data: estatisticas });
   } catch (error) {
-    logger.error('Erro na rota GET /estatisticas/geral:', undefined, { error: error instanceof Error ? error.message : 'Erro desconhecido' });
+    logger.error('Erro na rota GET /estatisticas/geral', { error: error instanceof Error ? error.message : 'Erro desconhecido' });
     return res.status(500).json({ error: 'Erro interno do servidor' });
   }
 }));
@@ -197,13 +197,13 @@ router.get('/geral', requireAuth, asyncHandler(async (req, res) => {
 // GET /api/estatisticas/performance - Performance por período
 router.get('/performance', requireAuth, createValidationMiddleware(estatisticasFiltrosSchema, 'query'), asyncHandler(async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.id;
+    const usuarioId = req.user?.id;
     const { data_inicio, data_fim } = req.query;
 
     // TODO: Implementar filtros por concurso_id, categoria_id e disciplina
     // const { concurso_id, categoria_id, disciplina } = req.query;
 
-    if (!userId) {
+    if (!usuarioId) {
       return res.status(401).json({ error: 'Usuário não autenticado' });
     }
 
@@ -221,7 +221,7 @@ router.get('/performance', requireAuth, createValidationMiddleware(estatisticasF
     let flashcardsQuery = supabase
       .from('progresso_usuario_flashcard')
       .select('acertos, erros, tempo_gasto_minutos, criado_em')
-      .eq('user_id', userId);
+      .eq('usuario_id', usuarioId);
 
     if (dataFilter) {
       flashcardsQuery = flashcardsQuery.or(dataFilter);
@@ -233,7 +233,7 @@ router.get('/performance', requireAuth, createValidationMiddleware(estatisticasF
     let simuladosQuery = supabase
       .from('progresso_usuario_simulado')
       .select('acertos, erros, pontuacao, tempo_gasto_minutos, criado_em')
-      .eq('user_id', userId);
+      .eq('usuario_id', usuarioId);
 
     if (dataFilter) {
       simuladosQuery = simuladosQuery.or(dataFilter);
@@ -245,7 +245,7 @@ router.get('/performance', requireAuth, createValidationMiddleware(estatisticasF
     let questoesQuery = supabase
       .from('questao_semanal_respostas')
       .select('is_correta, pontos_ganhos, tempo_gasto_segundos, criado_em')
-      .eq('user_id', userId);
+      .eq('usuario_id', usuarioId);
 
     if (dataFilter) {
       questoesQuery = questoesQuery.or(dataFilter);
@@ -254,10 +254,10 @@ router.get('/performance', requireAuth, createValidationMiddleware(estatisticasF
     const { data: questoesData, error: questoesError } = await questoesQuery;
 
     if (flashcardsError || simuladosError || questoesError) {
-      logger.error('Erro ao buscar performance:', undefined, {
+      logger.error('Erro ao buscar performance', {
         flashcardsError: flashcardsError?.message,
         simuladosError: simuladosError?.message,
-        questoesError: questoesError?.message
+        questoesError: questoesError?.message,
       });
       return res.status(500).json({ error: 'Erro interno do servidor' });
     }
@@ -278,7 +278,7 @@ router.get('/performance', requireAuth, createValidationMiddleware(estatisticasF
           data,
           flashcards: { acertos: 0, erros: 0, tempo: 0 },
           simulados: { acertos: 0, erros: 0, pontuacao: 0, tempo: 0 },
-          questoes: { acertos: 0, total: 0, pontos: 0, tempo: 0 }
+          questoes: { acertos: 0, total: 0, pontos: 0, tempo: 0 },
         };
       }
       if (data) {
@@ -299,7 +299,7 @@ router.get('/performance', requireAuth, createValidationMiddleware(estatisticasF
           data,
           flashcards: { acertos: 0, erros: 0, tempo: 0 },
           simulados: { acertos: 0, erros: 0, pontuacao: 0, tempo: 0 },
-          questoes: { acertos: 0, total: 0, pontos: 0, tempo: 0 }
+          questoes: { acertos: 0, total: 0, pontos: 0, tempo: 0 },
         };
       }
       if (data) {
@@ -321,7 +321,7 @@ router.get('/performance', requireAuth, createValidationMiddleware(estatisticasF
           data,
           flashcards: { acertos: 0, erros: 0, tempo: 0 },
           simulados: { acertos: 0, erros: 0, pontuacao: 0, tempo: 0 },
-          questoes: { acertos: 0, total: 0, pontos: 0, tempo: 0 }
+          questoes: { acertos: 0, total: 0, pontos: 0, tempo: 0 },
         };
       }
       if (data) {
@@ -341,7 +341,7 @@ router.get('/performance', requireAuth, createValidationMiddleware(estatisticasF
 
     return res.json({ success: true, data: performanceArray });
   } catch (error) {
-    logger.error('Erro na rota GET /estatisticas/performance:', undefined, { error: error instanceof Error ? error.message : 'Erro desconhecido' });
+    logger.error('Erro na rota GET /estatisticas/performance', { error: error instanceof Error ? error.message : 'Erro desconhecido' });
     return res.status(500).json({ error: 'Erro interno do servidor' });
   }
 }));
@@ -349,9 +349,9 @@ router.get('/performance', requireAuth, createValidationMiddleware(estatisticasF
 // GET /api/estatisticas/disciplinas - Performance por disciplina
 router.get('/disciplinas', requireAuth, asyncHandler(async (req, res) => {
   try {
-    const userId = req.user?.id;
+    const usuarioId = req.user?.id;
 
-    if (!userId) {
+    if (!usuarioId) {
       return res.status(401).json({ error: 'Usuário não autenticado' });
     }
 
@@ -366,7 +366,7 @@ router.get('/disciplinas', requireAuth, asyncHandler(async (req, res) => {
           disciplina
         )
       `)
-      .eq('user_id', userId);
+      .eq('usuario_id', usuarioId);
 
     // Buscar simulados por disciplina
     const { data: simuladosDisciplinas, error: simuladosError } = await supabase
@@ -382,7 +382,7 @@ router.get('/disciplinas', requireAuth, asyncHandler(async (req, res) => {
           )
         )
       `)
-      .eq('user_id', userId);
+      .eq('usuario_id', usuarioId);
 
     // Buscar questões semanais por disciplina
     const { data: questoesDisciplinas, error: questoesError } = await supabase
@@ -395,13 +395,13 @@ router.get('/disciplinas', requireAuth, asyncHandler(async (req, res) => {
           disciplina
         )
       `)
-      .eq('user_id', userId);
+      .eq('usuario_id', usuarioId);
 
     if (flashcardsError || simuladosError || questoesError) {
-      logger.error('Erro ao buscar estatísticas por disciplina:', undefined, {
+      logger.error('Erro ao buscar estatísticas por disciplina', {
         flashcardsError: flashcardsError?.message,
         simuladosError: simuladosError?.message,
-        questoesError: questoesError?.message
+        questoesError: questoesError?.message,
       });
       return res.status(500).json({ error: 'Erro interno do servidor' });
     }
@@ -422,7 +422,7 @@ router.get('/disciplinas', requireAuth, asyncHandler(async (req, res) => {
           disciplina,
           flashcards: { acertos: 0, erros: 0, tempo: 0 },
           simulados: { acertos: 0, erros: 0, pontuacao: 0, tempo: 0 },
-          questoes: { acertos: 0, total: 0, pontos: 0, tempo: 0 }
+          questoes: { acertos: 0, total: 0, pontos: 0, tempo: 0 },
         };
       }
       if (disciplinas[disciplina]) {
@@ -442,7 +442,7 @@ router.get('/disciplinas', requireAuth, asyncHandler(async (req, res) => {
           disciplina,
           flashcards: { acertos: 0, erros: 0, tempo: 0 },
           simulados: { acertos: 0, erros: 0, pontuacao: 0, tempo: 0 },
-          questoes: { acertos: 0, total: 0, pontos: 0, tempo: 0 }
+          questoes: { acertos: 0, total: 0, pontos: 0, tempo: 0 },
         };
       }
       if (disciplinas[disciplina]) {
@@ -461,7 +461,7 @@ router.get('/disciplinas', requireAuth, asyncHandler(async (req, res) => {
           disciplina,
           flashcards: { acertos: 0, erros: 0, tempo: 0 },
           simulados: { acertos: 0, erros: 0, pontuacao: 0, tempo: 0 },
-          questoes: { acertos: 0, total: 0, pontos: 0, tempo: 0 }
+          questoes: { acertos: 0, total: 0, pontos: 0, tempo: 0 },
         };
       }
       if (disciplinas[disciplina]) {
@@ -482,13 +482,13 @@ router.get('/disciplinas', requireAuth, asyncHandler(async (req, res) => {
         taxaAcertoFlashcards: totalFlashcards > 0 ? Math.round((disc.flashcards.acertos / totalFlashcards) * 100 * 100) / 100 : 0,
         taxaAcertoSimulados: totalSimulados > 0 ? Math.round((disc.simulados.acertos / totalSimulados) * 100 * 100) / 100 : 0,
         taxaAcertoQuestoes: disc.questoes.total > 0 ? Math.round((disc.questoes.acertos / disc.questoes.total) * 100 * 100) / 100 : 0,
-        tempoTotal: disc.flashcards.tempo + disc.simulados.tempo + (disc.questoes.tempo / 60)
+        tempoTotal: disc.flashcards.tempo + disc.simulados.tempo + (disc.questoes.tempo / 60),
       };
     });
 
     return res.json({ success: true, data: disciplinasArray });
   } catch (error) {
-    logger.error('Erro na rota GET /estatisticas/disciplinas:', undefined, { error: error instanceof Error ? error.message : 'Erro desconhecido' });
+    logger.error('Erro na rota GET /estatisticas/disciplinas', { error: error instanceof Error ? error.message : 'Erro desconhecido' });
     return res.status(500).json({ error: 'Erro interno do servidor' });
   }
 }));
@@ -502,7 +502,7 @@ router.get('/ranking', requireAuth, asyncHandler(async (req, res) => {
     const { data: rankingQuestoes, error: questoesError } = await supabase
       .from('questao_semanal_respostas')
       .select(`
-        user_id,
+        usuario_id,
         pontos_ganhos,
         usuarios (
           id,
@@ -510,13 +510,13 @@ router.get('/ranking', requireAuth, asyncHandler(async (req, res) => {
           email
         )
       `)
-      .not('user_id', 'is', null);
+      .not('usuario_id', 'is', null);
 
     // Buscar ranking por pontuação de simulados
     const { data: rankingSimulados, error: simuladosError } = await supabase
       .from('progresso_usuario_simulado')
       .select(`
-        user_id,
+        usuario_id,
         pontuacao,
         usuarios (
           id,
@@ -524,19 +524,19 @@ router.get('/ranking', requireAuth, asyncHandler(async (req, res) => {
           email
         )
       `)
-      .not('user_id', 'is', null);
+      .not('usuario_id', 'is', null);
 
     if (questoesError || simuladosError) {
-      logger.error('Erro ao buscar ranking:', undefined, {
+      logger.error('Erro ao buscar ranking', {
         questoesError: questoesError?.message,
-        simuladosError: simuladosError?.message
+        simuladosError: simuladosError?.message,
       });
       return res.status(500).json({ error: 'Erro interno do servidor' });
     }
 
     // Agrupar por usuário
     const ranking: Record<string, {
-      user_id: string;
+      usuario_id: string;
       nome: string;
       email?: string;
       pontosQuestoes: number;
@@ -547,39 +547,39 @@ router.get('/ranking', requireAuth, asyncHandler(async (req, res) => {
 
     // Processar questões semanais
     rankingQuestoes?.forEach(item => {
-      const userId = item.user_id;
-      if (!ranking[userId]) {
-        ranking[userId] = {
-          user_id: userId,
+      const usuarioId = item.usuario_id;
+      if (!ranking[usuarioId]) {
+        ranking[usuarioId] = {
+          usuario_id: usuarioId,
           nome: (item.usuarios as UserData)?.nome || 'Usuário',
           email: (item.usuarios as UserData)?.email,
           pontosQuestoes: 0,
           pontosSimulados: 0,
           totalAcertos: 0,
-          totalTempo: 0
+          totalTempo: 0,
         } as typeof ranking[string];
       }
-      if (ranking[userId]) {
-        ranking[userId].pontosQuestoes += item.pontos_ganhos || 0;
+      if (ranking[usuarioId]) {
+        ranking[usuarioId].pontosQuestoes += item.pontos_ganhos || 0;
       }
     });
 
     // Processar simulados
     rankingSimulados?.forEach(item => {
-      const userId = item.user_id;
-      if (!ranking[userId]) {
-        ranking[userId] = {
-          user_id: userId,
+      const usuarioId = item.usuario_id;
+      if (!ranking[usuarioId]) {
+        ranking[usuarioId] = {
+          usuario_id: usuarioId,
           nome: (item.usuarios as UserData)?.nome || 'Usuário',
           email: (item.usuarios as UserData)?.email,
           pontosQuestoes: 0,
           pontosSimulados: 0,
           totalAcertos: 0,
-          totalTempo: 0
+          totalTempo: 0,
         } as typeof ranking[string];
       }
-      if (ranking[userId]) {
-        ranking[userId].pontosSimulados += item.pontuacao || 0;
+      if (ranking[usuarioId]) {
+        ranking[usuarioId].pontosSimulados += item.pontuacao || 0;
       }
     });
 
@@ -587,19 +587,19 @@ router.get('/ranking', requireAuth, asyncHandler(async (req, res) => {
     const rankingFinal = Object.values(ranking)
       .map((user) => ({
         ...user,
-        pontuacaoTotal: user.pontosQuestoes + user.pontosSimulados
+        pontuacaoTotal: user.pontosQuestoes + user.pontosSimulados,
       }))
       .sort((a, b) => b.pontuacaoTotal - a.pontuacaoTotal)
       .slice(0, Number(limit));
 
     return res.json({
       success: true,
-      data: rankingFinal
+      data: rankingFinal,
     });
   } catch (error) {
-    logger.error('Erro na rota GET /estatisticas/ranking:', undefined, { error: error instanceof Error ? error.message : 'Erro desconhecido' });
+    logger.error('Erro na rota GET /estatisticas/ranking', { error: error instanceof Error ? error.message : 'Erro desconhecido' });
     return res.status(500).json({ error: 'Erro interno do servidor' });
   }
 }));
 
-export default router;
+export { router };

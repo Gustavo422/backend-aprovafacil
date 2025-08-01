@@ -13,6 +13,7 @@ export class LogService implements ILogService {
 
   async info(mensagem: string, detalhes?: unknown): Promise<void> {
     await this.logarEvento('INFO', mensagem, detalhes);
+    // eslint-disable-next-line no-console
     console.log(`[INFO] ${this.contexto}: ${mensagem}`, detalhes || '');
   }
 
@@ -21,21 +22,24 @@ export class LogService implements ILogService {
       ...(typeof detalhes === 'object' && detalhes !== null ? detalhes : {}),
       stack: erro?.stack,
       name: erro?.name,
-      message: erro?.message
+      message: erro?.message,
     };
     
     await this.logarEvento('ERROR', mensagem, detalhesCompletos);
+    // eslint-disable-next-line no-console
     console.error(`[ERROR] ${this.contexto}: ${mensagem}`, erro, detalhes || '');
   }
 
   async aviso(mensagem: string, detalhes?: unknown): Promise<void> {
     await this.logarEvento('WARN', mensagem, detalhes);
+    // eslint-disable-next-line no-console
     console.warn(`[WARN] ${this.contexto}: ${mensagem}`, detalhes || '');
   }
 
   async debug(mensagem: string, detalhes?: unknown): Promise<void> {
     if (process.env.NODE_ENV === 'development') {
       await this.logarEvento('DEBUG', mensagem, detalhes);
+      // eslint-disable-next-line no-console
       console.debug(`[DEBUG] ${this.contexto}: ${mensagem}`, detalhes || '');
     }
   }
@@ -45,7 +49,7 @@ export class LogService implements ILogService {
     tabela: string, 
     dadosAntigos?: unknown, 
     dadosNovos?: unknown, 
-    usuarioId?: string
+    usuarioId?: string,
   ): Promise<void> {
     try {
       const { error } = await this.supabase
@@ -56,13 +60,15 @@ export class LogService implements ILogService {
           nome_tabela: tabela,
           valores_antigos: dadosAntigos,
           valores_novos: dadosNovos,
-          criado_em: new Date().toISOString()
+          criado_em: new Date().toISOString(),
         });
 
       if (error) {
+        // eslint-disable-next-line no-console
         console.error('Erro ao registrar log de auditoria:', error);
       }
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Erro inesperado ao registrar log de auditoria:', error);
     }
   }
@@ -76,14 +82,16 @@ export class LogService implements ILogService {
           servico: this.contexto,
           mensagem,
           detalhes: detalhes ? JSON.stringify(detalhes) : null,
-          criado_em: new Date().toISOString()
+          criado_em: new Date().toISOString(),
         });
 
       if (error) {
+        // eslint-disable-next-line no-console
         console.error('Erro ao salvar log no banco:', error);
       }
     } catch (error) {
       // Não fazer nada para evitar loop infinito de logs
+      // eslint-disable-next-line no-console
       console.error('Erro crítico no sistema de logs:', error);
     }
   }
@@ -96,7 +104,7 @@ export class LogService implements ILogService {
   async logarFimOperacao(operacao: string, resultado?: unknown, tempoExecucao?: number): Promise<void> {
     await this.info(`Operação concluída: ${operacao}`, { 
       resultado: resultado ? 'sucesso' : 'falha',
-      tempo_execucao_ms: tempoExecucao 
+      tempo_execucao_ms: tempoExecucao, 
     });
   }
 
@@ -104,7 +112,7 @@ export class LogService implements ILogService {
     await this.info(`Acesso do usuário: ${acao}`, {
       usuario_id: usuarioId,
       endereco_ip: ip,
-      user_agent: userAgent
+      user_agent: userAgent,
     });
   }
 
@@ -123,7 +131,7 @@ export class LogService implements ILogService {
     await this.aviso(`Erro de validação no campo ${campo}`, {
       campo,
       valor,
-      regra_violada: regra
+      regra_violada: regra,
     });
   }
 
@@ -134,14 +142,14 @@ export class LogService implements ILogService {
     await metodo.call(this, mensagem, {
       email,
       endereco_ip: ip,
-      sucesso
+      sucesso,
     });
   }
 
   async logarAlteracaoSenha(usuarioId: string, ip?: string): Promise<void> {
     await this.info('Senha alterada pelo usuário', {
       usuario_id: usuarioId,
-      endereco_ip: ip
+      endereco_ip: ip,
     });
   }
 
@@ -149,7 +157,7 @@ export class LogService implements ILogService {
     await this.info(`Novo conteúdo criado: ${tipo}`, {
       tipo_conteudo: tipo,
       conteudo_id: id,
-      criado_por: usuarioId
+      criado_por: usuarioId,
     });
   }
 
@@ -157,7 +165,7 @@ export class LogService implements ILogService {
     await this.aviso(`Conteúdo excluído: ${tipo}`, {
       tipo_conteudo: tipo,
       conteudo_id: id,
-      excluido_por: usuarioId
+      excluido_por: usuarioId,
     });
   }
 
@@ -168,7 +176,7 @@ export class LogService implements ILogService {
     await metodo.call(this, mensagem, {
       operacao_cache: operacao,
       chave_cache: chave,
-      sucesso
+      sucesso,
     });
   }
 
@@ -178,7 +186,7 @@ export class LogService implements ILogService {
     
     await metodo.call(this, mensagem, {
       conexao_banco: sucesso,
-      tempo_resposta_ms: tempoResposta
+      tempo_resposta_ms: tempoResposta,
     });
   }
 
@@ -234,9 +242,10 @@ export class LogService implements ILogService {
 
       return {
         logs: Array.isArray(data) ? data : [],
-        total: count || 0
+        total: count || 0,
       };
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Erro ao obter logs:', error);
       return { logs: [], total: 0 };
     }
@@ -314,15 +323,16 @@ export class LogService implements ILogService {
         total_logs: totalData?.length || 0,
         logs_por_nivel: logsPorNivel,
         logs_por_servico: logsPorServico,
-        ultimo_log: ultimoLogData?.[0]?.criado_em ? new Date(ultimoLogData[0].criado_em) : null
+        ultimo_log: ultimoLogData?.[0]?.criado_em ? new Date(ultimoLogData[0].criado_em) : null,
       };
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Erro ao obter estatísticas de logs:', error);
       return {
         total_logs: 0,
         logs_por_nivel: {},
         logs_por_servico: {},
-        ultimo_log: null
+        ultimo_log: null,
       };
     }
   }

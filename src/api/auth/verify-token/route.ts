@@ -1,37 +1,53 @@
-import express, { Response } from 'express';
-import { jwtAuthGlobal, JWTRequest } from '../../../middleware/jwt-auth-global.js';
+import { Request, Response } from 'express';
+import { supabase } from '../../../config/supabase-unified.js';
+import { logger } from '../../../lib/logger.js';
 
-const router = express.Router();
-
-// GET - Verificar se o token é válido
-router.get('/', jwtAuthGlobal, async (req: JWTRequest, res: Response) => {
+export const verifyTokenHandler = async (req: Request, res: Response) => {
   try {
-    if (req.user) {
-      return res.status(200).json({
-        valid: true,
-        user: {
-          id: req.user.id,
-          nome: req.user.nome,
-          email: req.user.email,
-          role: req.user.role,
-          ativo: req.user.ativo,
-          primeiro_login: req.user.primeiro_login
-        }
-      });
-    } else {
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
         valid: false,
-        error: 'Token inválido ou expirado'
+        error: 'Token de autenticação não fornecido',
       });
     }
-  } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('Erro ao verificar token:', errorMessage);
+
+    const token = authHeader.substring(7);
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+
+    if (error || !user) {
+      return res.status(401).json({
+        valid: false,
+        error: 'Token inválido ou expirado',
+      });
+    }
+
+    return res.json({
+      valid: true,
+      user: {
+        id: user.id,
+        nome: user.user_metadata?.nome || user.email || '',
+        email: user.email || '',
+        role: user.user_metadata?.role || 'user',
+      },
+    });
+
+  } catch (error) {
+    logger.error('Erro ao verificar token:', { error });
     return res.status(500).json({
-      valid: false,
-      error: 'Erro interno do servidor'
+      success: false,
+      error: 'Erro interno do servidor',
     });
   }
-});
+};
 
-export default router; 
+// Criar router Express
+import { Router } from 'express';
+
+const router = Router();
+
+// Registrar rotas
+router.get('/', verifyTokenHandler);
+
+export { router }; 

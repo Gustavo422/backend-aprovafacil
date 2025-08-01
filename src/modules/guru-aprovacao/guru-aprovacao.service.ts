@@ -3,7 +3,7 @@ import {
   IGuruAprovacaoService, 
   IUsuarioRepository, 
   ILogService, 
-  ICacheService 
+  ICacheService, 
 } from '../../core/interfaces/index.js';
 import { 
   MetricasGuruAprovacao, 
@@ -22,7 +22,7 @@ export class GuruAprovacaoService implements IGuruAprovacaoService {
     usuarioRepository: IUsuarioRepository,
     logService: ILogService,
     cacheService: ICacheService,
-    supabase: SupabaseClient
+    supabase: SupabaseClient,
   ) {
     this.usuarioRepository = usuarioRepository;
     this.logService = logService;
@@ -43,7 +43,7 @@ export class GuruAprovacaoService implements IGuruAprovacaoService {
         return {
           success: true,
           data: metricasCache,
-          message: 'Métricas calculadas'
+          message: 'Métricas calculadas',
         };
       }
 
@@ -73,7 +73,7 @@ export class GuruAprovacaoService implements IGuruAprovacaoService {
         percentualQuestoes,
         proficienciaFlashcards,
         progressoApostilas,
-        consistenciaEstudo
+        consistenciaEstudo,
       });
 
       // Calcular distância da aprovação
@@ -83,7 +83,7 @@ export class GuruAprovacaoService implements IGuruAprovacaoService {
       const tempoEstimadoAprovacao = this.estimarTempoAprovacao(
         pontuacaoGeral,
         consistenciaEstudo,
-        concursoUsuario.nivel_dificuldade
+        concursoUsuario.nivel_dificuldade,
       );
 
       const metricas: MetricasGuruAprovacao = {
@@ -95,7 +95,7 @@ export class GuruAprovacaoService implements IGuruAprovacaoService {
         consistencia_estudo: Math.round(consistenciaEstudo * 100) / 100,
         pontuacao_geral: Math.round(pontuacaoGeral * 100) / 100,
         distancia_aprovacao: Math.round(distanciaAprovacao * 100) / 100,
-        tempo_estimado_aprovacao: tempoEstimadoAprovacao
+        tempo_estimado_aprovacao: tempoEstimadoAprovacao,
       };
 
       // Salvar no cache por 30 minutos
@@ -106,7 +106,7 @@ export class GuruAprovacaoService implements IGuruAprovacaoService {
       return {
         success: true,
         data: metricas,
-        message: 'Métricas calculadas com sucesso'
+        message: 'Métricas calculadas com sucesso',
       };
     } catch (error) {
       await this.logService.erro('Erro ao calcular métricas do Guru', error as Error, { usuarioId });
@@ -135,7 +135,7 @@ export class GuruAprovacaoService implements IGuruAprovacaoService {
       const prognostico = {
         distancia_aprovacao: metricas.distancia_aprovacao,
         tempo_estimado: metricas.tempo_estimado_aprovacao,
-        recomendacoes
+        recomendacoes,
       };
 
       await this.logService.logarFimOperacao('obterPrognosticoGuru', true);
@@ -143,7 +143,7 @@ export class GuruAprovacaoService implements IGuruAprovacaoService {
       return {
         success: true,
         data: prognostico,
-        message: 'Prognóstico gerado com sucesso'
+        message: 'Prognóstico gerado com sucesso',
       };
     } catch (error) {
       await this.logService.erro('Erro ao obter prognóstico do Guru', error as Error, { usuarioId });
@@ -208,7 +208,7 @@ export class GuruAprovacaoService implements IGuruAprovacaoService {
         id: concurso.id,
         nome: concurso.nome,
         nivel_dificuldade: concurso.nivel_dificuldade,
-        multiplicador_questoes: concurso.multiplicador_questoes
+        multiplicador_questoes: concurso.multiplicador_questoes,
       };
     } catch (error) {
       await this.logService.erro('Erro ao obter concurso do usuário', error as Error, { usuarioId });
@@ -356,7 +356,7 @@ export class GuruAprovacaoService implements IGuruAprovacaoService {
       questoes: 0.4,      // 40% - Questões são o mais importante
       flashcards: 0.25,   // 25% - Memorização é crucial
       apostilas: 0.2,     // 20% - Conhecimento teórico
-      consistencia: 0.15  // 15% - Regularidade nos estudos
+      consistencia: 0.15,  // 15% - Regularidade nos estudos
     };
 
     const pontuacao = 
@@ -371,13 +371,13 @@ export class GuruAprovacaoService implements IGuruAprovacaoService {
   private estimarTempoAprovacao(
     pontuacaoGeral: number, 
     consistenciaEstudo: number, 
-    nivelDificuldade: string
+    nivelDificuldade: string,
   ): string {
     // Fatores de ajuste baseados no nível de dificuldade
     const fatoresDificuldade = {
       'facil': 0.8,
       'medio': 1.0,
-      'dificil': 1.3
+      'dificil': 1.3,
     };
 
     const fatorDificuldade = fatoresDificuldade[nivelDificuldade as keyof typeof fatoresDificuldade] || 1.0;
@@ -494,9 +494,9 @@ export class GuruAprovacaoService implements IGuruAprovacaoService {
           analise_por_disciplina: analisePorDisciplina,
           evolucao_temporal: evolucaoTemporal,
           pontos_fortes: pontosFortes,
-          pontos_fracos: pontosFracos
+          pontos_fracos: pontosFracos,
         },
-        message: 'Análise detalhada gerada'
+        message: 'Análise detalhada gerada',
       };
     } catch (error) {
       await this.logService.erro('Erro ao obter análise detalhada', error as Error, { usuarioId });

@@ -45,7 +45,7 @@ export class ApostilaRepository extends BaseRepository<Apostila, FiltroApostila>
     super({
       tableName: 'apostilas',
       softDelete: true,
-      ...options
+      ...options,
     });
     
     this.logger.info('Repositório de apostilas inicializado');
@@ -65,7 +65,7 @@ export class ApostilaRepository extends BaseRepository<Apostila, FiltroApostila>
       }
       
       // Criar query
-      let query = this.supabase
+      const query = this.supabase
         .from(this.tableName)
         .select('*')
         .eq('slug', slug)
@@ -103,7 +103,7 @@ export class ApostilaRepository extends BaseRepository<Apostila, FiltroApostila>
       }
       
       // Criar query
-      let query = this.supabase
+      const query = this.supabase
         .from(this.tableName)
         .select('*')
         .eq('concurso_id', concursoId);
@@ -161,7 +161,7 @@ export class ApostilaRepository extends BaseRepository<Apostila, FiltroApostila>
       
       return {
         ...apostila,
-        conteudo: conteudo as ConteudoApostila[]
+        conteudo: conteudo as ConteudoApostila[],
       };
     } catch (error) {
       this.handleError(`buscarComConteudo:${id}`, error);
@@ -205,7 +205,7 @@ export class ApostilaRepository extends BaseRepository<Apostila, FiltroApostila>
         conteudo_json: conteudo.conteudo_json,
         numero_modulo: conteudo.numero_modulo || 1,
         concurso_id: conteudo.concurso_id,
-        criado_em: new Date().toISOString()
+        criado_em: new Date().toISOString(),
       };
       
       // Criar query
@@ -252,7 +252,7 @@ export class ApostilaRepository extends BaseRepository<Apostila, FiltroApostila>
         .update({
           titulo: dados.titulo,
           conteudo_json: dados.conteudo_json,
-          numero_modulo: dados.numero_modulo
+          numero_modulo: dados.numero_modulo,
         })
         .eq('id', conteudoId)
         .select('*')

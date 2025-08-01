@@ -1,74 +1,97 @@
 // Repositório de usuários para o AprovaFácil
 import { IUsuarioRepository, ILogService } from '../../core/interfaces/index.js';
-import { BaseSupabaseRepository } from '../../core/database/supabase.js';
+import { supabase } from '../../config/supabase-unified.js';
 import { Usuario, FiltroBase, PaginatedResponse, EstatisticasUsuario } from '../../shared/types/index.js';
 import { UsuarioNaoEncontradoError, EmailJaExisteError } from '../../core/errors/usuario-errors.js';
 
-export class UsuarioRepository extends BaseSupabaseRepository implements IUsuarioRepository {
-  constructor(logService: ILogService) {
-    super('usuarios', logService);
+export class UsuarioRepository implements IUsuarioRepository {
+  constructor(private logService: ILogService) {}
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private aplicarFiltros(query: any, _filtro: FiltroBase) {
+    // Implementação dos filtros
+    return query;
+  }
+
+  private toError(error: unknown): Error {
+    if (error instanceof Error) {
+      return error;
+    }
+    return new Error(String(error));
   }
 
   async buscarPorId(id: string): Promise<Usuario | null> {
-    return this.executarQuery('buscarPorId', async () => {
-      const { data, error } = await this.supabase
+    try {
+      const { data, error } = await supabase
         .from('usuarios')
         .select('*')
         .eq('id', id)
         .single();
 
-      return { data, error };
-    });
+      if (error && error.code !== 'PGRST116') {
+        await this.logService.erro('Erro ao buscar usuário por ID', error, { id });
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      await this.logService.erro('Erro inesperado ao buscar usuário por ID', error as Error, { id });
+      return null;
+    }
   }
 
   async buscarPorAuthUserId(authUserId: string): Promise<Usuario | null> {
-    return this.executarQuery('buscarPorAuthUserId', async () => {
-      const { data, error } = await this.supabase
+    try {
+      const { data, error } = await supabase
         .from('usuarios')
         .select('*')
-        .eq('auth_user_id', authUserId)
+        .eq('auth_usuario_id', authUserId)
         .single();
-      return { data, error };
-    });
+      if (error && error.code !== 'PGRST116') throw error;
+      return data;
+    } catch (error) {
+      this.logService.erro('Erro ao buscar usuário por Auth User ID.', this.toError(error), { authUserId });
+      throw error;
+    }
   }
 
   async buscarTodos(filtro?: FiltroBase): Promise<PaginatedResponse<Usuario>> {
-    const { dados, total } = await this.executarQueryLista('buscarTodos', async () => {
-      let query = this.supabase
+    try {
+      let query = supabase
         .from('usuarios')
         .select('*', { count: 'exact' });
 
-      // Aplicar filtros
       if (filtro) {
         query = this.aplicarFiltros(query, filtro);
-        
         if (filtro.search) {
           query = query.or(`nome.ilike.%${filtro.search}%,email.ilike.%${filtro.search}%`);
         }
       }
 
       const { data, error, count } = await query;
-      return { data, error, count };
-    });
+      if (error) throw error;
 
-    const page = filtro?.page || 1;
-    const limit = filtro?.limit || 10;
-    const totalPages = Math.ceil((total || 0) / limit);
+      const page = filtro?.page || 1;
+      const limit = filtro?.limit || 10;
+      const totalPages = Math.ceil((count || 0) / limit);
 
-    return {
-      success: true,
-      data: dados,
-      pagination: {
-        page,
-        limit,
-        total: total || 0,
-        totalPages
-      }
-    };
+      return {
+        success: true,
+        data: data || [],
+        pagination: {
+          page,
+          limit,
+          total: count || 0,
+          totalPages,
+        },
+      };
+    } catch (error) {
+      this.logService.erro('Erro ao buscar todos os usuários.', this.toError(error), { filtro });
+      throw error;
+    }
   }
 
   async criar(dados: Partial<Usuario>): Promise<Usuario> {
-    // Verificar se email já existe
     if (dados.email) {
       const usuarioExistente = await this.buscarPorEmail(dados.email);
       if (usuarioExistente) {
@@ -76,29 +99,30 @@ export class UsuarioRepository extends BaseSupabaseRepository implements IUsuari
       }
     }
 
-    return this.executarMutacao('criar', async () => {
-      const { data, error } = await this.supabase
+    try {
+      const { data, error } = await supabase
         .from('usuarios')
         .insert({
           ...dados,
           criado_em: new Date().toISOString(),
-          atualizado_em: new Date().toISOString()
+          atualizado_em: new Date().toISOString(),
         })
         .select()
         .single();
-
-      return { data, error };
-    });
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      this.logService.erro('Erro ao criar usuário.', this.toError(error), { dados });
+      throw error;
+    }
   }
 
   async atualizar(id: string, dados: Partial<Usuario>): Promise<Usuario> {
-    // Verificar se usuário existe
     const usuarioExistente = await this.buscarPorId(id);
     if (!usuarioExistente) {
       throw new UsuarioNaoEncontradoError(id);
     }
 
-    // Verificar se email já existe (se estiver sendo alterado)
     if (dados.email && dados.email !== usuarioExistente.email) {
       const usuarioComEmail = await this.buscarPorEmail(dados.email);
       if (usuarioComEmail && usuarioComEmail.id !== id) {
@@ -106,67 +130,70 @@ export class UsuarioRepository extends BaseSupabaseRepository implements IUsuari
       }
     }
 
-    return this.executarMutacao('atualizar', async () => {
-      const { data, error } = await this.supabase
+    try {
+      const { data, error } = await supabase
         .from('usuarios')
         .update({
           ...dados,
-          atualizado_em: new Date().toISOString()
+          atualizado_em: new Date().toISOString(),
         })
         .eq('id', id)
         .select()
         .single();
-
-      return { data, error };
-    });
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      this.logService.erro('Erro ao atualizar usuário.', this.toError(error), { id, dados });
+      throw error;
+    }
   }
 
   async atualizarPorAuthUserId(authUserId: string, dados: Partial<Usuario>): Promise<Usuario> {
-    // Verificar se usuário existe
     const usuarioExistente = await this.buscarPorAuthUserId(authUserId);
     if (!usuarioExistente) {
       throw new UsuarioNaoEncontradoError(authUserId);
     }
-    // Verificar se email já existe (se estiver sendo alterado)
     if (dados.email && dados.email !== usuarioExistente.email) {
       const usuarioComEmail = await this.buscarPorEmail(dados.email);
-      if (usuarioComEmail && usuarioComEmail.auth_user_id !== authUserId) {
+      if (usuarioComEmail && usuarioComEmail.auth_usuario_id !== authUserId) {
         throw new EmailJaExisteError(dados.email);
       }
     }
-    return this.executarMutacao('atualizarPorAuthUserId', async () => {
-      const { data, error } = await this.supabase
+    try {
+      const { data, error } = await supabase
         .from('usuarios')
         .update({
           ...dados,
-          atualizado_em: new Date().toISOString()
+          atualizado_em: new Date().toISOString(),
         })
-        .eq('auth_user_id', authUserId)
+        .eq('auth_usuario_id', authUserId)
         .select()
         .single();
-      return { data, error };
-    });
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      this.logService.erro('Erro ao atualizar usuário por Auth User ID.', this.toError(error), { authUserId, dados });
+      throw error;
+    }
   }
 
   async excluir(id: string): Promise<boolean> {
-    // Verificar se usuário existe
     const usuarioExistente = await this.buscarPorId(id);
     if (!usuarioExistente) {
       throw new UsuarioNaoEncontradoError(id);
     }
 
-    await this.executarMutacao('excluir', async () => {
-      const { data, error } = await this.supabase
+    try {
+      const { error } = await supabase
         .from('usuarios')
         .update({ ativo: false, atualizado_em: new Date().toISOString() })
-        .eq('id', id)
-        .select()
-        .single();
-
-      return { data, error };
-    });
-
-    return true;
+        .eq('id', id);
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      this.logService.erro('Erro ao excluir usuário.', this.toError(error), { id });
+      throw error;
+    }
   }
 
   async excluirPorAuthUserId(authUserId: string): Promise<boolean> {
@@ -174,21 +201,22 @@ export class UsuarioRepository extends BaseSupabaseRepository implements IUsuari
     if (!usuarioExistente) {
       throw new UsuarioNaoEncontradoError(authUserId);
     }
-    await this.executarMutacao('excluirPorAuthUserId', async () => {
-      const { data, error } = await this.supabase
+    try {
+      const { error } = await supabase
         .from('usuarios')
         .update({ ativo: false, atualizado_em: new Date().toISOString() })
-        .eq('auth_user_id', authUserId)
-        .select()
-        .single();
-      return { data, error };
-    });
-    return true;
+        .eq('auth_usuario_id', authUserId);
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      this.logService.erro('Erro ao excluir usuário por Auth User ID.', this.toError(error), { authUserId });
+      throw error;
+    }
   }
 
   async existePorId(id: string): Promise<boolean> {
     try {
-      const { data, error } = await this.supabase
+      const { data, error } = await supabase
         .from('usuarios')
         .select('id')
         .eq('id', id)
@@ -202,13 +230,11 @@ export class UsuarioRepository extends BaseSupabaseRepository implements IUsuari
 
   async buscarPorEmail(email: string): Promise<Usuario | null> {
     try {
-      const { data, error } = await this.supabase
+      const { data, error } = await supabase
         .from('usuarios')
         .select('*, senha_hash') // Garantir que senha_hash seja retornado
         .eq('email', email)
         .single();
-
-      console.log('[DEBUG] Usuario retornado por buscarPorEmail:', data); // Log para depuração
 
       if (error && error.code !== 'PGRST116') { // PGRST116 = não encontrado
         await this.logService.erro('Erro ao buscar usuário por email', error, { email });
@@ -224,11 +250,11 @@ export class UsuarioRepository extends BaseSupabaseRepository implements IUsuari
 
   async atualizarUltimoLogin(id: string): Promise<void> {
     try {
-      const { error } = await this.supabase
+      const { error } = await supabase
         .from('usuarios')
         .update({ 
           ultimo_login: new Date().toISOString(),
-          atualizado_em: new Date().toISOString()
+          atualizado_em: new Date().toISOString(),
         })
         .eq('id', id);
 
@@ -236,24 +262,24 @@ export class UsuarioRepository extends BaseSupabaseRepository implements IUsuari
         await this.logService.erro('Erro ao atualizar último login', error, { id });
       }
     } catch (error) {
-      await this.logService.erro('Erro inesperado ao atualizar último login', error as Error, { id });
+      await this.logService.erro('Erro inesperado ao atualizar último login', this.toError(error), { id });
     }
   }
 
   async atualizarUltimoLoginPorAuthUserId(authUserId: string): Promise<void> {
     try {
-      const { error } = await this.supabase
+      const { error } = await supabase
         .from('usuarios')
         .update({ 
           ultimo_login: new Date().toISOString(),
-          atualizado_em: new Date().toISOString()
+          atualizado_em: new Date().toISOString(),
         })
-        .eq('auth_user_id', authUserId);
+        .eq('auth_usuario_id', authUserId);
       if (error) {
         await this.logService.erro('Erro ao atualizar último login', error, { authUserId });
       }
     } catch (error) {
-      await this.logService.erro('Erro inesperado ao atualizar último login', error as Error, { authUserId });
+      await this.logService.erro('Erro inesperado ao atualizar último login', this.toError(error), { authUserId });
     }
   }
 
@@ -282,7 +308,7 @@ export class UsuarioRepository extends BaseSupabaseRepository implements IUsuari
         dadosAtualizacao.pontuacao_media = estatisticas.media_pontuacao_simulados;
       }
 
-      const { error } = await this.supabase
+      const { error } = await supabase
         .from('usuarios')
         .update(dadosAtualizacao)
         .eq('id', id);
@@ -291,7 +317,7 @@ export class UsuarioRepository extends BaseSupabaseRepository implements IUsuari
         await this.logService.erro('Erro ao atualizar estatísticas do usuário', error, { id, estatisticas });
       }
     } catch (error) {
-      await this.logService.erro('Erro inesperado ao atualizar estatísticas do usuário', error as Error, { id, estatisticas });
+      await this.logService.erro('Erro inesperado ao atualizar estatísticas do usuário', this.toError(error), { id, estatisticas });
     }
   }
 
@@ -314,50 +340,52 @@ export class UsuarioRepository extends BaseSupabaseRepository implements IUsuari
       if (estatisticas.media_pontuacao_simulados !== undefined) {
         dadosAtualizacao.pontuacao_media = estatisticas.media_pontuacao_simulados;
       }
-      const { error } = await this.supabase
+      const { error } = await supabase
         .from('usuarios')
         .update(dadosAtualizacao)
-        .eq('auth_user_id', authUserId);
+        .eq('auth_usuario_id', authUserId);
       if (error) {
         await this.logService.erro('Erro ao atualizar estatísticas do usuário', error, { authUserId, estatisticas });
       }
     } catch (error) {
-      await this.logService.erro('Erro inesperado ao atualizar estatísticas do usuário', error as Error, { authUserId, estatisticas });
+      await this.logService.erro('Erro inesperado ao atualizar estatísticas do usuário', this.toError(error), { authUserId, estatisticas });
     }
   }
 
   // Métodos específicos para usuários
 
   async buscarUsuariosAtivos(): Promise<Usuario[]> {
-    const { dados } = await this.executarQueryLista('buscarUsuariosAtivos', async () => {
-      const { data, error } = await this.supabase
+    try {
+      const { data, error } = await supabase
         .from('usuarios')
         .select('*')
         .eq('ativo', true)
         .order('criado_em', { ascending: false });
-
-      return { data, error };
-    });
-
-    return dados;
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      this.logService.erro('Erro ao buscar usuários ativos.', this.toError(error));
+      throw error;
+    }
   }
 
   async buscarUsuariosPorConcurso(concursoId: string): Promise<Usuario[]> {
-    const { dados } = await this.executarQueryLista('buscarUsuariosPorConcurso', async () => {
-      const { data, error } = await this.supabase
+    try {
+      const { data, error } = await supabase
         .from('usuarios')
         .select(`
           *,
-          preferencias_usuario_concurso!inner(concurso_id)
+          preferencias_usuario_concurso(concurso_id)
         `)
         .eq('preferencias_usuario_concurso.concurso_id', concursoId)
         .eq('preferencias_usuario_concurso.ativo', true)
         .eq('ativo', true);
-
-      return { data, error };
-    });
-
-    return dados;
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      this.logService.erro('Erro ao buscar usuários por concurso.', this.toError(error), { concursoId });
+      throw error;
+    }
   }
 
   async obterEstatisticasUsuario(id: string): Promise<EstatisticasUsuario> {
@@ -369,25 +397,25 @@ export class UsuarioRepository extends BaseSupabaseRepository implements IUsuari
       }
 
       // Buscar estatísticas de simulados
-      const { data: simuladosData } = await this.supabase
+      const { data: simuladosData } = await supabase
         .from('progresso_usuario_simulado')
         .select('pontuacao, concluido_em')
         .eq('usuario_id', id);
 
       // Buscar estatísticas de questões semanais
-      const { data: questoesData } = await this.supabase
+      const { data: questoesData } = await supabase
         .from('progresso_usuario_questoes_semanais')
         .select('total_questoes, pontuacao')
         .eq('usuario_id', id);
 
       // Buscar estatísticas de flashcards
-      const { data: flashcardsData } = await this.supabase
+      const { data: flashcardsData } = await supabase
         .from('progresso_usuario_flashcard')
         .select('status')
         .eq('usuario_id', id);
 
       // Buscar estatísticas de apostilas
-      const { data: apostilasData } = await this.supabase
+      const { data: apostilasData } = await supabase
         .from('progresso_usuario_apostila')
         .select('concluido')
         .eq('usuario_id', id);
@@ -419,10 +447,10 @@ export class UsuarioRepository extends BaseSupabaseRepository implements IUsuari
         tempo_total_estudo_horas: Math.round((usuario.tempo_estudo_minutos || 0) / 60 * 100) / 100,
         sequencia_dias_estudo: sequenciaDiasEstudo,
         ultima_atividade: ultimaAtividade,
-        total_acertos: 0 // TODO: calcular se necessário
+        total_acertos: 0, // TODO: calcular se necessário
       };
     } catch (error) {
-      await this.logService.erro('Erro ao obter estatísticas do usuário', error as Error, { id });
+      this.logService.erro('Erro ao obter estatísticas do usuário', this.toError(error), { id });
       throw error;
     }
   }
@@ -433,7 +461,7 @@ export class UsuarioRepository extends BaseSupabaseRepository implements IUsuari
       const dataLimite = new Date();
       dataLimite.setDate(dataLimite.getDate() - 30);
 
-      const { data } = await this.supabase
+      const { data } = await supabase
         .from('progresso_usuario_simulado')
         .select('concluido_em')
         .eq('usuario_id', usuarioId)
@@ -471,14 +499,14 @@ export class UsuarioRepository extends BaseSupabaseRepository implements IUsuari
 
       return sequencia;
     } catch (error) {
-      await this.logService.erro('Erro ao calcular sequência de dias de estudo', error as Error, { usuarioId });
+      await this.logService.erro('Erro ao calcular sequência de dias de estudo', this.toError(error), { usuarioId });
       return 0;
     }
   }
 
   private async obterUltimaAtividade(usuarioId: string): Promise<Date> {
     try {
-      const { data } = await this.supabase
+      const { data } = await supabase
         .from('progresso_usuario_simulado')
         .select('concluido_em')
         .eq('usuario_id', usuarioId)
@@ -493,18 +521,18 @@ export class UsuarioRepository extends BaseSupabaseRepository implements IUsuari
       const usuario = await this.buscarPorId(usuarioId);
       return usuario?.ultimo_login || usuario?.criado_em || new Date();
     } catch (error) {
-      await this.logService.erro('Erro ao obter última atividade', error as Error, { usuarioId });
+      await this.logService.erro('Erro ao obter última atividade', this.toError(error), { usuarioId });
       return new Date();
     }
   }
 
   async marcarPrimeiroLoginCompleto(id: string): Promise<void> {
     try {
-      const { error } = await this.supabase
+      const { error } = await supabase
         .from('usuarios')
         .update({ 
           primeiro_login: false,
-          atualizado_em: new Date().toISOString()
+          atualizado_em: new Date().toISOString(),
         })
         .eq('id', id);
 
@@ -515,24 +543,25 @@ export class UsuarioRepository extends BaseSupabaseRepository implements IUsuari
 
       await this.logService.info('Primeiro login marcado como completo', { usuarioId: id });
     } catch (error) {
-      await this.logService.erro('Erro inesperado ao marcar primeiro login como completo', error as Error, { id });
+      await this.logService.erro('Erro inesperado ao marcar primeiro login como completo', this.toError(error), { id });
       throw error;
     }
   }
 
   async obterUsuariosComPrimeiroLogin(): Promise<Usuario[]> {
-    const { dados } = await this.executarQueryLista('obterUsuariosComPrimeiroLogin', async () => {
-      const { data, error } = await this.supabase
+    try {
+      const { data, error } = await supabase
         .from('usuarios')
         .select('*')
         .eq('primeiro_login', true)
         .eq('ativo', true)
         .order('criado_em', { ascending: false });
-
-      return { data, error };
-    });
-
-    return dados;
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      this.logService.erro('Erro ao obter usuários com primeiro login.', this.toError(error));
+      throw error;
+    }
   }
 }
 

@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { LogEntry, LogLevel, LogTransport } from './logging-service';
+import { LogEntry, LogLevel, LogTransport } from './logging-service.js';
 
 /**
  * File log transport
@@ -46,7 +46,7 @@ export class FileLogTransport implements LogTransport {
        * Whether to append to existing file
        */
       append?: boolean;
-    }
+    },
   ) {
     // Set default options
     this.options = {
@@ -55,7 +55,7 @@ export class FileLogTransport implements LogTransport {
       maxFileSize: 10 * 1024 * 1024, // 10 MB
       maxFiles: 5,
       append: true,
-      ...options
+      ...options,
     };
     
     // Create directory if it doesn't exist
@@ -79,7 +79,8 @@ export class FileLogTransport implements LogTransport {
     }
     
     // Format log message
-    const message = this.options.format!(entry);
+    const format = this.options.format || this.defaultFormat;
+    const message = format(entry);
     
     // Write to file
     this.write(message);
@@ -96,7 +97,9 @@ export class FileLogTransport implements LogTransport {
     }
     
     // Write message
-    this.stream!.write(message + '\n');
+    if (this.stream) {
+      this.stream.write(message + '\n');
+    }
     
     // Check file size
     this.checkFileSize();
@@ -115,11 +118,12 @@ export class FileLogTransport implements LogTransport {
     // Open new stream
     this.stream = fs.createWriteStream(this.options.filePath, {
       flags: this.options.append ? 'a' : 'w',
-      encoding: 'utf8'
+      encoding: 'utf8',
     });
     
     // Handle errors
     this.stream.on('error', (error) => {
+      // eslint-disable-next-line no-console
       console.error('Error writing to log file:', error);
     });
   }
@@ -133,10 +137,12 @@ export class FileLogTransport implements LogTransport {
       const stats = fs.statSync(this.options.filePath);
       
       // Check if file is too large
-      if (stats.size >= this.options.maxFileSize!) {
+      const maxFileSize = this.options.maxFileSize || 10 * 1024 * 1024; // 10MB default
+      if (stats.size >= maxFileSize) {
         this.rotateFiles();
       }
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Error checking log file size:', error);
     }
   }
@@ -152,7 +158,8 @@ export class FileLogTransport implements LogTransport {
     }
     
     // Rotate files
-    for (let i = this.options.maxFiles! - 1; i >= 0; i--) {
+    const maxFiles = this.options.maxFiles || 5; // 5 files default
+    for (let i = maxFiles - 1; i >= 0; i--) {
       const source = i === 0
         ? this.options.filePath
         : `${this.options.filePath}.${i}`;
@@ -171,6 +178,7 @@ export class FileLogTransport implements LogTransport {
           fs.renameSync(source, target);
         }
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.error(`Error rotating log file ${source} to ${target}:`, error);
       }
     }
@@ -196,7 +204,8 @@ export class FileLogTransport implements LogTransport {
    */
   private isLevelEnabled(level: LogLevel): boolean {
     const levels = [LogLevel.DEBUG, LogLevel.INFO, LogLevel.WARN, LogLevel.ERROR, LogLevel.SILENT];
-    const minLevelIndex = levels.indexOf(this.options.minLevel!);
+    const minLevel = this.options.minLevel || LogLevel.DEBUG;
+    const minLevelIndex = levels.indexOf(minLevel);
     const levelIndex = levels.indexOf(level);
     
     return levelIndex >= minLevelIndex;

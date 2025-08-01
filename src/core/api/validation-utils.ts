@@ -75,7 +75,7 @@ export class ValidationSchemas {
       {
         message: 'End date must be after start date',
         path: ['endDate'],
-      }
+      },
     );
   }
   

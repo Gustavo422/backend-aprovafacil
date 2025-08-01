@@ -50,13 +50,13 @@ export class CategoriaService extends BaseService<CategoriasConcursos, FiltroCat
    */
   constructor(
     categoriaRepository: ICategoriaRepository,
-    options?: Partial<BaseServiceOptions>
+    options?: Partial<BaseServiceOptions>,
   ) {
     super(categoriaRepository, {
       serviceName: 'Categoria',
       enableCache: true,
       cacheTime: 900, // 15 minutos (categorias mudam pouco)
-      ...options
+      ...options,
     });
     this.repository = categoriaRepository;
     this.logger.info('Serviço de categorias inicializado');
@@ -90,7 +90,7 @@ export class CategoriaService extends BaseService<CategoriasConcursos, FiltroCat
           this.logger.debug('Cache hit para buscarPorSlug', { operationId });
           return {
             success: true,
-            data: cached as CategoriasConcursos
+            data: cached as CategoriasConcursos,
           };
         }
       }
@@ -103,13 +103,13 @@ export class CategoriaService extends BaseService<CategoriasConcursos, FiltroCat
         this.logger.warn('Categoria não encontrada por slug', {
           operationId,
           slug,
-          executionTimeMs: executionTime.toFixed(2)
+          executionTimeMs: executionTime.toFixed(2),
         });
         
         return {
           success: false,
           message: 'Categoria não encontrada',
-          error: 'NOT_FOUND'
+          error: 'NOT_FOUND',
         };
       }
       
@@ -125,12 +125,12 @@ export class CategoriaService extends BaseService<CategoriasConcursos, FiltroCat
       this.logger.debug('Categoria encontrada por slug', {
         operationId,
         categoriaId: categoria.id,
-        executionTimeMs: executionTime.toFixed(2)
+        executionTimeMs: executionTime.toFixed(2),
       });
       
       return {
         success: true,
-        data: processedCategoria
+        data: processedCategoria,
       };
     } catch (error) {
       const executionTime = performance.now() - startTime;
@@ -156,7 +156,7 @@ export class CategoriaService extends BaseService<CategoriasConcursos, FiltroCat
           this.logger.debug('Cache hit para buscarAtivos', { operationId });
           return {
             success: true,
-            data: cached as CategoriasConcursos[]
+            data: cached as CategoriasConcursos[],
           };
         }
       }
@@ -166,7 +166,7 @@ export class CategoriaService extends BaseService<CategoriasConcursos, FiltroCat
       
       // Processar dados após busca
       const processedCategorias = await Promise.all(
-        categorias.map(categoria => this.processAfterFind(categoria))
+        categorias.map(categoria => this.processAfterFind(categoria)),
       );
       
       // Salvar no cache
@@ -178,12 +178,12 @@ export class CategoriaService extends BaseService<CategoriasConcursos, FiltroCat
       this.logger.debug('Categorias ativas encontradas', {
         operationId,
         count: processedCategorias.length,
-        executionTimeMs: executionTime.toFixed(2)
+        executionTimeMs: executionTime.toFixed(2),
       });
       
       return {
         success: true,
-        data: processedCategorias
+        data: processedCategorias,
       };
     } catch (error) {
       const executionTime = performance.now() - startTime;
@@ -208,7 +208,7 @@ export class CategoriaService extends BaseService<CategoriasConcursos, FiltroCat
     try {
       this.logger.debug('Criando nova categoria', { 
         operationId,
-        dados: this.sanitizeLogData(dados)
+        dados: this.sanitizeLogData(dados),
       });
       
       // Validar entrada
@@ -222,7 +222,7 @@ export class CategoriaService extends BaseService<CategoriasConcursos, FiltroCat
         return {
           success: false,
           error: 'CATEGORIA_ALREADY_EXISTS',
-          message: 'Já existe uma categoria com este nome'
+          message: 'Já existe uma categoria com este nome',
         };
       }
       
@@ -233,7 +233,7 @@ export class CategoriaService extends BaseService<CategoriasConcursos, FiltroCat
         descricao: dados.descricao?.trim(),
         cor_primaria: dados.cor_primaria || '#3B82F6',
         cor_secundaria: dados.cor_secundaria || '#1E40AF',
-        ativo: true
+        ativo: true,
       };
       
       // Criar categoria
@@ -252,13 +252,13 @@ export class CategoriaService extends BaseService<CategoriasConcursos, FiltroCat
       this.logger.info('Categoria criada com sucesso', {
         operationId,
         categoriaId: categoria.id,
-        executionTimeMs: executionTime.toFixed(2)
+        executionTimeMs: executionTime.toFixed(2),
       });
       
       return {
         success: true,
         data: processedCategoria,
-        message: 'Categoria criada com sucesso'
+        message: 'Categoria criada com sucesso',
       };
     } catch (error) {
       const executionTime = performance.now() - startTime;
@@ -280,7 +280,7 @@ export class CategoriaService extends BaseService<CategoriasConcursos, FiltroCat
       this.logger.debug('Atualizando categoria', { 
         operationId,
         categoriaId: id,
-        dados: this.sanitizeLogData(dados)
+        dados: this.sanitizeLogData(dados),
       });
       
       // Validar entrada
@@ -302,7 +302,7 @@ export class CategoriaService extends BaseService<CategoriasConcursos, FiltroCat
           return {
             success: false,
             error: 'CATEGORIA_ALREADY_EXISTS',
-            message: 'Já existe uma categoria com este nome'
+            message: 'Já existe uma categoria com este nome',
           };
         }
       }
@@ -351,13 +351,13 @@ export class CategoriaService extends BaseService<CategoriasConcursos, FiltroCat
       this.logger.info('Categoria atualizada com sucesso', {
         operationId,
         categoriaId: id,
-        executionTimeMs: executionTime.toFixed(2)
+        executionTimeMs: executionTime.toFixed(2),
       });
       
       return {
         success: true,
         data: processedCategoria,
-        message: 'Categoria atualizada com sucesso'
+        message: 'Categoria atualizada com sucesso',
       };
     } catch (error) {
       const executionTime = performance.now() - startTime;

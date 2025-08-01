@@ -80,7 +80,7 @@ export class Validator {
    */
   static validateAndSanitize<T>(
     schema: ZodSchema<T>, 
-    data: unknown
+    data: unknown,
   ): ValidationResult<T> {
     const validation = this.validate(schema, data);
     

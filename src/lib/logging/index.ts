@@ -6,7 +6,7 @@ export {
   LoggerImpl,
   LoggingService,
   getLoggingService,
-  getLogger
+  getLogger,
 } from './logging-service';
 
 // Export enhanced logging service
@@ -14,7 +14,7 @@ export {
   EnhancedLoggerImpl,
   EnhancedLoggingService,
   getEnhancedLoggingService,
-  getEnhancedLogger
+  getEnhancedLogger,
 } from './enhanced-logging-service';
 
 // Export transports
@@ -23,13 +23,13 @@ export { FileLogTransport } from './file-transport';
 
 // Export middleware
 export { 
-  createRequestLoggerMiddleware 
+  createRequestLoggerMiddleware, 
 } from './request-logger-middleware';
 
 // Export error logger
 export {
   ErrorLogger,
-  getErrorLogger
+  getErrorLogger,
 } from './error-logger';
 
 // Export logging configuration
@@ -37,13 +37,13 @@ export {
   defaultLoggingConfig,
   loadLoggingConfigFromEnv,
   getLoggingConfig,
-  setLoggingConfig
+  setLoggingConfig,
 } from './logging-config';
 
 // Export logging service initializer
 export {
   initializeLoggingService,
-  createRequestLoggerSkipFunction
+  createRequestLoggerSkipFunction,
 } from './logging-service-initializer';
 
 // Default export

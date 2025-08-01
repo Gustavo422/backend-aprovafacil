@@ -18,7 +18,7 @@ export class AuthServiceAdapter implements IAuthService {
         email,
         password: senha,
         ipAddress: 'unknown',
-        userAgent: 'adapter-mode'
+        userAgent: 'adapter-mode',
       });
 
       if (result.success && result.user && result.accessToken) {
@@ -26,22 +26,22 @@ export class AuthServiceAdapter implements IAuthService {
           success: true,
           data: {
             usuario: result.user as unknown as Usuario,
-            token: result.accessToken
+            token: result.accessToken,
           },
-          message: 'Login realizado com sucesso'
+          message: 'Login realizado com sucesso',
         };
       } else {
         return {
           success: false,
           error: result.error || 'Erro no login',
-          message: result.error || 'Falha na autenticação'
+          message: result.error || 'Falha na autenticação',
         };
       }
     } catch (error) {
       return {
         success: false,
         error: error.message || 'Erro interno',
-        message: 'Erro interno do servidor'
+        message: 'Erro interno do servidor',
       };
     }
   }

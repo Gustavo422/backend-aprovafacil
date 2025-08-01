@@ -1,23 +1,68 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { Request, Response, Router } from 'express';
 import { z } from 'zod';
-import { BaseApiHandler, ApiHandlerOptions } from './base-api-handler';
-import { MiddlewareChain, MiddlewareFunction } from './middleware';
-import { getLogger } from '../../lib/logging';
+import { BaseApiHandler, ApiHandlerOptions } from './base-api-handler.js';
+import { MiddlewareChain, MiddlewareFunction } from './middleware.js';
+import { getLogger } from '../../lib/logging/logging-service.js';
 
 /**
- * Base route handler for Next.js App Router
+ * Base route handler for Express
  * This class provides a foundation for creating API route handlers
  */
 export abstract class BaseRouteHandler extends BaseApiHandler {
   protected middlewareChain: MiddlewareChain;
   protected logger: ReturnType<typeof getLogger>;
   protected routeName: string;
+  protected router: Router;
 
   constructor(routeName: string) {
     super();
     this.routeName = routeName;
     this.logger = getLogger(`Route:${routeName}`);
     this.middlewareChain = new MiddlewareChain();
+    this.router = Router();
+    this.setupRoutes();
+  }
+
+  /**
+   * Setup Express routes
+   */
+  protected setupRoutes(): void {
+    // GET route
+    this.router.get('*', async (req: Request, res: Response) => {
+      await this.handleMethod('GET', req, res);
+    });
+
+    // POST route
+    this.router.post('*', async (req: Request, res: Response) => {
+      await this.handleMethod('POST', req, res);
+    });
+
+    // PUT route
+    this.router.put('*', async (req: Request, res: Response) => {
+      await this.handleMethod('PUT', req, res);
+    });
+
+    // PATCH route
+    this.router.patch('*', async (req: Request, res: Response) => {
+      await this.handleMethod('PATCH', req, res);
+    });
+
+    // DELETE route
+    this.router.delete('*', async (req: Request, res: Response) => {
+      await this.handleMethod('DELETE', req, res);
+    });
+
+    // OPTIONS route
+    this.router.options('*', async (req: Request, res: Response) => {
+      await this.handleMethod('OPTIONS', req, res);
+    });
+  }
+
+  /**
+   * Get the Express router
+   */
+  public getRouter(): Router {
+    return this.router;
   }
 
   /**
@@ -32,42 +77,15 @@ export abstract class BaseRouteHandler extends BaseApiHandler {
    * Handle the request with middleware chain
    */
   public async handleRequest(
-    request: NextRequest,
-    options: ApiHandlerOptions = {}
-  ): Promise<NextResponse> {
-    return this.middlewareChain.execute(request, async (context: Record<string, unknown>) => {
+    req: Request,
+    res: Response,
+    options: ApiHandlerOptions = {},
+  ): Promise<void> {
+    await this.middlewareChain.execute(req, res, async (context: Record<string, unknown>) => {
       // Add context to the request for use in executeHandler
-      const requestWithContext = request as NextRequest & { context?: Record<string, unknown> };
-      requestWithContext.context = context;
-      return this.handle(request, options);
+      (req as Request & { context?: Record<string, unknown> }).context = context;
+      await this.handle(req, res, options);
     });
-  }
-
-  /**
-   * Create route handlers for Next.js App Router
-   */
-  public createRouteHandlers() {
-    // Removido o aliasing de 'this' para 'self'
-    return {
-      GET: async (request: NextRequest) => {
-        return this.handleMethod('GET', request);
-      },
-      POST: async (request: NextRequest) => {
-        return this.handleMethod('POST', request);
-      },
-      PUT: async (request: NextRequest) => {
-        return this.handleMethod('PUT', request);
-      },
-      PATCH: async (request: NextRequest) => {
-        return this.handleMethod('PATCH', request);
-      },
-      DELETE: async (request: NextRequest) => {
-        return this.handleMethod('DELETE', request);
-      },
-      OPTIONS: async (request: NextRequest) => {
-        return this.handleMethod('OPTIONS', request);
-      },
-    };
   }
 
   /**
@@ -75,27 +93,26 @@ export abstract class BaseRouteHandler extends BaseApiHandler {
    */
   protected async handleMethod(
     method: string,
-    request: NextRequest
-  ): Promise<NextResponse> {
+    req: Request,
+    res: Response,
+  ): Promise<void> {
     // Check if method is implemented
     if (!this.isMethodImplemented(method)) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: 'METHOD_NOT_ALLOWED',
-            message: `Method ${method} not allowed`,
-          },
+      res.status(405).json({
+        success: false,
+        error: {
+          code: 'METHOD_NOT_ALLOWED',
+          message: `Method ${method} not allowed`,
         },
-        { status: 405 }
-      );
+      });
+      return;
     }
 
     // Get validation schemas for this method
     const options = this.getValidationOptions(method);
     
     // Handle the request
-    return this.handleRequest(request, options);
+    await this.handleRequest(req, res, options);
   }
 
   /**
@@ -136,7 +153,8 @@ export abstract class BaseRouteHandler extends BaseApiHandler {
     // Add authentication requirement
     const authRequiredMethod = `is${method}AuthRequired`;
     if (typeof ((this as unknown) as Record<string, unknown>)[authRequiredMethod] === 'function') {
-      options.requireAuth = ((this as unknown) as Record<string, () => boolean>)[authRequiredMethod]!();
+      const authRequiredFn = ((this as unknown) as Record<string, () => boolean>)[authRequiredMethod];
+      options.requireAuth = authRequiredFn ? authRequiredFn() : true;
     } else {
       // Default to requiring authentication
       options.requireAuth = true;
@@ -149,18 +167,18 @@ export abstract class BaseRouteHandler extends BaseApiHandler {
    * Implementation of the abstract executeHandler method
    */
   protected async executeHandler(
-    request: NextRequest,
+    req: Request,
     context: {
       body?: unknown;
       query?: unknown;
       requestId: string;
-    }
+    },
   ): Promise<unknown> {
-    const method = request.method;
+    const method = req.method;
     const methodName = `handle${method}`;
     // Substituir 'any' por 'unknown' e checar se é função
     if (typeof ((this as unknown) as Record<string, unknown>)[methodName] === 'function') {
-      return ((this as unknown) as Record<string, (req: NextRequest, ctx: typeof context) => unknown>)[methodName](request, context);
+      return ((this as unknown) as Record<string, (req: Request, ctx: typeof context) => unknown>)[methodName](req, context);
     }
     
     throw new Error(`Method ${method} not implemented`);

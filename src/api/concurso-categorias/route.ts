@@ -1,8 +1,9 @@
 import express, { Request, Response } from 'express';
-import { supabase } from '../../config/supabase.js';
+import { supabase } from '../../config/supabase-unified.js';
 import { requestLogger } from '../../middleware/logger.js';
 import { rateLimit } from '../../middleware/rateLimit.js';
 import { requireAuth } from '../../middleware/auth.js';
+import { logger } from '../../lib/logger.js';
 
 const router = express.Router();
 
@@ -15,44 +16,43 @@ router.use(rateLimit);
 // ========================================
 
 router.get('/', async (req: Request, res: Response) => {
-    try {
-        const { ativo, slug } = req.query;
+  try {
+    const { ativo, slug } = req.query;
 
-        // Construir query base
-        let query = supabase.from('categorias_concursos').select('*');
+    // Construir query base
+    let query = supabase.from('categorias_concursos').select('*');
 
-        // Aplicar filtros
-        if (ativo !== undefined) {
-            query = query.eq('ativo', ativo === 'true');
-        }
-
-        if (slug) {
-            query = query.eq('slug', slug);
-        }
-
-        // Executar query
-        const { data: categorias, error } = await query.order('nome', { ascending: true });
-
-        if (error) {
-            console.error('Erro ao buscar categorias:', error);
-            res.status(500).json({
-                success: false,
-                error: 'Erro ao buscar categorias'
-            });
-            return;
-        }
-
-        res.json({
-            success: true,
-            data: categorias || []
-        });
-    } catch (error) {
-        console.error('Erro interno:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Erro interno do servidor'
-        });
+    // Aplicar filtros
+    if (ativo !== undefined) {
+      query = query.eq('ativo', ativo === 'true');
     }
+
+    if (slug) {
+      query = query.eq('slug', slug);
+    }
+
+    // Executar query
+    const { data: categorias, error } = await query.order('nome', { ascending: true });
+
+    if (error) {
+      logger.error('Erro ao buscar categorias de concurso:', { error: error.message, code: error.code, details: error.details });
+      return res.status(500).json({
+        success: false,
+        error: 'Erro ao buscar categorias de concurso',
+      });
+    }
+
+    res.json({
+      success: true,
+      data: categorias || [],
+    });
+  } catch (error) {
+    logger.error('Erro ao processar requisição GET /api/concurso-categorias:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro interno do servidor',
+    });
+  }
 });
 
 // ========================================
@@ -60,77 +60,77 @@ router.get('/', async (req: Request, res: Response) => {
 // ========================================
 
 router.post('/', requireAuth, async (req: Request, res: Response) => {
-    try {
-        const { nome, slug, descricao, cor_primaria, cor_secundaria } = req.body;
+  try {
+    const { nome, slug, descricao, cor_primaria, cor_secundaria } = req.body;
 
-        // Validar dados obrigatórios
-        if (!nome || !slug) {
-            res.status(400).json({
-                success: false,
-                error: 'Nome e slug são obrigatórios'
-            });
-            return;
-        }
-
-        // Verificar se o slug já existe
-        const { data: existingCategoria, error: existingError } = await supabase
-            .from('categorias_concursos')
-            .select('id')
-            .eq('slug', slug)
-            .single();
-
-        if (existingError && existingError.code !== 'PGRST116') {
-            console.error('Erro ao verificar slug existente:', existingError);
-            res.status(500).json({
-                success: false,
-                error: 'Erro ao verificar slug existente'
-            });
-            return;
-        }
-
-        if (existingCategoria) {
-            res.status(409).json({
-                success: false,
-                error: 'Slug já existe'
-            });
-            return;
-        }
-
-        // Criar categoria
-        const { data: categoria, error } = await supabase
-            .from('categorias_concursos')
-            .insert({
-                nome,
-                slug,
-                descricao,
-                cor_primaria: cor_primaria || '#2563EB',
-                cor_secundaria: cor_secundaria || '#1E40AF',
-                ativo: true
-            })
-            .select()
-            .single();
-
-        if (error) {
-            console.error('Erro ao criar categoria:', error);
-            res.status(500).json({
-                success: false,
-                error: 'Erro ao criar categoria'
-            });
-            return;
-        }
-
-        res.status(201).json({
-            success: true,
-            message: 'Categoria criada com sucesso',
-            data: categoria
-        });
-    } catch (error) {
-        console.error('Erro interno:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Erro interno do servidor'
-        });
+    // Validar dados obrigatórios
+    if (!nome || !slug) {
+      res.status(400).json({
+        success: false,
+        error: 'Nome e slug são obrigatórios',
+      });
+      return;
     }
+
+    // Verificar se o slug já existe
+    const { data: existingCategoria, error: existingError } = await supabase
+      .from('categorias_concursos')
+      .select('id')
+      .eq('slug', slug)
+      .single();
+
+    if (existingError && existingError.code !== 'PGRST116') {
+      logger.error('Erro ao verificar slug existente:', { error: existingError.message, code: existingError.code, details: existingError.details });
+      res.status(500).json({
+        success: false,
+        error: 'Erro ao verificar slug existente',
+      });
+      return;
+    }
+
+    if (existingCategoria) {
+      res.status(409).json({
+        success: false,
+        error: 'Slug já existe',
+      });
+      return;
+    }
+
+    // Criar categoria
+    const { data: categoria, error } = await supabase
+      .from('categorias_concursos')
+      .insert({
+        nome,
+        slug,
+        descricao,
+        cor_primaria: cor_primaria || '#2563EB',
+        cor_secundaria: cor_secundaria || '#1E40AF',
+        ativo: true,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      logger.error('Erro ao criar categoria de concurso:', { error: error.message, code: error.code, details: error.details });
+      res.status(500).json({
+        success: false,
+        error: 'Erro ao criar categoria de concurso',
+      });
+      return;
+    }
+
+    res.status(201).json({
+      success: true,
+      message: 'Categoria criada com sucesso',
+      data: categoria,
+    });
+  } catch (error) {
+    logger.error('Erro ao processar requisição POST /api/concurso-categorias:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro interno do servidor',
+    });
+  }
 });
 
 // ========================================
@@ -138,88 +138,88 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
 // ========================================
 
 router.put('/:id', requireAuth, async (req: Request, res: Response) => {
-    try {
-        const { id } = req.params;
-        const { nome, slug, descricao, cor_primaria, cor_secundaria, ativo } = req.body;
+  try {
+    const { id } = req.params;
+    const { nome, slug, descricao, cor_primaria, cor_secundaria, ativo } = req.body;
 
-        // Verificar se a categoria existe
-        const { data: existingCategoria, error: existingError } = await supabase
-            .from('categorias_concursos')
-            .select('*')
-            .eq('id', id)
-            .single();
+    // Verificar se a categoria existe
+    const { data: existingCategoria, error: existingError } = await supabase
+      .from('categorias_concursos')
+      .select('*')
+      .eq('id', id)
+      .single();
 
-        if (existingError || !existingCategoria) {
-            res.status(404).json({
-                success: false,
-                error: 'Categoria não encontrada'
-            });
-            return;
-        }
-
-        // Se o slug foi alterado, verificar se já existe
-        if (slug && slug !== existingCategoria.slug) {
-            const { data: slugExists, error: slugError } = await supabase
-                .from('categorias_concursos')
-                .select('id')
-                .eq('slug', slug)
-                .single();
-
-            if (slugError && slugError.code !== 'PGRST116') {
-                console.error('Erro ao verificar slug existente:', slugError);
-                res.status(500).json({
-                    success: false,
-                    error: 'Erro ao verificar slug existente'
-                });
-                return;
-            }
-
-            if (slugExists) {
-                res.status(409).json({
-                    success: false,
-                    error: 'Slug já existe'
-                });
-                return;
-            }
-        }
-
-        // Atualizar categoria
-        const { data: categoria, error } = await supabase
-            .from('categorias_concursos')
-            .update({
-                nome,
-                slug,
-                descricao,
-                cor_primaria,
-                cor_secundaria,
-                ativo,
-                atualizado_em: new Date().toISOString()
-            })
-            .eq('id', id)
-            .select()
-            .single();
-
-        if (error) {
-            console.error('Erro ao atualizar categoria:', error);
-            res.status(500).json({
-                success: false,
-                error: 'Erro ao atualizar categoria'
-            });
-            return;
-        }
-
-        res.json({
-            success: true,
-            message: 'Categoria atualizada com sucesso',
-            data: categoria
-        });
-    } catch (error) {
-        console.error('Erro interno:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Erro interno do servidor'
-        });
+    if (existingError || !existingCategoria) {
+      res.status(404).json({
+        success: false,
+        error: 'Categoria não encontrada',
+      });
+      return;
     }
+
+    // Se o slug foi alterado, verificar se já existe
+    if (slug && slug !== existingCategoria.slug) {
+      const { data: slugExists, error: slugError } = await supabase
+        .from('categorias_concursos')
+        .select('id')
+        .eq('slug', slug)
+        .single();
+
+      if (slugError && slugError.code !== 'PGRST116') {
+        logger.error('Erro ao verificar slug existente:', { error: slugError.message, code: slugError.code, details: slugError.details });
+        res.status(500).json({
+          success: false,
+          error: 'Erro ao verificar slug existente',
+        });
+        return;
+      }
+
+      if (slugExists) {
+        res.status(409).json({
+          success: false,
+          error: 'Slug já existe',
+        });
+        return;
+      }
+    }
+
+    // Atualizar categoria
+    const { data: categoria, error } = await supabase
+      .from('categorias_concursos')
+      .update({
+        nome,
+        slug,
+        descricao,
+        cor_primaria,
+        cor_secundaria,
+        ativo,
+        atualizado_em: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      logger.error('Erro ao atualizar categoria de concurso:', { error: error.message, code: error.code, details: error.details });
+      res.status(500).json({
+        success: false,
+        error: 'Erro ao atualizar categoria de concurso',
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      message: 'Categoria atualizada com sucesso',
+      data: categoria,
+    });
+  } catch (error) {
+    logger.error('Erro ao processar requisição PUT /api/concurso-categorias/:id:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro interno do servidor',
+    });
+  }
 });
 
 // ========================================
@@ -227,53 +227,53 @@ router.put('/:id', requireAuth, async (req: Request, res: Response) => {
 // ========================================
 
 router.delete('/:id', requireAuth, async (req: Request, res: Response) => {
-    try {
-        const { id } = req.params;
+  try {
+    const { id } = req.params;
 
-        // Verificar se a categoria existe
-        const { data: existingCategoria, error: existingError } = await supabase
-            .from('categorias_concursos')
-            .select('id')
-            .eq('id', id)
-            .single();
+    // Verificar se a categoria existe
+    const { data: existingCategoria, error: existingError } = await supabase
+      .from('categorias_concursos')
+      .select('id')
+      .eq('id', id)
+      .single();
 
-        if (existingError || !existingCategoria) {
-            res.status(404).json({
-                success: false,
-                error: 'Categoria não encontrada'
-            });
-            return;
-        }
-
-        // Deletar categoria
-        const { error } = await supabase
-            .from('categorias_concursos')
-            .delete()
-            .eq('id', id);
-
-        if (error) {
-            console.error('Erro ao deletar categoria:', error);
-            res.status(500).json({
-                success: false,
-                error: 'Erro ao deletar categoria'
-            });
-            return;
-        }
-
-        res.json({
-            success: true,
-            message: 'Categoria deletada com sucesso'
-        });
-    } catch (error) {
-        console.error('Erro interno:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Erro interno do servidor'
-        });
+    if (existingError || !existingCategoria) {
+      res.status(404).json({
+        success: false,
+        error: 'Categoria não encontrada',
+      });
+      return;
     }
+
+    // Deletar categoria
+    const { error } = await supabase
+      .from('categorias_concursos')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      logger.error('Erro ao deletar categoria:', { error: error.message, code: error.code, details: error.details });
+      res.status(500).json({
+        success: false,
+        error: 'Erro ao deletar categoria',
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      message: 'Categoria deletada com sucesso',
+    });
+  } catch (error) {
+    logger.error('Erro interno:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro interno do servidor',
+    });
+  }
 });
 
-export default router;
+// Registrar rotas
+// TODO: Adicionar rotas específicas para cada arquivo
 
-
-
+export { router };

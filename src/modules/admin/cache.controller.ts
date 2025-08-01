@@ -24,7 +24,7 @@ export class CacheController {
       res.json({
         success: true,
         data: stats,
-        message: 'Estatísticas de cache obtidas com sucesso'
+        message: 'Estatísticas de cache obtidas com sucesso',
       });
     } catch (error) {
       await this.logService.erro('Erro ao obter estatísticas de cache', error as Error);
@@ -32,7 +32,7 @@ export class CacheController {
       res.status(500).json({
         success: false,
         error: 'Erro ao obter estatísticas de cache',
-        message: (error as Error).message
+        message: (error as Error).message,
       });
     }
   }
@@ -46,7 +46,7 @@ export class CacheController {
       
       res.json({
         success: true,
-        message: 'Cache limpo com sucesso'
+        message: 'Cache limpo com sucesso',
       });
     } catch (error) {
       await this.logService.erro('Erro ao limpar cache', error as Error);
@@ -54,7 +54,7 @@ export class CacheController {
       res.status(500).json({
         success: false,
         error: 'Erro ao limpar cache',
-        message: (error as Error).message
+        message: (error as Error).message,
       });
     }
   }
@@ -70,7 +70,7 @@ export class CacheController {
         res.status(400).json({
           success: false,
           error: 'Padrão de cache é obrigatório',
-          message: 'Informe um padrão para limpar o cache'
+          message: 'Informe um padrão para limpar o cache',
         });
         return;
       }
@@ -79,7 +79,7 @@ export class CacheController {
       
       res.json({
         success: true,
-        message: `Cache com padrão "${pattern}" limpo com sucesso`
+        message: `Cache com padrão "${pattern}" limpo com sucesso`,
       });
     } catch (error) {
       await this.logService.erro('Erro ao limpar cache por padrão', error as Error);
@@ -87,7 +87,7 @@ export class CacheController {
       res.status(500).json({
         success: false,
         error: 'Erro ao limpar cache por padrão',
-        message: (error as Error).message
+        message: (error as Error).message,
       });
     }
   }
@@ -103,7 +103,7 @@ export class CacheController {
         res.status(400).json({
           success: false,
           error: 'Tipo e ID são obrigatórios',
-          message: 'Informe o tipo e ID da entidade para invalidar o cache'
+          message: 'Informe o tipo e ID da entidade para invalidar o cache',
         });
         return;
       }
@@ -113,19 +113,19 @@ export class CacheController {
         res.status(400).json({
           success: false,
           error: 'Tipo de entidade inválido',
-          message: `Tipo deve ser um dos seguintes: ${Object.values(CacheDependencyType).join(', ')}`
+          message: `Tipo deve ser um dos seguintes: ${Object.values(CacheDependencyType).join(', ')}`,
         });
         return;
       }
       
       await this.cacheManager.invalidate({
         type: type as CacheDependencyType,
-        id
+        id,
       });
       
       res.json({
         success: true,
-        message: `Cache para ${type} com ID ${id} invalidado com sucesso`
+        message: `Cache para ${type} com ID ${id} invalidado com sucesso`,
       });
     } catch (error) {
       await this.logService.erro('Erro ao invalidar cache por entidade', error as Error);
@@ -133,7 +133,7 @@ export class CacheController {
       res.status(500).json({
         success: false,
         error: 'Erro ao invalidar cache por entidade',
-        message: (error as Error).message
+        message: (error as Error).message,
       });
     }
   }
@@ -149,14 +149,14 @@ export class CacheController {
         maxKeys: parseInt(process.env.CACHE_MAX_KEYS || '1000', 10),
         redis: {
           url: process.env.REDIS_URL ? 'Configurado' : 'Não configurado',
-          keyPrefix: process.env.REDIS_KEY_PREFIX || 'aprovafacil:'
-        }
+          keyPrefix: process.env.REDIS_KEY_PREFIX || 'aprovafacil:',
+        },
       };
       
       res.json({
         success: true,
         data: config,
-        message: 'Configuração de cache obtida com sucesso'
+        message: 'Configuração de cache obtida com sucesso',
       });
     } catch (error) {
       await this.logService.erro('Erro ao obter configuração de cache', error as Error);
@@ -164,7 +164,7 @@ export class CacheController {
       res.status(500).json({
         success: false,
         error: 'Erro ao obter configuração de cache',
-        message: (error as Error).message
+        message: (error as Error).message,
       });
     }
   }
@@ -181,7 +181,7 @@ export class CacheController {
       res.status(501).json({
         success: false,
         error: 'Método não implementado',
-        message: 'Esta funcionalidade ainda não está disponível'
+        message: 'Esta funcionalidade ainda não está disponível',
       });
     } catch (error) {
       await this.logService.erro('Erro ao obter chaves de cache', error as Error);
@@ -189,7 +189,7 @@ export class CacheController {
       res.status(500).json({
         success: false,
         error: 'Erro ao obter chaves de cache',
-        message: (error as Error).message
+        message: (error as Error).message,
       });
     }
   }

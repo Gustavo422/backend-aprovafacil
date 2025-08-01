@@ -9,8 +9,8 @@ export const ErrorSchema: OpenAPIV3.SchemaObject = {
       type: 'object',
       properties: {
         code: { type: 'string', example: 'ERROR_CODE' },
-        message: { type: 'string', example: 'Mensagem de erro' }
-      }
-    }
-  }
+        message: { type: 'string', example: 'Mensagem de erro' },
+      },
+    },
+  },
 }; 

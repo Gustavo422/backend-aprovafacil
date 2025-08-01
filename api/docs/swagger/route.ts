@@ -1,27 +1,20 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { Request, Response } from 'express';
 import { serveSwaggerUI } from '../../../src/core/documentation/swagger-ui';
 
-export async function GET(request: NextRequest) {
+export const GET = async (req: Request, res: Response) => {
   try {
     const response = serveSwaggerUI();
     const html = await response.text();
-    
-    return new NextResponse(html, {
-      headers: {
-        'Content-Type': 'text/html; charset=utf-8',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
-      }
-    });
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    return res.send(html);
   } catch (error) {
     console.error('Erro ao servir Swagger UI:', error);
-    return NextResponse.json(
-      { error: 'Erro interno do servidor' },
-      { status: 500 }
-    );
+    return res.status(500).json({ error: 'Erro interno do servidor' });
   }
-} 
+}; 
 
 
 

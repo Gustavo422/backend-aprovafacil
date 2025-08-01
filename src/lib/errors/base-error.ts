@@ -53,7 +53,7 @@ export class BaseError extends Error {
       retryable?: boolean;
       details?: Record<string, unknown>;
       cause?: Error;
-    } = {}
+    } = {},
   ) {
     super(message);
     
@@ -95,8 +95,8 @@ export class BaseError extends Error {
       cause: this.cause ? {
         name: this.cause.name,
         message: this.cause.message,
-        stack: this.cause.stack
-      } : undefined
+        stack: this.cause.stack,
+      } : undefined,
     };
   }
   

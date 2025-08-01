@@ -1,8 +1,7 @@
-import { NextRequest } from 'next/server';
+import { Request } from 'express';
 import { z } from 'zod';
-import { BaseRouteHandler } from './base-route-handler';
-import { ResponseFormatter } from './response-formatter';
-import { URL } from 'url';
+import { BaseRouteHandler } from './base-route-handler.js';
+import { ResponseFormatter } from './response-formatter.js';
 
 /**
  * Base CRUD route handler for resource-based API routes
@@ -74,16 +73,15 @@ export abstract class CrudRouteHandler<
    * Handle GET requests
    */
   protected async handleGET(
-    request: NextRequest,
+    req: Request,
     context: {
       query?: unknown;
       requestId: string;
-    }
+    },
   ): Promise<unknown> {
     try {
       // Check if this is a single resource request
-      const url = new URL(request.url);
-      const pathParts = url.pathname.split('/');
+      const pathParts = req.path.split('/');
       const lastPart = pathParts[pathParts.length - 1];
       
       // If the last part is not the resource name, it's likely an ID
@@ -96,7 +94,7 @@ export abstract class CrudRouteHandler<
     } catch (error) {
       this.logger.error('Error handling GET request', { 
         requestId: context.requestId, 
-        error: error instanceof Error ? error.message : String(error) 
+        error: error instanceof Error ? error.message : String(error), 
       });
       
       return ResponseFormatter.error('Error processing request', {
@@ -110,18 +108,18 @@ export abstract class CrudRouteHandler<
    * Handle POST requests
    */
   protected async handlePOST(
-    request: NextRequest,
+    req: Request,
     context: {
       body?: unknown;
       requestId: string;
-    }
+    },
   ): Promise<unknown> {
     try {
       return this.handleCreate(context.body as T, context);
     } catch (error) {
       this.logger.error('Error handling POST request', { 
         requestId: context.requestId, 
-        error: error instanceof Error ? error.message : String(error) 
+        error: error instanceof Error ? error.message : String(error), 
       });
       
       return ResponseFormatter.error('Error processing request', {
@@ -135,16 +133,15 @@ export abstract class CrudRouteHandler<
    * Handle PUT requests
    */
   protected async handlePUT(
-    request: NextRequest,
+    req: Request,
     context: {
       body?: unknown;
       requestId: string;
-    }
+    },
   ): Promise<unknown> {
     try {
       // Get ID from URL
-      const url = new URL(request.url);
-      const pathParts = url.pathname.split('/');
+      const pathParts = req.path.split('/');
       const id = pathParts[pathParts.length - 1];
       
       if (!id || id === this.routeName.toLowerCase()) {
@@ -158,7 +155,7 @@ export abstract class CrudRouteHandler<
     } catch (error) {
       this.logger.error('Error handling PUT request', { 
         requestId: context.requestId, 
-        error: error instanceof Error ? error.message : String(error) 
+        error: error instanceof Error ? error.message : String(error), 
       });
       
       return ResponseFormatter.error('Error processing request', {
@@ -172,16 +169,15 @@ export abstract class CrudRouteHandler<
    * Handle PATCH requests
    */
   protected async handlePATCH(
-    request: NextRequest,
+    req: Request,
     context: {
       body?: unknown;
       requestId: string;
-    }
+    },
   ): Promise<unknown> {
     try {
       // Get ID from URL
-      const url = new URL(request.url);
-      const pathParts = url.pathname.split('/');
+      const pathParts = req.path.split('/');
       const id = pathParts[pathParts.length - 1];
       
       if (!id || id === this.routeName.toLowerCase()) {
@@ -195,7 +191,7 @@ export abstract class CrudRouteHandler<
     } catch (error) {
       this.logger.error('Error handling PATCH request', { 
         requestId: context.requestId, 
-        error: error instanceof Error ? error.message : String(error) 
+        error: error instanceof Error ? error.message : String(error), 
       });
       
       return ResponseFormatter.error('Error processing request', {
@@ -209,15 +205,14 @@ export abstract class CrudRouteHandler<
    * Handle DELETE requests
    */
   protected async handleDELETE(
-    request: NextRequest,
+    req: Request,
     context: {
       requestId: string;
-    }
+    },
   ): Promise<unknown> {
     try {
       // Get ID from URL
-      const url = new URL(request.url);
-      const pathParts = url.pathname.split('/');
+      const pathParts = req.path.split('/');
       const id = pathParts[pathParts.length - 1];
       
       if (!id || id === this.routeName.toLowerCase()) {
@@ -231,7 +226,7 @@ export abstract class CrudRouteHandler<
     } catch (error) {
       this.logger.error('Error handling DELETE request', { 
         requestId: context.requestId, 
-        error: error instanceof Error ? error.message : String(error) 
+        error: error instanceof Error ? error.message : String(error), 
       });
       
       return ResponseFormatter.error('Error processing request', {

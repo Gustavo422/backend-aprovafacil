@@ -13,9 +13,16 @@ export class RedisCacheService implements ICacheService {
     password?: string;
     username?: string;
   };
+  private readonly redisDisabled: boolean;
 
   constructor(logService: ILogService) {
     this.logService = logService;
+    this.redisDisabled = process.env.REDIS_DISABLED === 'true';
+    
+    if (this.redisDisabled) {
+      this.logService.info('Redis desabilitado via variável de ambiente REDIS_DISABLED');
+      return;
+    }
     
     // Get Redis connection details from environment variables
     this.connectionOptions = {
@@ -36,6 +43,8 @@ export class RedisCacheService implements ICacheService {
   }
   
   private async connect(): Promise<void> {
+    if (this.redisDisabled) return;
+    
     try {
       await this.client.connect();
     } catch (error) {
@@ -63,6 +72,10 @@ export class RedisCacheService implements ICacheService {
   }
 
   async obter<T>(chave: string): Promise<T | null> {
+    if (this.redisDisabled) {
+      return null;
+    }
+    
     try {
       if (!this.isConnected) {
         await this.logService.aviso('Tentativa de obter cache sem conexão Redis');
@@ -85,7 +98,11 @@ export class RedisCacheService implements ICacheService {
     }
   }
 
-  async definir<T>(chave: string, valor: T, ttlMinutos?: number): Promise<void> {
+  async definir<T>(chave: string, valor: T, ttlSegundos?: number): Promise<void> {
+    if (this.redisDisabled) {
+      return;
+    }
+    
     try {
       if (!this.isConnected) {
         await this.logService.aviso('Tentativa de definir cache sem conexão Redis');
@@ -93,23 +110,26 @@ export class RedisCacheService implements ICacheService {
       }
       
       const fullKey = this.getFullKey(chave);
-      const ttl = ttlMinutos || this.defaultTTL;
-      const ttlSeconds = ttl * 60;
+      const ttl = ttlSegundos || (this.defaultTTL * 60);
       
       await this.client.setEx(
         fullKey,
-        ttlSeconds,
-        JSON.stringify(valor)
+        ttl,
+        JSON.stringify(valor),
       );
       
       await this.logService.logarOperacaoCache('SET', chave, true);
     } catch (error) {
-      await this.logService.erro('Erro ao definir cache no Redis', error as Error, { chave, ttl: ttlMinutos });
+      await this.logService.erro('Erro ao definir cache no Redis', error as Error, { chave, ttl: ttlSegundos });
       throw error;
     }
   }
 
   async remover(chave: string): Promise<void> {
+    if (this.redisDisabled) {
+      return;
+    }
+    
     try {
       if (!this.isConnected) {
         await this.logService.aviso('Tentativa de remover cache sem conexão Redis');
@@ -126,65 +146,54 @@ export class RedisCacheService implements ICacheService {
     }
   }
 
-  async limpar(padrao?: string): Promise<void> {
+  async limparPorPrefixo(prefixo: string): Promise<void> {
+    if (this.redisDisabled) {
+      return;
+    }
+    
     try {
       if (!this.isConnected) {
         await this.logService.aviso('Tentativa de limpar cache sem conexão Redis');
         return;
       }
       
-      if (padrao) {
-        // Use Redis SCAN to find keys matching the pattern
-        const pattern = this.getFullKey(`*${padrao}*`);
-        let cursor = 0;
-        let keys: string[] = [];
-        
-        do {
-          const reply = await this.client.scan(cursor.toString(), {
-            MATCH: pattern,
-            COUNT: 100
-          });
-          
-          cursor = parseInt(reply.cursor);
-          keys = keys.concat(reply.keys);
-        } while (cursor !== 0);
-        
-        if (keys.length > 0) {
-          await this.client.del(keys);
-        }
-        
-        await this.logService.info(`Cache Redis limpo com padrão: ${padrao}`, { 
-          chaves_removidas: keys.length 
+      const pattern = this.getFullKey(`${prefixo}*`);
+      let cursor = '0';
+      
+      do {
+        const reply = await this.client.scan(cursor, {
+          MATCH: pattern,
+          COUNT: 100,
         });
-      } else {
-        // Clear all keys with our prefix
-        const pattern = this.getFullKey('*');
-        let cursor = 0;
-        let keys: string[] = [];
         
-        do {
-          const reply = await this.client.scan(cursor.toString(), {
-            MATCH: pattern,
-            COUNT: 100
-          });
-          
-          cursor = parseInt(reply.cursor);
-          keys = keys.concat(reply.keys);
-        } while (cursor !== 0);
-        
-        if (keys.length > 0) {
-          await this.client.del(keys);
+        cursor = reply.cursor;
+        if (reply.keys.length > 0) {
+          await this.client.del(reply.keys);
         }
-        
-        await this.logService.info(`Todo o cache Redis foi limpo: ${keys.length} chaves removidas`);
-      }
+      } while (cursor !== '0');
+      
+      await this.logService.info(`Cache Redis limpo com prefixo: ${prefixo}`);
+
     } catch (error) {
-      await this.logService.erro('Erro ao limpar cache do Redis', error as Error, { padrao });
+      await this.logService.erro('Erro ao limpar cache do Redis por prefixo', error as Error, { prefixo });
       throw error;
     }
   }
 
+  async limpar(padrao?: string): Promise<void> {
+    if (this.redisDisabled) {
+      return;
+    }
+    
+    const prefixo = padrao || '*';
+    return this.limparPorPrefixo(prefixo);
+  }
+
   async existe(chave: string): Promise<boolean> {
+    if (this.redisDisabled) {
+      return false;
+    }
+    
     try {
       if (!this.isConnected) {
         await this.logService.aviso('Tentativa de verificar existência no cache sem conexão Redis');
@@ -209,6 +218,17 @@ export class RedisCacheService implements ICacheService {
     tempo_atividade_segundos: number;
     versao: string;
   }> {
+    if (this.redisDisabled) {
+      return {
+        status: 'desconectado',
+        total_chaves: 0,
+        memoria_usada_mb: 0,
+        conexoes_ativas: 0,
+        tempo_atividade_segundos: 0,
+        versao: 'desconhecida',
+      };
+    }
+    
     try {
       if (!this.isConnected) {
         return {
@@ -217,7 +237,7 @@ export class RedisCacheService implements ICacheService {
           memoria_usada_mb: 0,
           conexoes_ativas: 0,
           tempo_atividade_segundos: 0,
-          versao: 'desconhecida'
+          versao: 'desconhecida',
         };
       }
       
@@ -251,7 +271,7 @@ export class RedisCacheService implements ICacheService {
       do {
         const reply = await this.client.scan(cursor.toString(), {
           MATCH: pattern,
-          COUNT: 100
+          COUNT: 100,
         });
         
         cursor = parseInt(reply.cursor);
@@ -264,7 +284,7 @@ export class RedisCacheService implements ICacheService {
         memoria_usada_mb: parseInt(parsedInfo['used_memory'] || '0') / (1024 * 1024),
         conexoes_ativas: parseInt(parsedInfo['connected_clients'] || '0'),
         tempo_atividade_segundos: parseInt(parsedInfo['uptime_in_seconds'] || '0'),
-        versao: parsedInfo['redis_version'] || 'desconhecida'
+        versao: parsedInfo['redis_version'] || 'desconhecida',
       };
     } catch (error) {
       await this.logService.erro('Erro ao obter estatísticas do Redis', error as Error);
@@ -274,7 +294,7 @@ export class RedisCacheService implements ICacheService {
         memoria_usada_mb: 0,
         conexoes_ativas: 0,
         tempo_atividade_segundos: 0,
-        versao: 'desconhecida'
+        versao: 'desconhecida',
       };
     }
   }
@@ -283,47 +303,6 @@ export class RedisCacheService implements ICacheService {
     // Redis automatically removes expired keys, so this method is not needed
     // but we implement it to satisfy the interface
     return 0;
-  }
-  
-  // Helper methods for specific cache types
-  async obterProgressoUsuario(usuarioId: string): Promise<unknown> {
-    return this.obter(`progresso_usuario_${usuarioId}`);
-  }
-
-  async definirProgressoUsuario(usuarioId: string, progresso: unknown): Promise<void> {
-    await this.definir(`progresso_usuario_${usuarioId}`, progresso);
-  }
-
-  async obterResultadoSimulado(usuarioId: string, simuladoId: string): Promise<unknown> {
-    return this.obter(`resultado_simulado_${usuarioId}_${simuladoId}`);
-  }
-
-  async definirResultadoSimulado(usuarioId: string, simuladoId: string, resultado: unknown): Promise<void> {
-    await this.definir(`resultado_simulado_${usuarioId}_${simuladoId}`, resultado);
-  }
-
-  async obterQuestoesSemana(ano: number, semana: number): Promise<unknown> {
-    return this.obter(`questoes_semana_${ano}_${semana}`);
-  }
-
-  async definirQuestoesSemana(ano: number, semana: number, questoes: unknown): Promise<void> {
-    await this.definir(`questoes_semana_${ano}_${semana}`, questoes);
-  }
-
-  async obterConteudoApostila(apostilaId: string): Promise<unknown> {
-    return this.obter(`conteudo_apostila_${apostilaId}`);
-  }
-
-  async definirConteudoApostila(apostilaId: string, conteudo: unknown): Promise<void> {
-    await this.definir(`conteudo_apostila_${apostilaId}`, conteudo);
-  }
-
-  async obterPlanoEstudo(usuarioId: string): Promise<unknown> {
-    return this.obter(`plano_estudo_${usuarioId}`);
-  }
-
-  async definirPlanoEstudo(usuarioId: string, plano: unknown): Promise<void> {
-    await this.definir(`plano_estudo_${usuarioId}`, plano);
   }
 }
 

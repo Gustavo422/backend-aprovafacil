@@ -1,39 +1,40 @@
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '../config/supabase-unified.js';
 import fs from 'fs';
 import path from 'path';
 import { URL } from 'url';
+import { getLogger } from '../lib/logging/logging-service.js';
 
 // Load environment variables
 import 'dotenv/config';
+
+const logger = getLogger('run-users-migration');
 
 const supabaseUrl = process.env['NEXT_PUBLIC_SUPABASE_URL'];
 const supabaseServiceKey = process.env['SUPABASE_SERVICE_ROLE_KEY'];
 
 if (!supabaseUrl || !supabaseServiceKey) {
-  console.error('❌ Missing required environment variables:');
-  console.error('   - NEXT_PUBLIC_SUPABASE_URL');
-  console.error('   - SUPABASE_SERVICE_ROLE_KEY');
-  process.exit(1);
+  logger.error('Variáveis de ambiente obrigatórias não encontradas', {
+    missing: ['NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'],
+  });
+  throw new Error('Variáveis de ambiente obrigatórias não encontradas');
 }
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 async function runMigration(): Promise<void> {
   try {
-    console.log('🚀 Starting usuarios table migration...');
+    logger.info('🚀 Starting usuarios table migration...');
 
     // Read the migration SQL file
     const migrationPath = path.join(path.dirname(new URL(import.meta.url).pathname), '../migrations/users.sql');
     const migrationSQL = fs.readFileSync(migrationPath, 'utf8');
 
-    console.log('📄 Executing migration SQL...');
+    logger.info('📄 Executing migration SQL...');
 
     // Execute the migration
     const { error } = await supabase.rpc('exec_sql', { sql: migrationSQL });
 
     if (error) {
       // If exec_sql doesn't exist, try direct query
-      console.log('⚠️  exec_sql not available, trying direct query...');
+      logger.warn('⚠️  exec_sql not available, trying direct query...');
 
       // Split the SQL into individual statements
       const statements = migrationSQL
@@ -43,36 +44,39 @@ async function runMigration(): Promise<void> {
 
       for (const statement of statements) {
         if (statement.trim()) {
-          console.log(`Executing: ${statement.substring(0, 50)}...`);
+          logger.info(`Executing: ${statement.substring(0, 50)}...`);
           const { error: stmtError } = await supabase.rpc('exec_sql', { sql: statement + ';' });
 
           if (stmtError) {
-            console.log(`⚠️  Statement failed (this might be expected): ${stmtError.message}`);
+            logger.warn(`⚠️  Statement failed (this might be expected): ${stmtError.message}`);
           }
         }
       }
     }
 
-    console.log('✅ Migration concluido successfully!');
-    console.log('');
-    console.log('📋 Added columns to usuarios table:');
-    console.log('   - total_questoes_respondidas (INTEGER)');
-    console.log('   - total_resposta_corretas (INTEGER)');
-    console.log('   - tempo_estudo_minutos (INTEGER)');
-    console.log('   - pontuacao_media (DECIMAL(5,2))');
-    console.log('   - atualizado_em (TIMESTAMP)');
-    console.log('');
-    console.log('🔧 Added triggers and indexes for performance');
+    logger.info('✅ Migration concluido successfully!');
+    logger.info('📋 Added columns to usuarios table', {
+      columns: [
+        'total_questoes_respondidas (INTEGER)',
+        'total_resposta_corretas (INTEGER)',
+        'tempo_estudo_minutos (INTEGER)',
+        'pontuacao_media (DECIMAL(5,2))',
+        'atualizado_em (TIMESTAMP)',
+      ],
+    });
+    logger.info('🔧 Added triggers and indexes for performance');
   } catch (error) {
-    console.error('❌ Migration failed:', error instanceof Error ? error.message : 'Unknown error');
-    process.exit(1);
+    logger.error('Migration failed', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+    throw new Error('Falha na migração');
   }
 }
 
 // Alternative approach using direct SQL execution
 async function runMigrationAlternative(): Promise<void> {
   try {
-    console.log('🚀 Starting usuarios table migration (alternative method)...');
+    logger.info('🚀 Starting usuarios table migration (alternative method)...');
 
     // Add columns one by one
     const alterStatements = [
@@ -84,32 +88,32 @@ async function runMigrationAlternative(): Promise<void> {
     ];
 
     for (const statement of alterStatements) {
-      console.log(`Executing: ${statement}`);
+      logger.info(`Executing: ${statement}`);
       const { error } = await supabase.rpc('exec_sql', { sql: statement });
 
       if (error) {
-        console.log(`⚠️  Statement failed (this might be expected): ${error.message}`);
+        logger.warn(`⚠️  Statement failed (this might be expected): ${error.message}`);
       } else {
-        console.log('✅ Statement executed successfully');
+        logger.info('✅ Statement executed successfully');
       }
     }
 
-    console.log('✅ Migration concluido successfully!');
+    logger.info('✅ Migration concluido successfully!');
   } catch (error) {
-    console.error('❌ Migration failed:', error instanceof Error ? error.message : 'Unknown error');
-    process.exit(1);
+    logger.error('Migration failed', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+    throw new Error('Falha na migração alternativa');
   }
 }
 
 // Run the migration if this file is executed directly
 if (require.main === module) {
   runMigration().catch(() => {
-    console.log('🔄 Trying alternative migration method...');
+    logger.info('🔄 Trying alternative migration method...');
     return runMigrationAlternative();
   });
 }
 
 export { runMigration, runMigrationAlternative }; 
-
-
 

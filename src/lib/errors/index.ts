@@ -10,7 +10,7 @@ export {
   PermissionError,
   RateLimitError,
   TimeoutError,
-  ValidationError
+  ValidationError,
 } from './error-types';
 
 // Error utilities

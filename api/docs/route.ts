@@ -1,26 +1,15 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { Request, Response } from 'express';
 import { generateOpenAPISpec } from '../../src/core/documentation/openapi';
 
-export async function GET(request: NextRequest) {
+export const GET = async (req: Request, res: Response) => {
   try {
     const spec = generateOpenAPISpec();
-    
-    return NextResponse.json(spec, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
-      }
-    });
+    return res.json(spec);
   } catch (error) {
     console.error('Erro ao gerar documentação OpenAPI:', error);
-    return NextResponse.json(
-      { error: 'Erro interno do servidor' },
-      { status: 500 }
-    );
+    return res.status(500).json({ error: 'Erro interno do servidor' });
   }
-} 
+}; 
 
 
 

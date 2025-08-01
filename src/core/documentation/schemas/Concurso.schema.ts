@@ -10,8 +10,8 @@ export const ConcursoSchema: OpenAPIV3.SchemaObject = {
     dataFim: { type: 'string', format: 'date', example: '2024-12-31' },
     ativo: { type: 'boolean', example: true },
     createdAt: { type: 'string', format: 'date-time', example: '2024-01-01T00:00:00Z' },
-    updatedAt: { type: 'string', format: 'date-time', example: '2024-01-01T00:00:00Z' }
-  }
+    updatedAt: { type: 'string', format: 'date-time', example: '2024-01-01T00:00:00Z' },
+  },
 };
 
 export const ConcursoInputSchema: OpenAPIV3.SchemaObject = {
@@ -22,6 +22,6 @@ export const ConcursoInputSchema: OpenAPIV3.SchemaObject = {
     description: { type: 'string', maxLength: 1000, example: 'Descrição do concurso' },
     dataInicio: { type: 'string', format: 'date', example: '2024-01-01' },
     dataFim: { type: 'string', format: 'date', example: '2024-12-31' },
-    ativo: { type: 'boolean', example: true }
-  }
+    ativo: { type: 'boolean', example: true },
+  },
 }; 

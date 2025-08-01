@@ -7,18 +7,18 @@ export const openApiSpec = {
     version: '1.0.0',
     contact: {
       nome: 'AprovaFacil Team',
-      email: 'contato@aprovafacil.com'
-    }
+      email: 'contato@aprovafacil.com',
+    },
   },
   servers: [
     {
       url: 'http://localhost:5000/api',
-      descricao: 'Servidor de desenvolvimento'
+      descricao: 'Servidor de desenvolvimento',
     },
     {
       url: 'https://api.aprovafacil.com',
-      descricao: 'Servidor de produção'
-    }
+      descricao: 'Servidor de produção',
+    },
   ],
   paths: {
     '/auth/login': {
@@ -37,26 +37,26 @@ export const openApiSpec = {
                   email: {
                     type: 'string',
                     format: 'email',
-                    descricao: 'Email do usuário'
+                    descricao: 'Email do usuário',
                   },
                   senha: {
                     type: 'string',
                     minLength: 6,
-                    descricao: 'Senha do usuário'
-                  }
-                }
+                    descricao: 'Senha do usuário',
+                  },
+                },
               },
               examples: {
                 login: {
                   summary: 'Exemplo de login',
                   value: {
                     email: 'usuario@exemplo.com',
-                    senha: 'senha123'
-                  }
-                }
-              }
-            }
-          }
+                    senha: 'senha123',
+                  },
+                },
+              },
+            },
+          },
         },
         responses: {
           '200': {
@@ -72,33 +72,33 @@ export const openApiSpec = {
                       properties: {
                         id: { type: 'string', example: 'user-123' },
                         email: { type: 'string', example: 'usuario@exemplo.com' },
-                        nome: { type: 'string', example: 'João Silva' }
-                      }
+                        nome: { type: 'string', example: 'João Silva' },
+                      },
                     },
-                    message: { type: 'string', example: 'Login realizado com sucesso' }
-                  }
-                }
-              }
-            }
+                    message: { type: 'string', example: 'Login realizado com sucesso' },
+                  },
+                },
+              },
+            },
           },
           '400': {
             descricao: 'Dados inválidos',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
           },
           '401': {
             descricao: 'Credenciais inválidas',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
-      }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
     },
     '/auth/register': {
       post: {
@@ -116,19 +116,19 @@ export const openApiSpec = {
                   email: {
                     type: 'string',
                     format: 'email',
-                    descricao: 'Email do usuário'
+                    descricao: 'Email do usuário',
                   },
                   senha: {
                     type: 'string',
                     minLength: 6,
-                    descricao: 'Senha do usuário'
+                    descricao: 'Senha do usuário',
                   },
                   nome: {
                     type: 'string',
                     minLength: 2,
-                    descricao: 'Nome completo do usuário'
-                  }
-                }
+                    descricao: 'Nome completo do usuário',
+                  },
+                },
               },
               examples: {
                 register: {
@@ -136,12 +136,12 @@ export const openApiSpec = {
                   value: {
                     email: 'novo@exemplo.com',
                     senha: 'senha123',
-                    nome: 'Maria Silva'
-                  }
-                }
-              }
-            }
-          }
+                    nome: 'Maria Silva',
+                  },
+                },
+              },
+            },
+          },
         },
         responses: {
           '201': {
@@ -157,24 +157,24 @@ export const openApiSpec = {
                       type: 'object',
                       properties: {
                         id: { type: 'string', example: 'user-456' },
-                        email: { type: 'string', example: 'novo@exemplo.com' }
-                      }
-                    }
-                  }
-                }
-              }
-            }
+                        email: { type: 'string', example: 'novo@exemplo.com' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
           },
           '400': {
             descricao: 'Dados inválidos',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
-      }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
     },
     '/apostilas': {
       get: {
@@ -187,14 +187,14 @@ export const openApiSpec = {
             nome: 'concurso',
             in: 'query',
             descricao: 'Filtrar por concurso',
-            schema: { type: 'string' }
+            schema: { type: 'string' },
           },
           {
             nome: 'disciplina',
             in: 'query',
             descricao: 'Filtrar por disciplina',
-            schema: { type: 'string' }
-          }
+            schema: { type: 'string' },
+          },
         ],
         responses: {
           '200': {
@@ -216,34 +216,34 @@ export const openApiSpec = {
                           concurso: { type: 'string', example: 'OAB' },
                           disciplina: { type: 'string', example: 'Direito Constitucional' },
                           tamanho: { type: 'string', example: '2.5 MB' },
-                          dataCriacao: { type: 'string', format: 'date-time' }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
+                          dataCriacao: { type: 'string', format: 'date-time' },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
           },
           '401': {
             descricao: 'Não autorizado',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
-      }
-    }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
+    },
   },
   components: {
     securitySchemes: {
       bearerAuth: {
         type: 'http',
         scheme: 'bearer',
-        bearerFormat: 'JWT'
-      }
+        bearerFormat: 'JWT',
+      },
     },
     schemas: {
       Error: {
@@ -251,21 +251,21 @@ export const openApiSpec = {
         properties: {
           success: { type: 'boolean', example: false },
           error: { type: 'string', example: 'Mensagem de erro' },
-          message: { type: 'string', example: 'Descrição detalhada do erro' }
-        }
-      }
-    }
+          message: { type: 'string', example: 'Descrição detalhada do erro' },
+        },
+      },
+    },
   },
   tags: [
     {
       nome: 'Autenticação',
-      descricao: 'Endpoints relacionados à autenticação de usuários'
+      descricao: 'Endpoints relacionados à autenticação de usuários',
     },
     {
       nome: 'Apostilas',
-      descricao: 'Endpoints relacionados ao gerenciamento de apostilas'
-    }
-  ]
+      descricao: 'Endpoints relacionados ao gerenciamento de apostilas',
+    },
+  ],
 };
 
 export function generateOpenAPISpec(): object {

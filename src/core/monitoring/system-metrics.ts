@@ -49,18 +49,18 @@ export async function getSystemMetrics(): Promise<SystemMetrics> {
     cpu: {
       usage: cpuUsage,
       cores: cpuCores,
-      loadAverage
+      loadAverage,
     },
     memory: {
       total: totalMem,
       used: usedMem,
       free: freeMem,
-      usage: memoryUsage
+      usage: memoryUsage,
     },
     uptime: os.uptime(),
     platform: os.platform(),
     nodeVersion: process.version,
-    warnings
+    warnings,
   };
 } 
 

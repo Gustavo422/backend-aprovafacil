@@ -1,38 +1,44 @@
-import { NextRequest } from 'next/server';
+import { Request, Response } from 'express';
 import { z } from 'zod';
-import { RequestContext } from './api-handler';
-import { ValidationSchemas } from './validation-utils';
-import { URL } from 'url';
+import { logger } from '../../lib/logger.js';
 
 /**
  * Example schema for a user
  */
 export const UserSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
-  email: ValidationSchemas.email(),
+  email: z.string().email('Invalid email format'),
   role: z.enum(['user', 'admin', 'editor']),
-  active: ValidationSchemas.boolean().default(true),
+  active: z.boolean().default(true),
 });
 
 /**
  * Example schema for user query parameters
  */
 const UserQuerySchema = z.object({
-  ...ValidationSchemas.pagination().shape,
-  active: ValidationSchemas.boolean().optional(),
+  page: z.string().optional().transform(val => val ? parseInt(val, 10) : 1),
+  limit: z.string().optional().transform(val => val ? parseInt(val, 10) : 10),
+  active: z.string().optional().transform(val => val === 'true'),
   role: z.enum(['user', 'admin', 'editor']).optional(),
   search: z.string().optional(),
 });
 
 /**
- * Example route handler for users
+ * GET /api/users - Retrieve users
  */
-export const usersRouteHandler = {
-  /**
-   * GET handler for retrieving users
-   */
-  async GET(request: NextRequest, context: RequestContext) {
-    const { query, logger } = context;
+export const getUsersHandler = async (req: Request, res: Response) => {
+  try {
+    // Validate query parameters
+    const validationResult = UserQuerySchema.safeParse(req.query);
+    if (!validationResult.success) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid query parameters',
+        details: validationResult.error.format(),
+      });
+    }
+
+    const query = validationResult.data;
     
     logger.info('Retrieving users', { query });
     
@@ -46,49 +52,67 @@ export const usersRouteHandler = {
     // Apply filters if provided
     let filteredUsers = users;
     
-    if (query) {
-      const typedQuery = query as z.infer<typeof UserQuerySchema>;
-      
-      if (typedQuery.active !== undefined) {
-        filteredUsers = filteredUsers.filter(user => user.active === typedQuery.active);
-      }
-      
-      if (typedQuery.role) {
-        filteredUsers = filteredUsers.filter(user => user.role === typedQuery.role);
-      }
-      
-      if (typedQuery.search) {
-        const searchLower = typedQuery.search.toLowerCase();
-        filteredUsers = filteredUsers.filter(user => 
-          user.name.toLowerCase().includes(searchLower) || 
-          user.email.toLowerCase().includes(searchLower)
-        );
-      }
+    if (query.active !== undefined) {
+      filteredUsers = filteredUsers.filter(user => user.active === query.active);
+    }
+    
+    if (query.role) {
+      filteredUsers = filteredUsers.filter(user => user.role === query.role);
+    }
+    
+    if (query.search) {
+      const searchLower = query.search.toLowerCase();
+      filteredUsers = filteredUsers.filter(user => 
+        user.name.toLowerCase().includes(searchLower) || 
+        user.email.toLowerCase().includes(searchLower),
+      );
     }
     
     // Return paginated response
-    return {
-      items: filteredUsers,
-      pagination: {
-        page: query ? (query as Record<string, unknown>).page || 1 : 1,
-        limit: query ? (query as Record<string, unknown>).limit || 10 : 10,
-        total: filteredUsers.length,
-        totalPages: Math.ceil(filteredUsers.length / Number((query as Record<string, unknown>).limit || 10)),
+    return res.json({
+      success: true,
+      data: {
+        items: filteredUsers,
+        pagination: {
+          page: query.page || 1,
+          limit: query.limit || 10,
+          total: filteredUsers.length,
+          totalPages: Math.ceil(filteredUsers.length / (query.limit || 10)),
+        },
       },
-    };
-  },
-  
-  /**
-   * POST handler for creating a user
-   */
-  async POST(request: NextRequest, context: RequestContext) {
-    const { body, logger } = context;
+    });
+  } catch (error) {
+    logger.error('Error retrieving users', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+
+    return res.status(500).json({
+      success: false,
+      error: 'Error retrieving users',
+    });
+  }
+};
+
+/**
+ * POST /api/users - Create a user
+ */
+export const createUserHandler = async (req: Request, res: Response) => {
+  try {
+    // Validate request body
+    const validationResult = UserSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid request data',
+        details: validationResult.error.format(),
+      });
+    }
+
+    const userData = validationResult.data;
     
     logger.info('Creating user');
     
     // Example implementation
-    const userData = body as z.infer<typeof UserSchema>;
-    
     // In a real implementation, you would save the user to the database
     const newUser = {
       id: `user_${Date.now()}`,
@@ -99,83 +123,101 @@ export const usersRouteHandler = {
       createdAt: new Date().toISOString(),
     };
     
-    return {
-      user: newUser,
-      message: 'User created successfully',
-    };
-  },
-  
-  /**
-   * PUT handler for updating a user
-   */
-  async PUT(request: NextRequest, context: RequestContext) {
-    const { body, logger } = context;
+    return res.status(201).json({
+      success: true,
+      data: {
+        user: newUser,
+        message: 'User created successfully',
+      },
+    });
+  } catch (error) {
+    logger.error('Error creating user', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+
+    return res.status(500).json({
+      success: false,
+      error: 'Error creating user',
+    });
+  }
+};
+
+/**
+ * PUT /api/users/:id - Update a user
+ */
+export const updateUserHandler = async (req: Request, res: Response) => {
+  try {
+    const { id: usuarioId } = req.params;
+
+    // Validate request body
+    const validationResult = UserSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid request data',
+        details: validationResult.error.format(),
+      });
+    }
+
+    const userData = validationResult.data;
     
-    // Get user ID from URL
-    const url = new URL(request.url);
-    const pathParts = url.pathname.split('/');
-    const userId = pathParts[pathParts.length - 1];
-    
-    logger.info('Updating user', { userId });
+    logger.info('Updating user', { usuarioId });
     
     // Example implementation
-    const userData = body as z.infer<typeof UserSchema>;
-    
     // In a real implementation, you would update the user in the database
     const updatedUser = {
-      id: userId,
+      id: usuarioId,
       ...userData,
       updatedAt: new Date().toISOString(),
     };
     
-    return {
-      user: updatedUser,
-      message: 'User updated successfully',
-    };
-  },
-  
-  /**
-   * DELETE handler for deleting a user
-   */
-  async DELETE(request: NextRequest, context: RequestContext) {
-    const { logger } = context;
+    return res.json({
+      success: true,
+      data: {
+        user: updatedUser,
+        message: 'User updated successfully',
+      },
+    });
+  } catch (error) {
+    logger.error('Error updating user', {
+      usuarioId: req.params.id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+
+    return res.status(500).json({
+      success: false,
+      error: 'Error updating user',
+    });
+  }
+};
+
+/**
+ * DELETE /api/users/:id - Delete a user
+ */
+export const deleteUserHandler = async (req: Request, res: Response) => {
+  try {
+    const { id: usuarioId } = req.params;
     
-    // Get user ID from URL
-    const url = new URL(request.url);
-    const pathParts = url.pathname.split('/');
-    const userId = pathParts[pathParts.length - 1];
-    
-    logger.info('Deleting user', { userId });
+    logger.info('Deleting user', { usuarioId });
     
     // In a real implementation, you would delete the user from the database
     
-    return {
-      deleted: true,
-      message: 'User deleted successfully',
-    };
-  },
-};
+    return res.json({
+      success: true,
+      data: {
+        deleted: true,
+        message: 'User deleted successfully',
+      },
+    });
+  } catch (error) {
+    logger.error('Error deleting user', {
+      usuarioId: req.params.id,
+      error: error instanceof Error ? error.message : String(error),
+    });
 
-/**
- * Create the API handler for users
- */
-export const usersHandler = {
-  validateQuery: UserQuerySchema,
-  validateBody: undefined,
-  requireAuth: true,
-  allowedRoles: ['admin'],
-  rateLimit: {
-    requests: 100,
-    windowMs: 60000, // 1 minute
-  },
-  timeout: 5000, // 5 seconds
-  routeHandler: usersRouteHandler,
+    return res.status(500).json({
+      success: false,
+      error: 'Error deleting user',
+    });
+  }
 };
-
-/**
- * Export the handler for Next.js App Router
- */
-export const GET = usersHandler;
-export const POST = usersHandler;
-export const PUT = usersHandler;
-export const DELETE = usersHandler;

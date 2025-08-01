@@ -11,11 +11,11 @@ export const ApostilaSchema = z.object({
   ativo: z.boolean().default(true),
   ordem: z.number().int().min(0).optional(),
   tags: z.array(z.string()).optional(),
-  metadata: z.record(z.unknown()).optional()
+  metadata: z.record(z.unknown()).optional(),
 });
 
 export const UpdateApostilaSchema = ApostilaSchema.partial().extend({
-  id: z.string().uuid('ID deve ser um UUID válido')
+  id: z.string().uuid('ID deve ser um UUID válido'),
 });
 
 export const ApostilaFiltersSchema = z.object({
@@ -26,11 +26,11 @@ export const ApostilaFiltersSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
   orderBy: z.enum(['titulo', 'criado_em', 'atualizado_em']).default('criado_em'),
-  order: z.enum(['asc', 'desc']).default('desc')
+  order: z.enum(['asc', 'desc']).default('desc'),
 });
 
 export const ApostilaIdSchema = z.object({
-  id: z.string().uuid('ID deve ser um UUID válido')
+  id: z.string().uuid('ID deve ser um UUID válido'),
 });
 
 export const ApostilaContentSchema = z.object({
@@ -39,21 +39,21 @@ export const ApostilaContentSchema = z.object({
   tipo: z.enum(['texto', 'html', 'markdown']).default('texto'),
   ordem: z.number().int().min(0).default(0),
   ativo: z.boolean().default(true),
-  metadata: z.record(z.unknown()).optional()
+  metadata: z.record(z.unknown()).optional(),
 });
 
 export const UpdateApostilaContentSchema = ApostilaContentSchema.partial().extend({
-  id: z.string().uuid('ID deve ser um UUID válido')
+  id: z.string().uuid('ID deve ser um UUID válido'),
 });
 
 export const ApostilaContentIdSchema = z.object({
-  id: z.string().uuid('ID deve ser um UUID válido')
+  id: z.string().uuid('ID deve ser um UUID válido'),
 });
 
 // Middleware de validação genérico
 const createValidationMiddleware = <T extends z.ZodTypeAny>(
   schema: T,
-  field: 'body' | 'query' | 'params' = 'body'
+  field: 'body' | 'query' | 'params' = 'body',
 ) => {
   return (req: Request, res: Response, next: NextFunction): void => {
     try {
@@ -64,20 +64,20 @@ const createValidationMiddleware = <T extends z.ZodTypeAny>(
       if (!result.success) {
         const errors = result.error.errors.map(err => ({
           field: err.path.join('.'),
-          message: err.message
+          message: err.message,
         }));
         
-        logger.warn('Validação falhou', undefined, {
+        logger.warn('Validação falhou', {
           errors,
           url: req.originalUrl,
           method: req.method,
-          ip: req.ip
+          ip: req.ip,
         });
         
         res.status(400).json({
           error: 'Dados inválidos',
           details: errors,
-          code: 'VALIDATION_ERROR'
+          code: 'VALIDATION_ERROR',
         });
         return;
       }
@@ -93,15 +93,15 @@ const createValidationMiddleware = <T extends z.ZodTypeAny>(
       
       next();
     } catch (error) {
-      logger.error('Erro na validação', undefined, {
+      logger.error('Erro na validação', {
         error: error instanceof Error ? error.message : 'Erro desconhecido',
         url: req.originalUrl,
-        method: req.method
+        method: req.method,
       });
       
       res.status(500).json({
         error: 'Erro interno do servidor',
-        code: 'VALIDATION_ERROR'
+        code: 'VALIDATION_ERROR',
       });
     }
   };
@@ -147,7 +147,7 @@ export default {
   ApostilaIdSchema,
   ApostilaContentSchema,
   UpdateApostilaContentSchema,
-  ApostilaContentIdSchema
+  ApostilaContentIdSchema,
 }; 
 
 

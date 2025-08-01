@@ -3,7 +3,7 @@ import { ICacheService, ILogService } from '../interfaces/index.js';
 import { CacheFactory, CacheProvider } from './cache-factory.js';
 import { 
   CacheInvalidationStrategy, 
-  CacheDependency
+  CacheDependency,
 } from './cache-invalidation.strategy.js';
 import { SupabaseClient } from '@supabase/supabase-js';
 
@@ -27,7 +27,7 @@ export class CacheManager {
   private constructor(
     cacheProvider: CacheProvider,
     logService: ILogService,
-    supabase?: SupabaseClient
+    supabase?: SupabaseClient,
   ) {
     this.logService = logService;
     this.cacheService = CacheFactory.createCacheService(cacheProvider, logService, supabase);
@@ -48,7 +48,7 @@ export class CacheManager {
   public static getInstance(
     cacheProvider: CacheProvider = CacheProvider.MEMORY,
     logService: ILogService,
-    supabase?: SupabaseClient
+    supabase?: SupabaseClient,
   ): CacheManager {
     if (!CacheManager.instance) {
       CacheManager.instance = new CacheManager(cacheProvider, logService, supabase);
@@ -122,10 +122,10 @@ export class CacheManager {
   
   /**
    * Invalidate all cache entries related to a user
-   * @param userId The user ID
+   * @param usuarioId The user ID
    */
-  async invalidateUserCache(userId: string): Promise<void> {
-    await this.invalidationStrategy.invalidateUserCache(userId);
+  async invalidateUserCache(usuarioId: string): Promise<void> {
+    await this.invalidationStrategy.invalidateUserCache(usuarioId);
   }
   
   /**
@@ -162,7 +162,7 @@ export class CacheManager {
   async getOrSet<T>(
     key: string, 
     factory: () => Promise<T>, 
-    options?: CacheOptions
+    options?: CacheOptions,
   ): Promise<T> {
     // Try to get from cache first
     const cachedValue = await this.get<T>(key);

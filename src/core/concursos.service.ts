@@ -1,4 +1,4 @@
-import { supabase } from '../config/supabase.js';
+import { supabase } from '../config/supabase-unified.js';
 
 interface ListarParams {
   page?: number;
@@ -79,8 +79,8 @@ export class ConcursosService {
         page,
         limit,
         total: totalCount,
-        totalPages
-      }
+        totalPages,
+      },
     };
   }
 
@@ -128,6 +128,42 @@ export class ConcursosService {
       throw error;
     }
     return concurso;
+  }
+
+  static async atualizar(id: string, concursoData: Partial<ConcursoData>) {
+    const { data: concurso, error } = await supabase
+      .from('concursos')
+      .update(concursoData)
+      .eq('id', id)
+      .select(`
+        *,
+        categorias_concursos (
+          id,
+          nome,
+          slug,
+          descricao,
+          cor_primaria,
+          cor_secundaria
+        )
+      `)
+      .single();
+
+    if (error) {
+      throw error;
+    }
+    return concurso;
+  }
+
+  static async excluir(id: string) {
+    const { error } = await supabase
+      .from('concursos')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      throw error;
+    }
+    return true;
   }
 } 
 

@@ -79,7 +79,7 @@ export function calculateExponentialBackoff(attempt: number, options: RetryOptio
  */
 export async function executeWithRetry<T>(
   fn: () => Promise<T>,
-  options: RetryOptions
+  options: RetryOptions,
 ): Promise<T> {
   // Definir função de cálculo de delay
   const calculateDelay = options.calculateDelay || calculateExponentialBackoff;

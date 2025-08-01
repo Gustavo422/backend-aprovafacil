@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { SupabaseClient } from '@supabase/supabase-js';
 import { EnhancedLogger, getEnhancedLogger } from '../lib/logging/enhanced-logging-service.js';
 import { LoginSecurityService } from '../security/login-security.service.js';
 import bcrypt from 'bcrypt';
@@ -30,7 +30,7 @@ interface AuthResult {
 
 interface UserSession {
   id: string;
-  userId: string;
+  usuarioId: string;
   tokenHash: string;
   deviceInfo?: Record<string, unknown>;
   ipAddress?: string;
@@ -42,7 +42,7 @@ interface UserSession {
 }
 
 export class EnhancedAuthService {
-  private supabase: ReturnType<typeof createClient>;
+  private supabase: SupabaseClient;
   private logger: EnhancedLogger;
   private securityService: LoginSecurityService;
   private jwtSecret: string;
@@ -50,12 +50,12 @@ export class EnhancedAuthService {
   private refreshTokenExpiry: number;
 
   constructor(
-    supabaseClient: ReturnType<typeof createClient>,
+    supabaseClient: SupabaseClient,
     options: {
       jwtSecret: string;
       accessTokenExpiry?: number; // em segundos
       refreshTokenExpiry?: number; // em segundos
-    }
+    },
   ) {
     this.supabase = supabaseClient;
     this.logger = getEnhancedLogger('enhanced-auth');
@@ -79,7 +79,7 @@ export class EnhancedAuthService {
         operationId,
         email: this.sanitizeEmail(credentials.email),
         ipAddress: credentials.ipAddress,
-        deviceName: credentials.deviceName
+        deviceName: credentials.deviceName,
       });
 
       // 1. Validação básica
@@ -91,7 +91,7 @@ export class EnhancedAuthService {
           false,
           validationError,
           credentials.userAgent,
-          credentials.deviceFingerprint
+          credentials.deviceFingerprint,
         );
         return { success: false, error: validationError, errorCode: 'VALIDATION_ERROR' };
       }
@@ -100,7 +100,7 @@ export class EnhancedAuthService {
       const securityCheck = await this.securityService.checkLoginSecurity(
         credentials.email,
         credentials.ipAddress,
-        credentials.userAgent
+        credentials.userAgent,
       );
 
       if (!securityCheck.allowed) {
@@ -110,13 +110,13 @@ export class EnhancedAuthService {
           false,
           securityCheck.reason,
           credentials.userAgent,
-          credentials.deviceFingerprint
+          credentials.deviceFingerprint,
         );
 
         return {
           success: false,
           error: securityCheck.reason || 'Acesso bloqueado por segurança',
-          errorCode: 'SECURITY_BLOCK'
+          errorCode: 'SECURITY_BLOCK',
         };
       }
 
@@ -134,13 +134,13 @@ export class EnhancedAuthService {
           false,
           'Usuário não encontrado',
           credentials.userAgent,
-          credentials.deviceFingerprint
+          credentials.deviceFingerprint,
         );
 
         return {
           success: false,
           error: 'Email ou senha incorretos',
-          errorCode: 'INVALID_CREDENTIALS'
+          errorCode: 'INVALID_CREDENTIALS',
         };
       }
 
@@ -152,13 +152,13 @@ export class EnhancedAuthService {
           false,
           'Conta desativada',
           credentials.userAgent,
-          credentials.deviceFingerprint
+          credentials.deviceFingerprint,
         );
 
         return {
           success: false,
           error: 'Conta desativada. Entre em contato com o suporte',
-          errorCode: 'ACCOUNT_DISABLED'
+          errorCode: 'ACCOUNT_DISABLED',
         };
       }
 
@@ -171,13 +171,13 @@ export class EnhancedAuthService {
           false,
           'Senha incorreta',
           credentials.userAgent,
-          credentials.deviceFingerprint
+          credentials.deviceFingerprint,
         );
 
         return {
           success: false,
           error: 'Email ou senha incorretos',
-          errorCode: 'INVALID_CREDENTIALS'
+          errorCode: 'INVALID_CREDENTIALS',
         };
       }
 
@@ -189,7 +189,7 @@ export class EnhancedAuthService {
         credentials.deviceName,
         credentials.ipAddress,
         credentials.userAgent,
-        credentials.rememberMe
+        credentials.rememberMe,
       );
 
       // 7. Criar sessão
@@ -199,10 +199,10 @@ export class EnhancedAuthService {
         {
           deviceFingerprint: credentials.deviceFingerprint,
           deviceName: credentials.deviceName,
-          platform: this.extractPlatform(credentials.userAgent)
+          platform: this.extractPlatform(credentials.userAgent),
         },
         credentials.ipAddress,
-        credentials.userAgent
+        credentials.userAgent,
       );
 
       // 8. Atualizar último login
@@ -218,7 +218,7 @@ export class EnhancedAuthService {
         true,
         undefined,
         credentials.userAgent,
-        credentials.deviceFingerprint
+        credentials.deviceFingerprint,
       );
 
       // 10. Log de auditoria
@@ -229,15 +229,15 @@ export class EnhancedAuthService {
         user.id,
         { ipAddress: credentials.ipAddress, deviceName: credentials.deviceName },
         credentials.ipAddress,
-        credentials.userAgent
+        credentials.userAgent,
       );
 
       const executionTime = performance.now() - startTime;
       this.logger.info('Login realizado com sucesso', {
         operationId,
-        userId: user.id,
+        usuarioId: user.id,
         executionTimeMs: executionTime.toFixed(2),
-        securityRisk: securityCheck.riskLevel
+        securityRisk: securityCheck.riskLevel,
       });
 
       // Remover dados sensíveis
@@ -255,7 +255,7 @@ export class EnhancedAuthService {
         user: userWithoutPassword,
         expiresIn: this.accessTokenExpiry,
         requiresPasswordChange: user.primeiro_login,
-        securityWarning
+        securityWarning,
       };
 
     } catch (error) {
@@ -263,13 +263,13 @@ export class EnhancedAuthService {
       this.logger.error('Erro durante login', {
         operationId,
         error: error.message,
-        executionTimeMs: executionTime.toFixed(2)
+        executionTimeMs: executionTime.toFixed(2),
       });
 
       return {
         success: false,
         error: 'Erro interno do servidor',
-        errorCode: 'INTERNAL_ERROR'
+        errorCode: 'INTERNAL_ERROR',
       };
     }
   }
@@ -294,7 +294,7 @@ export class EnhancedAuthService {
         return {
           success: false,
           error: 'Token de refresh inválido ou expirado',
-          errorCode: 'INVALID_REFRESH_TOKEN'
+          errorCode: 'INVALID_REFRESH_TOKEN',
         };
       }
 
@@ -302,14 +302,14 @@ export class EnhancedAuthService {
       const { data: user, error: userError } = await this.supabase
         .from('usuarios')
         .select('*')
-        .eq('id', refreshTokenData.user_id)
+        .eq('id', refreshTokenData.usuario_id) // CORRIGIDO
         .single();
 
       if (userError || !user || !user.ativo) {
         return {
           success: false,
           error: 'Usuário não encontrado ou inativo',
-          errorCode: 'USER_NOT_FOUND'
+          errorCode: 'USER_NOT_FOUND',
         };
       }
 
@@ -325,7 +325,7 @@ export class EnhancedAuthService {
       // Atualizar sessão
       await this.updateSessionActivity(user.id, ipAddress);
 
-      this.logger.info('Token refreshed com sucesso', { userId: user.id });
+      this.logger.info('Token refreshed com sucesso', { usuarioId: user.id });
 
       const userWithoutPassword = { ...user };
 
@@ -333,7 +333,7 @@ export class EnhancedAuthService {
         success: true,
         accessToken: newAccessToken,
         user: userWithoutPassword,
-        expiresIn: this.accessTokenExpiry
+        expiresIn: this.accessTokenExpiry,
       };
 
     } catch (error) {
@@ -341,7 +341,7 @@ export class EnhancedAuthService {
       return {
         success: false,
         error: 'Erro interno do servidor',
-        errorCode: 'INTERNAL_ERROR'
+        errorCode: 'INTERNAL_ERROR',
       };
     }
   }
@@ -349,7 +349,7 @@ export class EnhancedAuthService {
   /**
    * Logout de uma sessão específica
    */
-  async logout(token: string, userId: string): Promise<{ success: boolean; error?: string }> {
+  async logout(token: string, usuarioId: string): Promise<{ success: boolean; error?: string }> {
     try {
       const tokenHash = this.hashToken(token);
 
@@ -359,26 +359,26 @@ export class EnhancedAuthService {
         .update({
           revoked: true,
           revoked_at: new Date().toISOString(),
-          revoked_reason: 'User logout'
+          revoked_reason: 'User logout',
         })
-        .eq('user_id', userId);
+        .eq('usuario_id', usuarioId); // CORRIGIDO
 
       // Desativar sessão
       await this.supabase
-        .from('user_sessions')
-        .update({ active: false })
-        .eq('user_id', userId)
+        .from('sessoes_usuario') // Tabela correta
+        .update({ ativo: false })
+        .eq('usuario_id', usuarioId) // Coluna correta
         .eq('token_hash', tokenHash);
 
       // Log de auditoria
-      await this.logAuditEvent(userId, 'LOGOUT', 'auth', userId);
+      await this.logAuditEvent(usuarioId, 'LOGOUT', 'auth', usuarioId);
 
-      this.logger.info('Logout realizado', { userId });
+      this.logger.info('Logout realizado', { usuarioId });
 
       return { success: true };
 
     } catch (error) {
-      this.logger.error('Erro no logout', { error: error.message, userId });
+      this.logger.error('Erro no logout', { error: error.message, usuarioId });
       return { success: false, error: 'Erro interno' };
     }
   }
@@ -386,7 +386,7 @@ export class EnhancedAuthService {
   /**
    * Logout de todas as sessões do usuário
    */
-  async logoutAllSessions(userId: string): Promise<{ success: boolean; error?: string }> {
+  async logoutAllSessions(usuarioId: string): Promise<{ success: boolean; error?: string }> {
     try {
       // Revogar todos os refresh tokens
       await this.supabase
@@ -394,25 +394,25 @@ export class EnhancedAuthService {
         .update({
           revoked: true,
           revoked_at: new Date().toISOString(),
-          revoked_reason: 'Logout all sessions'
+          revoked_reason: 'Logout all sessions',
         })
-        .eq('user_id', userId);
+        .eq('usuario_id', usuarioId); // CORRIGIDO
 
       // Desativar todas as sessões
       await this.supabase
-        .from('user_sessions')
-        .update({ active: false })
-        .eq('user_id', userId);
+        .from('sessoes_usuario') // Tabela correta
+        .update({ ativo: false })
+        .eq('usuario_id', usuarioId); // Coluna correta
 
       // Log de auditoria
-      await this.logAuditEvent(userId, 'LOGOUT_ALL', 'auth', userId);
+      await this.logAuditEvent(usuarioId, 'LOGOUT_ALL', 'auth', usuarioId);
 
-      this.logger.info('Logout de todas as sessões', { userId });
+      this.logger.info('Logout de todas as sessões', { usuarioId });
 
       return { success: true };
 
     } catch (error) {
-      this.logger.error('Erro no logout geral', { error: error.message, userId });
+      this.logger.error('Erro no logout geral', { error: error.message, usuarioId });
       return { success: false, error: 'Erro interno' };
     }
   }
@@ -422,13 +422,13 @@ export class EnhancedAuthService {
    */
   async validateAccessToken(token: string): Promise<{ valid: boolean; user?: { id: string; email: string; role: string; nome?: string; ativo?: boolean; primeiro_login?: boolean; is_admin?: boolean; }; error?: string }> {
     try {
-      const decoded = jwt.verify(token, this.jwtSecret) as { userId: string };
+      const decoded = jwt.verify(token, this.jwtSecret) as { usuarioId: string }; // CORRIGIDO
       
       // Buscar usuário
       const { data: user, error } = await this.supabase
         .from('usuarios')
         .select('*')
-        .eq('id', decoded.userId)
+        .eq('id', decoded.usuarioId) // CORRIGIDO
         .single();
 
       if (error || !user || !user.ativo) {
@@ -442,7 +442,7 @@ export class EnhancedAuthService {
         nome: user.nome,
         ativo: user.ativo,
         primeiro_login: user.primeiro_login,
-        is_admin: user.is_admin
+        is_admin: user.is_admin,
       };
 
       return { valid: true, user: userWithoutPassword };
@@ -458,17 +458,17 @@ export class EnhancedAuthService {
   /**
    * Obter sessões ativas do usuário
    */
-  async getUserSessions(userId: string): Promise<UserSession[]> {
+  async getUserSessions(usuarioId: string): Promise<UserSession[]> {
     const { data, error } = await this.supabase
-      .from('user_sessions')
+      .from('sessoes_usuario') // Tabela correta
       .select('*')
-      .eq('user_id', userId)
-      .eq('active', true)
-      .gt('expires_at', new Date().toISOString())
-      .order('last_activity', { ascending: false });
+      .eq('usuario_id', usuarioId) // Coluna correta
+      .eq('ativo', true)
+      .gt('expira_em', new Date().toISOString())
+      .order('ultimo_acesso', { ascending: false });
 
     if (error) {
-      this.logger.error('Erro ao buscar sessões', { error: error.message, userId });
+      this.logger.error('Erro ao buscar sessões', { error: error.message, usuarioId });
       return [];
     }
 
@@ -478,15 +478,15 @@ export class EnhancedAuthService {
   /**
    * Revogar sessão específica
    */
-  async revokeSession(userId: string, sessionId: string): Promise<{ success: boolean }> {
+  async revokeSession(usuarioId: string, sessionId: string): Promise<{ success: boolean }> {
     try {
       await this.supabase
-        .from('user_sessions')
-        .update({ active: false })
-        .eq('user_id', userId)
+        .from('sessoes_usuario') // Tabela correta
+        .update({ ativo: false })
+        .eq('usuario_id', usuarioId) // Coluna correta
         .eq('id', sessionId);
 
-      await this.logAuditEvent(userId, 'REVOKE_SESSION', 'session', sessionId);
+      await this.logAuditEvent(usuarioId, 'REVOKE_SESSION', 'session', sessionId);
 
       return { success: true };
     } catch (error) {
@@ -515,23 +515,23 @@ export class EnhancedAuthService {
 
   private generateAccessToken(user: Record<string, unknown>): string {
     const payload = {
-      userId: user.id,
+      usuarioId: user.id, // CORRIGIDO
       email: user.email,
       role: user.role,
       iat: Math.floor(Date.now() / 1000),
-      exp: Math.floor(Date.now() / 1000) + this.accessTokenExpiry
+      exp: Math.floor(Date.now() / 1000) + this.accessTokenExpiry,
     };
 
     return jwt.sign(payload, this.jwtSecret);
   }
 
   private async generateRefreshToken(
-    userId: string,
+    usuarioId: string,
     deviceFingerprint?: string,
     deviceName?: string,
     ipAddress?: string,
     userAgent?: string,
-    rememberMe?: boolean
+    rememberMe?: boolean,
   ): Promise<string> {
     const tokenValue = crypto.randomBytes(32).toString('hex');
     const tokenHash = this.hashToken(tokenValue);
@@ -546,71 +546,71 @@ export class EnhancedAuthService {
     await this.supabase
       .from('refresh_tokens')
       .insert({
-        user_id: userId,
+        usuario_id: usuarioId, // CORRIGIDO
         token_hash: tokenHash,
         device_fingerprint: deviceFingerprint,
         device_name: deviceName,
         ip_address: ipAddress,
         user_agent: userAgent,
-        expires_at: expiresAt.toISOString()
+        expires_at: expiresAt.toISOString(),
       });
 
     return tokenValue;
   }
 
   private async createUserSession(
-    userId: string,
+    usuarioId: string,
     accessToken: string,
     deviceInfo: Record<string, unknown>,
     ipAddress?: string,
-    userAgent?: string
+    userAgent?: string,
   ): Promise<void> {
     const tokenHash = this.hashToken(accessToken);
     const expiresAt = new Date(Date.now() + (this.accessTokenExpiry * 1000));
 
     await this.supabase
-      .from('user_sessions')
+      .from('sessoes_usuario') // Tabela correta
       .insert({
-        user_id: userId,
+        usuario_id: usuarioId, // Coluna correta
         token_hash: tokenHash,
-        device_info: deviceInfo,
+        dispositivo: deviceInfo, // 'device_info' -> 'dispositivo'
         ip_address: ipAddress,
         user_agent: userAgent,
-        expires_at: expiresAt.toISOString()
+        expira_em: expiresAt.toISOString(), // 'expires_at' -> 'expira_em'
       });
   }
 
-  private async updateSessionActivity(userId: string, ipAddress?: string): Promise<void> {
+  private async updateSessionActivity(usuarioId: string, ipAddress?: string): Promise<void> {
     await this.supabase
-      .from('user_sessions')
+      .from('sessoes_usuario') // Tabela correta
       .update({
-        last_activity: new Date().toISOString(),
-        ip_address: ipAddress
+        ultimo_acesso: new Date().toISOString(), // 'last_activity' -> 'ultimo_acesso'
+        ip_address: ipAddress,
       })
-      .eq('user_id', userId)
-      .eq('active', true);
+      .eq('usuario_id', usuarioId) // Coluna correta
+      .eq('ativo', true);
   }
 
   private async logAuditEvent(
-    userId: string,
+    usuarioId: string,
     action: string,
     resource?: string,
     resourceId?: string,
     details?: Record<string, unknown>,
     ipAddress?: string,
-    userAgent?: string
+    userAgent?: string,
   ): Promise<void> {
     try {
       await this.supabase
         .from('audit_logs')
         .insert({
-          user_id: userId,
+          usuario_id: usuarioId, // CORRIGIDO
           action,
           resource,
           resource_id: resourceId,
           details,
           ip_address: ipAddress,
-          user_agent: userAgent
+          user_agent: userAgent,
         });
     } catch (error) {
       this.logger.error('Erro ao registrar log de auditoria', { error: error.message });
@@ -684,19 +684,19 @@ export class EnhancedAuthService {
       email,
       password: senha,
       ipAddress: 'unknown',
-      userAgent: 'compatibility-mode'
+      userAgent: 'compatibility-mode',
     });
 
     if (result.success) {
       return {
         success: true,
         user: result.user,
-        accessToken: result.accessToken
+        accessToken: result.accessToken,
       };
     } else {
       return {
         success: false,
-        error: result.error
+        error: result.error,
       };
     }
   }

@@ -1,52 +1,95 @@
-import express from 'express';
 import { Request, Response } from 'express';
-import { supabase } from '../../config/supabase.js';
-import { requestLogger } from '../../middleware/logger.js';
-import { rateLimit } from '../../middleware/rateLimit.js';
-import { requireAuth } from '../../middleware/auth.js';
+import { z } from 'zod';
+import { supabase } from '../../config/supabase-unified.js';
+import { logger } from '../../lib/logger.js';
+
+// Interface para request com usuário autenticado
+interface AuthenticatedRequest extends Request {
+  user?: {
+    id: string;
+    email: string;
+    role: string;
+    [key: string]: unknown;
+  };
+}
 import { getUserConcurso, checkConcursoAccess } from '../../utils/concurso-filter.js';
-import { 
-  validateApostilaFilters,
-  validateApostilaId,
-  validateCreateApostila,
-  validateUpdateApostila,
-  validateCreateApostilaContent,
-  validateUpdateApostilaContent,
-  validateApostilaContentId
-} from '../../validation/apostilas.validation.js';
-import { logger } from '../../utils/logger.js';
 
-const router = express.Router();
+// Validation schemas
+const createApostilaSchema = z.object({
+  titulo: z.string().min(1),
+  descricao: z.string().optional(),
+  categoria_id: z.string().uuid(),
+  concurso_id: z.string().uuid(),
+  ativo: z.boolean().default(true),
+  ordem: z.number().min(0).default(0),
+});
 
-// Aplicar middlewares globais
-router.use(requestLogger);
-router.use(rateLimit); // 100 requests por 15 minutos
+const updateApostilaSchema = z.object({
+  titulo: z.string().min(1).optional(),
+  descricao: z.string().optional(),
+  categoria_id: z.string().uuid().optional(),
+  ativo: z.boolean().optional(),
+  ordem: z.number().min(0).optional(),
+});
 
-// =====================================================
-// ROTAS PARA APOSTILAS
-// =====================================================
+const querySchema = z.object({
+  categoria_id: z.string().uuid().optional(),
+  ativo: z.string().optional().transform(val => val === 'true'),
+  search: z.string().optional(),
+  page: z.string().optional().transform(val => val ? parseInt(val, 10) : 1),
+  limit: z.string().optional().transform(val => val ? parseInt(val, 10) : 20),
+});
 
-// GET /api/apostilas - Listar apostilas com filtros e paginação
-router.get('/', validateApostilaFilters, requireAuth, async (req: Request, res: Response) => {
-  logger.info('Início da requisição GET /api/apostilas', 'backend', { query: req.query, user: req.user?.id });
+const createApostilaContentSchema = z.object({
+  titulo: z.string().min(1),
+  conteudo: z.string().min(1),
+  tipo: z.enum(['texto', 'video', 'pdf', 'link']),
+  ordem: z.number().min(0).default(0),
+  module_number: z.number().min(1).default(1),
+  ativo: z.boolean().default(true),
+});
+
+const updateApostilaContentSchema = z.object({
+  titulo: z.string().min(1).optional(),
+  conteudo: z.string().min(1).optional(),
+  tipo: z.enum(['texto', 'video', 'pdf', 'link']).optional(),
+  ordem: z.number().min(0).optional(),
+  module_number: z.number().min(1).optional(),
+  ativo: z.boolean().optional(),
+});
+
+/**
+ * GET /api/apostilas - Listar apostilas com filtros e paginação
+ */
+export const listApostilasHandler = async (req: AuthenticatedRequest, res: Response) => {
+  logger.info('Início da requisição GET /api/apostilas', { query: req.query, user: req.user?.id });
 
   try {
+    // Validate query parameters
+    const validationResult = querySchema.safeParse(req.query);
+    if (!validationResult.success) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid query parameters',
+        details: validationResult.error.format(),
+      });
+    }
+
     const { 
       categoria_id, 
       ativo, 
       search, 
       page = 1, 
-      limit = 20 
-    } = req.query;
+      limit = 20, 
+    } = validationResult.data;
 
     // Obter o usuário autenticado
-    const userId = (req as { user?: { id?: string } }).user?.id;
-    if (!userId) {
-      res.status(401).json({
+    const usuarioId = req.user?.id;
+    if (!usuarioId) {
+      return res.status(401).json({
         success: false,
-        error: 'Usuário não autenticado'
+        error: 'Usuário não autenticado',
       });
-      return;
     }
 
     let query = supabase
@@ -71,10 +114,10 @@ router.get('/', validateApostilaFilters, requireAuth, async (req: Request, res: 
       `);
 
     // Aplicar filtro automático por concurso do usuário
-    const concursoId = await getUserConcurso(supabase, userId);
+    const concursoId = await getUserConcurso(supabase, usuarioId);
     if (concursoId) {
       query = query.eq('concurso_id', concursoId);
-      logger.debug('Filtro por concurso do usuário aplicado', 'backend', { concursoId });
+      logger.debug('Filtro por concurso do usuário aplicado', { concursoId });
     }
 
     // Aplicar filtros adicionais
@@ -83,7 +126,7 @@ router.get('/', validateApostilaFilters, requireAuth, async (req: Request, res: 
     }
 
     if (ativo !== undefined) {
-      query = query.eq('ativo', ativo === 'true');
+      query = query.eq('ativo', ativo);
     }
 
     if (search) {
@@ -96,19 +139,17 @@ router.get('/', validateApostilaFilters, requireAuth, async (req: Request, res: 
     const offset = (pageNum - 1) * limitNum;
 
     // Buscar dados com paginação
-    logger.debug('Executando query para apostilas', 'backend', { filters: { categoria_id, ativo, search, page, limit }, offset });
+    logger.debug('Executando query para apostilas', { filters: { categoria_id, ativo, search, page, limit }, offset });
     const { data: apostilas, error: apostilasError, count } = await query
       .range(offset, offset + limitNum - 1)
       .order('criado_em', { ascending: false });
 
     if (apostilasError) {
-      logger.error('Erro ao executar query Supabase para apostilas', 'backend', { error: apostilasError, details: apostilasError.details, hint: apostilasError.hint, filters: { categoria_id, ativo, search, page, limit } });
-      console.error('Erro ao buscar apostilas:', apostilasError);
-      res.status(500).json({
+      logger.error('Erro ao executar query Supabase para apostilas', { error: apostilasError, details: apostilasError.details, hint: apostilasError.hint, filters: { categoria_id, ativo, search, page, limit } });
+      return res.status(500).json({
         success: false,
-        error: 'Erro interno ao buscar apostilas'
+        error: 'Erro interno ao buscar apostilas',
       });
-      return;
     }
 
     // Buscar total de registros para paginação
@@ -124,51 +165,50 @@ router.get('/', validateApostilaFilters, requireAuth, async (req: Request, res: 
 
     const totalPages = Math.ceil(totalCount / limitNum);
 
-    logger.info('Resposta de apostilas preparada', 'backend', { totalCount, page: pageNum, resultsCount: apostilas?.length || 0 });
-    res.json({
+    logger.info('Resposta de apostilas preparada', { totalCount, page: pageNum, resultsCount: apostilas?.length || 0 });
+    return res.json({
       success: true,
       data: apostilas || [],
       pagination: {
         page: pageNum,
         limit: limitNum,
         total: totalCount,
-        totalPages
-      }
+        totalPages,
+      },
     });
 
   } catch (error) {
-    logger.error('Erro inesperado no endpoint GET /api/apostilas', 'backend', { error: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined });
-    console.error('Erro ao processar requisição GET /api/apostilas:', error);
-    res.status(500).json({
+    logger.error('Erro inesperado no endpoint GET /api/apostilas', { error: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined });
+    return res.status(500).json({
       success: false,
-      error: 'Erro interno no servidor'
+      error: 'Erro interno no servidor',
     });
   }
-});
+};
 
-// GET /api/apostilas/:id - Buscar apostila por ID
-router.get('/:id', validateApostilaId, requireAuth, async (req: Request, res: Response) => {
+/**
+ * GET /api/apostilas/:id - Buscar apostila por ID
+ */
+export const getApostilaByIdHandler = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
     
     // Obter o usuário autenticado
-    const userId = (req as { user?: { id?: string } }).user?.id;
-    if (!userId) {
-      res.status(401).json({
+    const usuarioId = req.user?.id;
+    if (!usuarioId) {
+      return res.status(401).json({
         success: false,
-        error: 'Usuário não autenticado'
+        error: 'Usuário não autenticado',
       });
-      return;
     }
 
     // Verificar se o usuário tem acesso a esta apostila
-    const hasAccess = await checkConcursoAccess(supabase, userId, id, 'apostilas');
+    const hasAccess = await checkConcursoAccess(supabase, usuarioId, id, 'apostilas');
     if (!hasAccess) {
-      res.status(403).json({
+      return res.status(403).json({
         success: false,
-        error: 'Acesso negado a esta apostila'
+        error: 'Acesso negado a esta apostila',
       });
-      return;
     }
 
     const { data: apostila, error } = await supabase
@@ -196,39 +236,49 @@ router.get('/:id', validateApostilaId, requireAuth, async (req: Request, res: Re
 
     if (error) {
       if (error.code === 'PGRST116') {
-        res.status(404).json({
+        return res.status(404).json({
           success: false,
-          error: 'Apostila não encontrada'
+          error: 'Apostila não encontrada',
         });
-        return;
       }
       
-      console.error('Erro ao buscar apostila:', error);
-      res.status(500).json({
+      logger.error('Erro ao buscar apostila:', { error: error.message, code: error.code, details: error.details });
+      return res.status(500).json({
         success: false,
-        error: 'Erro interno ao buscar apostila'
+        error: 'Erro interno ao buscar apostila',
       });
-      return;
     }
 
-    res.json({
+    return res.json({
       success: true,
-      data: apostila
+      data: apostila,
     });
 
   } catch (error) {
-    console.error('Erro ao processar requisição GET /api/apostilas/:id:', error);
-    res.status(500).json({
+    logger.error('Erro ao processar requisição GET /api/apostilas/:id:', error);
+    return res.status(500).json({
       success: false,
-      error: 'Erro interno no servidor'
+      error: 'Erro interno no servidor',
     });
   }
-});
+};
 
-// POST /api/apostilas - Criar nova apostila (requer autenticação)
-router.post('/', requireAuth, validateCreateApostila, async (req: Request, res: Response) => {
+/**
+ * POST /api/apostilas - Criar nova apostila
+ */
+export const createApostilaHandler = async (req: Request, res: Response) => {
   try {
-    const apostilaData = req.body;
+    // Validate request body
+    const validationResult = createApostilaSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid request data',
+        details: validationResult.error.format(),
+      });
+    }
+
+    const apostilaData = validationResult.data;
 
     const { data: apostila, error } = await supabase
       .from('apostilas')
@@ -254,52 +304,63 @@ router.post('/', requireAuth, validateCreateApostila, async (req: Request, res: 
       .single();
 
     if (error) {
-      console.error('Erro ao criar apostila:', error);
+      logger.error('Erro ao criar apostila:', { error: error.message, code: error.code, details: error.details });
       
       if (error.code === '23505') {
-        res.status(400).json({
+        return res.status(400).json({
           success: false, 
-          error: 'Apostila já existe com esses dados'
+          error: 'Apostila já existe com esses dados',
         });
-        return;
       }
       
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
-        error: 'Erro interno ao criar apostila'
+        error: 'Erro interno ao criar apostila',
       });
-      return;
     }
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       message: 'Apostila criada com sucesso',
-      data: apostila
+      data: apostila,
     });
 
   } catch (error) {
-    console.error('Erro ao processar requisição POST /api/apostilas:', error);
-    res.status(500).json({
+    logger.error('Erro ao processar requisição POST /api/apostilas:', error);
+    return res.status(500).json({
       success: false,
-      error: 'Erro interno no servidor'
+      error: 'Erro interno no servidor',
     });
   }
-});
+};
 
-// PUT /api/apostilas/:id - Atualizar apostila (requer autenticação)
-router.put('/:id', requireAuth, validateApostilaId, validateUpdateApostila, async (req: Request, res: Response) => {
+/**
+ * PUT /api/apostilas/:id - Atualizar apostila
+ */
+export const updateApostilaHandler = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const updateData = req.body;
+
+    // Validate request body
+    const validationResult = updateApostilaSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid request data',
+        details: validationResult.error.format(),
+      });
+    }
+
+    const updateData = validationResult.data;
 
     // Remover o ID dos dados de atualização
-    delete updateData.id;
+    delete (updateData as Record<string, unknown>).id;
 
     const { data: apostila, error } = await supabase
       .from('apostilas')
       .update({
         ...updateData,
-        atualizado_em: new Date().toISOString()
+        atualizado_em: new Date().toISOString(),
       })
       .eq('id', id)
       .select(`
@@ -324,49 +385,48 @@ router.put('/:id', requireAuth, validateApostilaId, validateUpdateApostila, asyn
 
     if (error) {
       if (error.code === 'PGRST116') {
-        res.status(404).json({
+        return res.status(404).json({
           success: false,
-          error: 'Apostila não encontrada'
+          error: 'Apostila não encontrada',
         });
-        return;
       }
       
-      console.error('Erro ao atualizar apostila:', error);
-      res.status(500).json({
+      logger.error('Erro ao atualizar apostila:', { error: error.message, code: error.code, details: error.details });
+      return res.status(500).json({
         success: false,
-        error: 'Erro interno ao atualizar apostila'
+        error: 'Erro interno ao atualizar apostila',
       });
-      return;
     }
 
-    res.json({
+    return res.json({
       success: true,
       message: 'Apostila atualizada com sucesso',
-      data: apostila
+      data: apostila,
     });
 
   } catch (error) {
-    console.error('Erro ao processar requisição PUT /api/apostilas/:id:', error);
-    res.status(500).json({
+    logger.error('Erro ao processar requisição PUT /api/apostilas/:id:', error);
+    return res.status(500).json({
       success: false,
-      error: 'Erro interno no servidor'
+      error: 'Erro interno no servidor',
     });
   }
-});
+};
 
-// DELETE /api/apostilas/:id - Deletar apostila (requer admin)
-router.delete('/:id', requireAuth, async (req: Request, res: Response) => {
+/**
+ * DELETE /api/apostilas/:id - Deletar apostila
+ */
+export const deleteApostilaHandler = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
 
     // Verificar se o usuário é admin
-    const userId = (req as { user?: { id?: string; is_admin?: boolean } }).user?.id;
-    if (!userId || !(req.user?.is_admin)) {
-      res.status(403).json({
+    const usuarioId = req.user?.id;
+    if (!usuarioId || !(req.user?.is_admin)) {
+      return res.status(403).json({
         success: false,
-        error: 'Acesso negado: usuário não é administrador'
+        error: 'Acesso negado: usuário não é administrador',
       });
-      return;
     }
 
     const { error } = await supabase
@@ -375,34 +435,31 @@ router.delete('/:id', requireAuth, async (req: Request, res: Response) => {
       .eq('id', id);
 
     if (error) {
-      console.error('Erro ao deletar apostila:', error);
-      res.status(500).json({
+      logger.error('Erro ao deletar apostila:', { error: error.message, code: error.code, details: error.details });
+      return res.status(500).json({
         success: false,
-        error: 'Erro interno ao deletar apostila'
+        error: 'Erro interno ao deletar apostila',
       });
-      return;
     }
 
-    res.json({
+    return res.json({
       success: true,
-      message: 'Apostila deletada com sucesso'
+      message: 'Apostila deletada com sucesso',
     });
 
   } catch (error) {
-    console.error('Erro ao processar requisição DELETE /api/apostilas/:id:', error);
-    res.status(500).json({
+    logger.error('Erro ao processar requisição DELETE /api/apostilas/:id:', error);
+    return res.status(500).json({
       success: false,
-      error: 'Erro interno no servidor'
+      error: 'Erro interno no servidor',
     });
   }
-});
+};
 
-// =====================================================
-// ROTAS PARA CONTEÚDO DE APOSTILAS
-// =====================================================
-
-// GET /api/apostilas/:id/content - Listar conteúdo de uma apostila
-router.get('/:id/content', validateApostilaId, async (req: Request, res: Response) => {
+/**
+ * GET /api/apostilas/:id/content - Listar conteúdo de uma apostila
+ */
+export const getApostilaContentHandler = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -415,36 +472,48 @@ router.get('/:id/content', validateApostilaId, async (req: Request, res: Respons
       .order('module_number', { ascending: true });
 
     if (error) {
-      console.error('Erro ao buscar conteúdo da apostila:', error);
-      res.status(500).json({
+      logger.error('Erro ao buscar conteúdo da apostila:', { error: error.message, code: error.code, details: error.details });
+      return res.status(500).json({
         success: false,
-        error: 'Erro interno ao buscar conteúdo da apostila'
+        error: 'Erro interno ao buscar conteúdo da apostila',
       });
-      return;
     }
 
-    res.json({
+    return res.json({
       success: true,
-      data: content || []
+      data: content || [],
     });
 
   } catch (error) {
-    console.error('Erro ao processar requisição GET /api/apostilas/:id/content:', error);
-    res.status(500).json({
+    logger.error('Erro ao processar requisição GET /api/apostilas/:id/content:', error);
+    return res.status(500).json({
       success: false,
-      error: 'Erro interno no servidor'
+      error: 'Erro interno no servidor',
     });
   }
-});
+};
 
-// POST /api/apostilas/:id/content - Adicionar conteúdo à apostila (requer autenticação)
-router.post('/:id/content', requireAuth, validateApostilaId, validateCreateApostilaContent, async (req: Request, res: Response) => {
+/**
+ * POST /api/apostilas/:id/content - Adicionar conteúdo à apostila
+ */
+export const createApostilaContentHandler = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const contentData = req.body;
 
-    // Garantir que o apostila_id seja o da URL
-    contentData.apostila_id = id;
+    // Validate request body
+    const validationResult = createApostilaContentSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid request data',
+        details: validationResult.error.format(),
+      });
+    }
+
+    const contentData = {
+      ...validationResult.data,
+      apostila_id: id,
+    };
 
     const { data: content, error } = await supabase
       .from('conteudo_apostila')
@@ -453,43 +522,55 @@ router.post('/:id/content', requireAuth, validateApostilaId, validateCreateApost
       .single();
 
     if (error) {
-      console.error('Erro ao criar conteúdo da apostila:', error);
-      res.status(500).json({
+      logger.error('Erro ao criar conteúdo da apostila:', { error: error.message, code: error.code, details: error.details });
+      return res.status(500).json({
         success: false,
-        error: 'Erro interno ao criar conteúdo da apostila'
+        error: 'Erro interno ao criar conteúdo da apostila',
       });
-      return;
     }
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       message: 'Conteúdo da apostila criado com sucesso',
-      data: content
+      data: content,
     });
 
   } catch (error) {
-    console.error('Erro ao processar requisição POST /api/apostilas/:id/content:', error);
-    res.status(500).json({
+    logger.error('Erro ao processar requisição POST /api/apostilas/:id/content:', error);
+    return res.status(500).json({
       success: false,
-      error: 'Erro interno no servidor'
+      error: 'Erro interno no servidor',
     });
   }
-});
+};
 
-// PUT /api/apostilas/content/:contentId - Atualizar conteúdo específico (requer autenticação)
-router.put('/content/:id', requireAuth, validateApostilaContentId, validateUpdateApostilaContent, async (req: Request, res: Response) => {
+/**
+ * PUT /api/apostilas/content/:contentId - Atualizar conteúdo específico
+ */
+export const updateApostilaContentHandler = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const updateData = req.body;
+
+    // Validate request body
+    const validationResult = updateApostilaContentSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid request data',
+        details: validationResult.error.format(),
+      });
+    }
+
+    const updateData = validationResult.data;
 
     // Remover o ID dos dados de atualização
-    delete updateData.id;
+    delete (updateData as Record<string, unknown>).id;
 
     const { data: content, error } = await supabase
       .from('conteudo_apostila')
       .update({
         ...updateData,
-        atualizado_em: new Date().toISOString()
+        atualizado_em: new Date().toISOString(),
       })
       .eq('id', id)
       .select()
@@ -497,49 +578,48 @@ router.put('/content/:id', requireAuth, validateApostilaContentId, validateUpdat
 
     if (error) {
       if (error.code === 'PGRST116') {
-        res.status(404).json({
+        return res.status(404).json({
           success: false,
-          error: 'Conteúdo da apostila não encontrado'
+          error: 'Conteúdo da apostila não encontrado',
         });
-        return;
       }
       
-      console.error('Erro ao atualizar conteúdo da apostila:', error);
-      res.status(500).json({
+      logger.error('Erro ao atualizar conteúdo da apostila:', { error: error.message, code: error.code, details: error.details });
+      return res.status(500).json({
         success: false,
-        error: 'Erro interno ao atualizar conteúdo da apostila'
+        error: 'Erro interno ao atualizar conteúdo da apostila',
       });
-      return;
     }
 
-    res.json({
+    return res.json({
       success: true,
       message: 'Conteúdo da apostila atualizado com sucesso',
-      data: content
+      data: content,
     });
 
   } catch (error) {
-    console.error('Erro ao processar requisição PUT /api/apostilas/content/:id:', error);
-    res.status(500).json({
+    logger.error('Erro ao processar requisição PUT /api/apostilas/content/:id:', error);
+    return res.status(500).json({
       success: false,
-      error: 'Erro interno no servidor'
+      error: 'Erro interno no servidor',
     });
   }
-});
+};
 
-// DELETE /api/apostilas/content/:contentId - Deletar conteúdo específico (requer admin)
-router.delete('/content/:id', requireAuth, async (req: Request, res: Response) => {
+/**
+ * DELETE /api/apostilas/content/:contentId - Deletar conteúdo específico
+ */
+export const deleteApostilaContentHandler = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
 
     // Verificar se o usuário é admin
-    const userId = (req as { user?: { id?: string; is_admin?: boolean } }).user?.id;
-    if (!userId || !(req.user?.is_admin)) {
-      res.status(403).json({
+    const usuarioId = req.user?.id;
+    if (!usuarioId || !(req.user?.is_admin)) {
+      return res.status(403).json({
         success: false,
-        error: 'Acesso negado: usuário não é administrador'
+        error: 'Acesso negado: usuário não é administrador',
       });
-      return;
     }
 
     const { error } = await supabase
@@ -548,29 +628,46 @@ router.delete('/content/:id', requireAuth, async (req: Request, res: Response) =
       .eq('id', id);
 
     if (error) {
-      console.error('Erro ao deletar conteúdo da apostila:', error);
-      res.status(500).json({
+      logger.error('Erro ao deletar conteúdo da apostila:', { error: error.message, code: error.code, details: error.details });
+      return res.status(500).json({
         success: false,
-        error: 'Erro interno ao deletar conteúdo da apostila'
+        error: 'Erro interno ao deletar conteúdo da apostila',
       });
-      return;
     }
 
-    res.json({
+    return res.json({
       success: true,
-      message: 'Conteúdo da apostila deletado com sucesso'
+      message: 'Conteúdo da apostila deletado com sucesso',
     });
 
   } catch (error) {
-    console.error('Erro ao processar requisição DELETE /api/apostilas/content/:id:', error);
-    res.status(500).json({
+    logger.error('Erro ao processar requisição DELETE /api/apostilas/content/:id:', error);
+    return res.status(500).json({
       success: false,
-      error: 'Erro interno no servidor'
+      error: 'Erro interno no servidor',
     });
   }
-});
+};
 
-export default router;
+// Criar router Express
+import { Router } from 'express';
+
+const router = Router();
+
+// Registrar rotas
+router.get('/', listApostilasHandler);
+router.get('/:id', getApostilaByIdHandler);
+router.post('/', createApostilaHandler);
+router.put('/:id', updateApostilaHandler);
+router.delete('/:id', deleteApostilaHandler);
+
+// Rotas de conteúdo
+router.get('/:id/content', getApostilaContentHandler);
+router.post('/:id/content', createApostilaContentHandler);
+router.put('/content/:id', updateApostilaContentHandler);
+router.delete('/content/:id', deleteApostilaContentHandler);
+
+export { router };
 
 
 

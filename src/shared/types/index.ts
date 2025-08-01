@@ -2,7 +2,7 @@
 
 export interface Usuario {
   id: string;
-  auth_user_id?: string;
+  auth_usuario_id?: string;
   nome: string;
   email: string;
   senha_hash: string; // Adicionado para autenticação

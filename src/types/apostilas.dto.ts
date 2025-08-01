@@ -64,7 +64,7 @@ export interface UpdateApostilaContentDTO {
 
 export interface UserApostilaProgressDTO {
   id: string;
-  user_id: string;
+  usuario_id: string;
   conteudo_apostila_id: string;
   concluido: boolean;
   percentual_progresso: number;
@@ -74,7 +74,7 @@ export interface UserApostilaProgressDTO {
 }
 
 export interface CreateUserApostilaProgressDTO {
-  user_id: string;
+  usuario_id: string;
   conteudo_apostila_id: string;
   concluido?: boolean;
   percentual_progresso?: number;

@@ -1,5 +1,5 @@
 import { SupabaseClient } from '@supabase/supabase-js';
-import { getLogger } from '../../lib/logging';
+import { getLogger } from '../../lib/logging/logging-service.js';
 // import { AuthError } from '../../lib/errors';
 
 export enum UserRole {
@@ -72,7 +72,7 @@ export class RoleManager {
    */
   public removePermission(role: string, resource: string, action: string): void {
     this.permissions = this.permissions.filter(
-      p => !(p.role === role && p.resource === resource && p.action === action)
+      p => !(p.role === role && p.resource === resource && p.action === action),
     );
     this.logger.debug('Permission removed', { role, resource, action });
   }
@@ -84,7 +84,7 @@ export class RoleManager {
     role: string,
     resource: string,
     action: string,
-    context: Record<string, unknown> = {}
+    context: Record<string, unknown> = {},
   ): boolean {
     // Get all roles including inherited ones
     const roles = this.getAllRoles(role);
@@ -135,7 +135,7 @@ export class RoleManager {
    */
   private evaluateConditions(
     conditions: Record<string, unknown>,
-    context: Record<string, unknown>
+    context: Record<string, unknown>,
   ): boolean {
     for (const [key, value] of Object.entries(conditions)) {
       if (typeof value === 'function') {
@@ -157,13 +157,13 @@ export class RoleManager {
   /**
    * Get user role from Supabase
    */
-  public async getUserRole(userId: string): Promise<string> {
+  public async getUserRole(usuarioId: string): Promise<string> {
     try {
       // First check in app_metadata
       const { data: userData, error: userError } = await this.supabaseClient
         .from('users')
         .select('role')
-        .eq('id', userId)
+        .eq('id', usuarioId)
         .single();
       
       if (!userError && userData?.role) {
@@ -171,7 +171,7 @@ export class RoleManager {
       }
       
       // If not found, check in auth.users
-      const { data: authData, error: authError } = await this.supabaseClient.auth.admin.getUserById(userId);
+      const { data: authData, error: authError } = await this.supabaseClient.auth.admin.getUserById(usuarioId);
       
       if (authError) {
         this.logger.error('Failed to get user role', { error: authError.message });
@@ -183,7 +183,7 @@ export class RoleManager {
              UserRole.USER;
     } catch (error) {
       this.logger.error('Error getting user role', { 
-        error: error instanceof Error ? error.message : String(error) 
+        error: error instanceof Error ? error.message : String(error), 
       });
       return UserRole.GUEST;
     }
@@ -192,12 +192,12 @@ export class RoleManager {
   /**
    * Set user role in Supabase
    */
-  public async setUserRole(userId: string, role: string): Promise<boolean> {
+  public async setUserRole(usuarioId: string, role: string): Promise<boolean> {
     try {
       // Update in app_metadata
       const { error } = await this.supabaseClient.auth.admin.updateUserById(
-        userId,
-        { app_metadata: { role } }
+        usuarioId,
+        { app_metadata: { role } },
       );
       
       if (error) {
@@ -210,19 +210,19 @@ export class RoleManager {
         await this.supabaseClient
           .from('users')
           .update({ role })
-          .eq('id', userId);
+          .eq('id', usuarioId);
       } catch (tableError) {
         // Ignore errors if table doesn't exist
         this.logger.warn('Could not update role in users table', { 
-          error: tableError instanceof Error ? tableError.message : String(tableError) 
+          error: tableError instanceof Error ? tableError.message : String(tableError), 
         });
       }
       
-      this.logger.info('User role updated', { userId, role });
+      this.logger.info('User role updated', { usuarioId, role });
       return true;
     } catch (error) {
       this.logger.error('Error setting user role', { 
-        error: error instanceof Error ? error.message : String(error) 
+        error: error instanceof Error ? error.message : String(error), 
       });
       return false;
     }

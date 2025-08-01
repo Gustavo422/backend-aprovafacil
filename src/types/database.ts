@@ -21,7 +21,7 @@ export type Database = {
           criado_em: string;
           atualizado_em: string;
           role: 'user' | 'admin';
-          auth_user_id: string | null;
+          auth_usuario_id: string | null;
         };
         Insert: {
           id?: string;
@@ -38,7 +38,7 @@ export type Database = {
           criado_em?: string;
           atualizado_em?: string;
           role?: 'user' | 'admin';
-          auth_user_id?: string | null;
+          auth_usuario_id?: string | null;
         };
         Update: {
           id?: string;
@@ -55,7 +55,7 @@ export type Database = {
           criado_em?: string;
           atualizado_em?: string;
           role?: 'user' | 'admin';
-          auth_user_id?: string | null;
+          auth_usuario_id?: string | null;
         };
       };
       
@@ -96,7 +96,7 @@ export type Database = {
       user_sessions: {
         Row: {
           id: string;
-          user_id: string;
+          usuario_id: string;
           created_at: string;
           expires_at: string;
           last_active_at: string;
@@ -110,7 +110,7 @@ export type Database = {
         };
         Insert: {
           id?: string;
-          user_id: string;
+          usuario_id: string;
           created_at?: string;
           expires_at: string;
           last_active_at?: string;
@@ -124,7 +124,7 @@ export type Database = {
         };
         Update: {
           id?: string;
-          user_id?: string;
+          usuario_id?: string;
           created_at?: string;
           expires_at?: string;
           last_active_at?: string;
@@ -141,7 +141,7 @@ export type Database = {
       connection_logs: {
         Row: {
           id: string;
-          user_id: string | null;
+          usuario_id: string | null;
           timestamp: string;
           event_type: string;
           status: string;
@@ -155,7 +155,7 @@ export type Database = {
         };
         Insert: {
           id?: string;
-          user_id?: string | null;
+          usuario_id?: string | null;
           timestamp?: string;
           event_type: string;
           status: string;
@@ -169,7 +169,7 @@ export type Database = {
         };
         Update: {
           id?: string;
-          user_id?: string | null;
+          usuario_id?: string | null;
           timestamp?: string;
           event_type?: string;
           status?: string;
@@ -411,7 +411,7 @@ export type Database = {
       };
       manage_user_session: {
         Args: {
-          p_user_id: string;
+          p_usuario_id: string;
           p_refresh_token: string;
           p_user_agent: string;
           p_ip_address: string;
@@ -423,7 +423,7 @@ export type Database = {
       };
       invalidate_user_sessions: {
         Args: {
-          p_user_id: string;
+          p_usuario_id: string;
           p_exclude_session_id?: string | null;
         };
         Returns: number;
@@ -434,7 +434,7 @@ export type Database = {
       };
       log_connection_event: {
         Args: {
-          p_user_id: string | null;
+          p_usuario_id: string | null;
           p_event_type: string;
           p_status: string;
           p_error_message?: string | null;

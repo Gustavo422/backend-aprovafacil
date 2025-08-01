@@ -25,7 +25,7 @@ class MetricsStore {
       system: [],
       database: [],
       logs: [],
-      maxPoints
+      maxPoints,
     };
   }
 
@@ -37,7 +37,7 @@ class MetricsStore {
       dbResponseTime: 0,
       logErrors: 0,
       logWarnings: 0,
-      logInfo: 0
+      logInfo: 0,
     };
 
     this.history.system.push(point);
@@ -52,7 +52,7 @@ class MetricsStore {
       dbResponseTime: responseTime,
       logErrors: 0,
       logWarnings: 0,
-      logInfo: 0
+      logInfo: 0,
     };
 
     this.history.database.push(point);
@@ -67,7 +67,7 @@ class MetricsStore {
       dbResponseTime: 0,
       logErrors: errors,
       logWarnings: warnings,
-      logInfo: info
+      logInfo: info,
     };
 
     this.history.logs.push(point);
@@ -110,7 +110,7 @@ class MetricsStore {
         alerts.push({
           type: 'warning',
           message: `CPU alto: ${avgCpu.toFixed(1)}% (média da última hora)`,
-          timestamp: now
+          timestamp: now,
         });
       }
 
@@ -118,7 +118,7 @@ class MetricsStore {
         alerts.push({
           type: 'warning',
           message: `Memória alta: ${avgMemory.toFixed(1)}% (média da última hora)`,
-          timestamp: now
+          timestamp: now,
         });
       }
     }
@@ -131,7 +131,7 @@ class MetricsStore {
         alerts.push({
           type: 'warning',
           message: `Banco lento: ${avgResponseTime.toFixed(0)}ms (média da última hora)`,
-          timestamp: now
+          timestamp: now,
         });
       }
     }
@@ -144,7 +144,7 @@ class MetricsStore {
         alerts.push({
           type: 'error',
           message: `${totalErrors} erros nos logs na última hora`,
-          timestamp: now
+          timestamp: now,
         });
       }
     }
@@ -156,7 +156,7 @@ class MetricsStore {
     system: { avgCpu: number; avgMemory: number; peakCpu: number; peakMemory: number };
     database: { avgResponseTime: number; maxResponseTime: number; totalQueries: number };
     logs: { totalErrors: number; totalWarnings: number; totalInfo: number };
-  } {
+    } {
     const oneHourAgo = Date.now() - (60 * 60 * 1000);
     
     const recentSystem = this.history.system.filter(p => p.timestamp >= oneHourAgo);
@@ -168,18 +168,18 @@ class MetricsStore {
         avgCpu: recentSystem.length > 0 ? recentSystem.reduce((sum, p) => sum + p.cpu, 0) / recentSystem.length : 0,
         avgMemory: recentSystem.length > 0 ? recentSystem.reduce((sum, p) => sum + p.memory, 0) / recentSystem.length : 0,
         peakCpu: recentSystem.length > 0 ? Math.max(...recentSystem.map(p => p.cpu)) : 0,
-        peakMemory: recentSystem.length > 0 ? Math.max(...recentSystem.map(p => p.memory)) : 0
+        peakMemory: recentSystem.length > 0 ? Math.max(...recentSystem.map(p => p.memory)) : 0,
       },
       database: {
         avgResponseTime: recentDb.length > 0 ? recentDb.reduce((sum, p) => sum + p.dbResponseTime, 0) / recentDb.length : 0,
         maxResponseTime: recentDb.length > 0 ? Math.max(...recentDb.map(p => p.dbResponseTime)) : 0,
-        totalQueries: recentDb.length
+        totalQueries: recentDb.length,
       },
       logs: {
         totalErrors: recentLogs.reduce((sum, p) => sum + p.logErrors, 0),
         totalWarnings: recentLogs.reduce((sum, p) => sum + p.logWarnings, 0),
-        totalInfo: recentLogs.reduce((sum, p) => sum + p.logInfo, 0)
-      }
+        totalInfo: recentLogs.reduce((sum, p) => sum + p.logInfo, 0),
+      },
     };
   }
 }
@@ -191,14 +191,14 @@ export const metricsStore = new MetricsStore();
 export function addMetricsToStore(
   system: { cpu: { usage: number }; memory: { usage: number } },
   database: { responseTime?: number },
-  logs: { logStats?: { info?: number; warnings?: number; errors?: number } }
+  logs: { logStats?: { info?: number; warnings?: number; errors?: number } },
 ): void {
   metricsStore.addSystemMetric(system.cpu.usage, system.memory.usage);
   metricsStore.addDatabaseMetric(database.responseTime || 0);
   metricsStore.addLogsMetric(
     logs.logStats?.info || 0,
     logs.logStats?.warnings || 0,
-    logs.logStats?.errors || 0
+    logs.logStats?.errors || 0,
   );
 } 
 

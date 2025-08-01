@@ -49,13 +49,13 @@ export class ApostilaService extends BaseService<Apostila, FiltroApostila> imple
    */
   constructor(
     apostilaRepository: IApostilaRepository,
-    options?: Partial<BaseServiceOptions>
+    options?: Partial<BaseServiceOptions>,
   ) {
     super(apostilaRepository, {
       serviceName: 'Apostila',
       enableCache: true,
       cacheTime: 600, // 10 minutos
-      ...options
+      ...options,
     });
     
     this.logger.info('Serviço de apostilas inicializado');
@@ -89,7 +89,7 @@ export class ApostilaService extends BaseService<Apostila, FiltroApostila> imple
           this.logger.debug('Cache hit para buscarPorSlug', { operationId });
           return {
             success: true,
-            data: cached as Apostila
+            data: cached as Apostila,
           };
         }
       }
@@ -102,13 +102,13 @@ export class ApostilaService extends BaseService<Apostila, FiltroApostila> imple
         this.logger.warn('Apostila não encontrada por slug', {
           operationId,
           slug,
-          executionTimeMs: executionTime.toFixed(2)
+          executionTimeMs: executionTime.toFixed(2),
         });
         
         return {
           success: false,
           message: 'Apostila não encontrada',
-          error: 'NOT_FOUND'
+          error: 'NOT_FOUND',
         };
       }
       
@@ -124,12 +124,12 @@ export class ApostilaService extends BaseService<Apostila, FiltroApostila> imple
       this.logger.debug('Apostila encontrada por slug', {
         operationId,
         apostilaId: apostila.id,
-        executionTimeMs: executionTime.toFixed(2)
+        executionTimeMs: executionTime.toFixed(2),
       });
       
       return {
         success: true,
-        data: processedApostila
+        data: processedApostila,
       };
     } catch (error) {
       const executionTime = performance.now() - startTime;
@@ -161,7 +161,7 @@ export class ApostilaService extends BaseService<Apostila, FiltroApostila> imple
           this.logger.debug('Cache hit para buscarPorConcurso', { operationId });
           return {
             success: true,
-            data: cached as Apostila[]
+            data: cached as Apostila[],
           };
         }
       }
@@ -171,7 +171,7 @@ export class ApostilaService extends BaseService<Apostila, FiltroApostila> imple
       
       // Processar dados após busca
       const processedApostilas = await Promise.all(
-        apostilas.map(apostila => this.processAfterFind(apostila))
+        apostilas.map(apostila => this.processAfterFind(apostila)),
       );
       
       // Salvar no cache
@@ -184,12 +184,12 @@ export class ApostilaService extends BaseService<Apostila, FiltroApostila> imple
         operationId,
         concursoId,
         count: processedApostilas.length,
-        executionTimeMs: executionTime.toFixed(2)
+        executionTimeMs: executionTime.toFixed(2),
       });
       
       return {
         success: true,
-        data: processedApostilas
+        data: processedApostilas,
       };
     } catch (error) {
       const executionTime = performance.now() - startTime;
@@ -226,7 +226,7 @@ export class ApostilaService extends BaseService<Apostila, FiltroApostila> imple
           this.logger.debug('Cache hit para buscarComConteudo', { operationId });
           return {
             success: true,
-            data: cached as Apostila & { conteudo: ConteudoApostila[] }
+            data: cached as Apostila & { conteudo: ConteudoApostila[] },
           };
         }
       }
@@ -244,12 +244,12 @@ export class ApostilaService extends BaseService<Apostila, FiltroApostila> imple
         operationId,
         apostilaId: id,
         modulosCount: apostilaComConteudo.conteudo.length,
-        executionTimeMs: executionTime.toFixed(2)
+        executionTimeMs: executionTime.toFixed(2),
       });
       
       return {
         success: true,
-        data: apostilaComConteudo
+        data: apostilaComConteudo,
       };
     } catch (error) {
       const executionTime = performance.now() - startTime;
@@ -278,7 +278,7 @@ export class ApostilaService extends BaseService<Apostila, FiltroApostila> imple
         operationId,
         usuarioId,
         conteudoId,
-        percentual
+        percentual,
       });
       
       // Validar entrada
@@ -294,13 +294,13 @@ export class ApostilaService extends BaseService<Apostila, FiltroApostila> imple
         usuarioId,
         conteudoId,
         percentual,
-        executionTimeMs: executionTime.toFixed(2)
+        executionTimeMs: executionTime.toFixed(2),
       });
       
       return {
         success: true,
         data: true,
-        message: 'Progresso marcado com sucesso'
+        message: 'Progresso marcado com sucesso',
       };
     } catch (error) {
       const executionTime = performance.now() - startTime;
@@ -325,7 +325,7 @@ export class ApostilaService extends BaseService<Apostila, FiltroApostila> imple
     try {
       this.logger.debug('Criando nova apostila', { 
         operationId,
-        dados: this.sanitizeLogData(dados)
+        dados: this.sanitizeLogData(dados),
       });
       
       // Validar entrada
@@ -339,7 +339,7 @@ export class ApostilaService extends BaseService<Apostila, FiltroApostila> imple
         return {
           success: false,
           error: 'APOSTILA_ALREADY_EXISTS',
-          message: 'Já existe uma apostila com este título'
+          message: 'Já existe uma apostila com este título',
         };
       }
       
@@ -351,7 +351,7 @@ export class ApostilaService extends BaseService<Apostila, FiltroApostila> imple
         concurso_id: dados.concurso_id,
         categoria_id: dados.categoria_id,
         disciplinas: dados.disciplinas || [],
-        ativo: true
+        ativo: true,
       };
       
       // Criar apostila
@@ -372,13 +372,13 @@ export class ApostilaService extends BaseService<Apostila, FiltroApostila> imple
       this.logger.info('Apostila criada com sucesso', {
         operationId,
         apostilaId: apostila.id,
-        executionTimeMs: executionTime.toFixed(2)
+        executionTimeMs: executionTime.toFixed(2),
       });
       
       return {
         success: true,
         data: processedApostila,
-        message: 'Apostila criada com sucesso'
+        message: 'Apostila criada com sucesso',
       };
     } catch (error) {
       const executionTime = performance.now() - startTime;
@@ -400,7 +400,7 @@ export class ApostilaService extends BaseService<Apostila, FiltroApostila> imple
       this.logger.debug('Atualizando apostila', { 
         operationId,
         apostilaId: id,
-        dados: this.sanitizeLogData(dados)
+        dados: this.sanitizeLogData(dados),
       });
       
       // Validar entrada
@@ -422,7 +422,7 @@ export class ApostilaService extends BaseService<Apostila, FiltroApostila> imple
           return {
             success: false,
             error: 'APOSTILA_ALREADY_EXISTS',
-            message: 'Já existe uma apostila com este título'
+            message: 'Já existe uma apostila com este título',
           };
         }
       }
@@ -481,13 +481,13 @@ export class ApostilaService extends BaseService<Apostila, FiltroApostila> imple
       this.logger.info('Apostila atualizada com sucesso', {
         operationId,
         apostilaId: id,
-        executionTimeMs: executionTime.toFixed(2)
+        executionTimeMs: executionTime.toFixed(2),
       });
       
       return {
         success: true,
         data: processedApostila,
-        message: 'Apostila atualizada com sucesso'
+        message: 'Apostila atualizada com sucesso',
       };
     } catch (error) {
       const executionTime = performance.now() - startTime;

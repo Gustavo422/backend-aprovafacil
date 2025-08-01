@@ -1,4 +1,4 @@
-import { LogLevel } from './logging-service';
+import { LogLevel } from './logging-service.js';
 
 /**
  * Logging configuration interface
@@ -175,14 +175,14 @@ export const defaultLoggingConfig: LoggingConfig = {
     level: LogLevel.INFO,
     includeTimestamp: true,
     includeLoggerName: true,
-    useColors: true
+    useColors: true,
   },
   file: {
     enabled: false,
     level: LogLevel.INFO,
     filePath: 'logs/app.log',
     maxFileSize: 10 * 1024 * 1024, // 10 MB
-    maxFiles: 5
+    maxFiles: 5,
   },
   supabase: {
     enabled: false,
@@ -191,7 +191,7 @@ export const defaultLoggingConfig: LoggingConfig = {
     key: '',
     tableName: 'logs',
     maxBufferSize: 100,
-    flushIntervalMs: 10000
+    flushIntervalMs: 10000,
   },
   request: {
     enabled: true,
@@ -200,12 +200,12 @@ export const defaultLoggingConfig: LoggingConfig = {
     logResponseBody: false,
     logResponseTime: true,
     excludeHeaders: ['authorization', 'cookie', 'set-cookie'],
-    excludePaths: ['/health', '/metrics']
+    excludePaths: ['/health', '/metrics'],
   },
   error: {
     includeStack: true,
-    includeCause: true
-  }
+    includeCause: true,
+  },
 };
 
 /**
@@ -338,23 +338,23 @@ export function setLoggingConfig(config: Partial<LoggingConfig>): void {
     ...config,
     console: {
       ...getLoggingConfig().console,
-      ...(config.console || {})
+      ...(config.console || {}),
     },
     file: {
       ...getLoggingConfig().file,
-      ...(config.file || {})
+      ...(config.file || {}),
     },
     supabase: {
       ...getLoggingConfig().supabase,
-      ...(config.supabase || {})
+      ...(config.supabase || {}),
     },
     request: {
       ...getLoggingConfig().request,
-      ...(config.request || {})
+      ...(config.request || {}),
     },
     error: {
       ...getLoggingConfig().error,
-      ...(config.error || {})
-    }
+      ...(config.error || {}),
+    },
   };
 }

@@ -34,11 +34,11 @@ const cacheConfig: CacheConfig = {
     url: process.env.REDIS_URL || 'redis://localhost:6379',
     password: process.env.REDIS_PASSWORD,
     username: process.env.REDIS_USERNAME,
-    keyPrefix: process.env.REDIS_KEY_PREFIX || 'aprovafacil:'
+    keyPrefix: process.env.REDIS_KEY_PREFIX || 'aprovafacil:',
   },
   invalidation: {
-    cleanupInterval: 30 * 60 * 1000 // 30 minutes
-  }
+    cleanupInterval: 30 * 60 * 1000, // 30 minutes
+  },
 };
 
 export default cacheConfig;

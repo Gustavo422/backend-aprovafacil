@@ -1,7 +1,7 @@
 // DTO de Planos de Estudo - Atualizado para corresponder ao schema real
 export interface PlanoEstudoDTO {
   id: string;
-  user_id: string;
+  usuario_id: string; // CORRIGIDO
   nome: string;
   descricao?: string;
   ativo: boolean;
@@ -15,7 +15,7 @@ export interface PlanoEstudoDTO {
 }
 
 export interface CreatePlanoEstudoDTO {
-  user_id: string;
+  usuario_id: string; // CORRIGIDO
   nome: string;
   descricao?: string;
   ativo?: boolean;

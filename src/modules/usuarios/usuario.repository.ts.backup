@@ -1,0 +1,585 @@
+// Repositório de usuários para o AprovaFácil
+import { SupabaseClient } from '@supabase/supabase-js';
+import { IUsuarioRepository, ILogService } from '../../core/interfaces/index.js';
+import { supabase } from '../../config/supabase-unified.js';
+import { LogService } from '../../core/utils/log.service.js';
+import { Usuario, FiltroBase, PaginatedResponse, EstatisticasUsuario } from '../../shared/types/index.js';
+import { UsuarioNaoEncontradoError, EmailJaExisteError } from '../../core/errors/usuario-errors.js';
+
+export class UsuarioRepository implements IUsuarioRepository {
+  private supabase: SupabaseClient;
+  private logService: ILogService;
+
+  constructor() {
+    this.supabase = supabase;
+    this.logService = new LogService(supabase, 'UsuarioRepository');
+  }
+
+  private aplicarFiltros(query: any, filtro: FiltroBase) {
+    if (filtro.limit) {
+      query = query.limit(filtro.limit);
+    }
+    if (filtro.page) {
+      const offset = (filtro.page - 1) * (filtro.limit || 10);
+      query = query.offset(offset);
+    }
+    if (filtro.sort_by) {
+      query = query.order(filtro.sort_by, { ascending: filtro.sort_order === 'asc' });
+    }
+    return query;
+  }
+
+  private toError(error: unknown): Error {
+    if (error instanceof Error) {
+      return error;
+    }
+    return new Error(String(error));
+  }
+
+  async buscarPorId(id: string): Promise<Usuario | null> {
+    try {
+      const { data, error } = await this.supabase
+        .from('usuarios')
+        .select('*')
+        .eq('id', id)
+        .single();
+      if (error && error.code !== 'PGRST116') throw error;
+      return data;
+    } catch (error) {
+      this.logService.erro('Erro ao buscar usuário por ID.', this.toError(error), { id });
+      throw error;
+    }
+  }
+
+  async buscarPorAuthUserId(authUserId: string): Promise<Usuario | null> {
+    try {
+      const { data, error } = await this.supabase
+        .from('usuarios')
+        .select('*')
+        .eq('auth_user_id', authUserId)
+        .single();
+      if (error && error.code !== 'PGRST116') throw error;
+      return data;
+    } catch (error) {
+      this.logService.erro('Erro ao buscar usuário por Auth User ID.', this.toError(error), { authUserId });
+      throw error;
+    }
+  }
+
+  async buscarTodos(filtro?: FiltroBase): Promise<PaginatedResponse<Usuario>> {
+    try {
+      let query = this.supabase
+        .from('usuarios')
+        .select('*', { count: 'exact' });
+
+      if (filtro) {
+        query = this.aplicarFiltros(query, filtro);
+        if (filtro.search) {
+          query = query.or(`nome.ilike.%${filtro.search}%,email.ilike.%${filtro.search}%`);
+        }
+      }
+
+      const { data, error, count } = await query;
+      if (error) throw error;
+
+      const page = filtro?.page || 1;
+      const limit = filtro?.limit || 10;
+      const totalPages = Math.ceil((count || 0) / limit);
+
+      return {
+        success: true,
+        data: data || [],
+        pagination: {
+          page,
+          limit,
+          total: count || 0,
+          totalPages
+        }
+      };
+    } catch (error) {
+      this.logService.erro('Erro ao buscar todos os usuários.', this.toError(error), { filtro });
+      throw error;
+    }
+  }
+
+  async criar(dados: Partial<Usuario>): Promise<Usuario> {
+    if (dados.email) {
+      const usuarioExistente = await this.buscarPorEmail(dados.email);
+      if (usuarioExistente) {
+        throw new EmailJaExisteError(dados.email);
+      }
+    }
+
+    try {
+      const { data, error } = await this.supabase
+        .from('usuarios')
+        .insert({
+          ...dados,
+          criado_em: new Date().toISOString(),
+          atualizado_em: new Date().toISOString()
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      this.logService.erro('Erro ao criar usuário.', this.toError(error), { dados });
+      throw error;
+    }
+  }
+
+  async atualizar(id: string, dados: Partial<Usuario>): Promise<Usuario> {
+    const usuarioExistente = await this.buscarPorId(id);
+    if (!usuarioExistente) {
+      throw new UsuarioNaoEncontradoError(id);
+    }
+
+    if (dados.email && dados.email !== usuarioExistente.email) {
+      const usuarioComEmail = await this.buscarPorEmail(dados.email);
+      if (usuarioComEmail && usuarioComEmail.id !== id) {
+        throw new EmailJaExisteError(dados.email);
+      }
+    }
+
+    try {
+      const { data, error } = await this.supabase
+        .from('usuarios')
+        .update({
+          ...dados,
+          atualizado_em: new Date().toISOString()
+        })
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      this.logService.erro('Erro ao atualizar usuário.', this.toError(error), { id, dados });
+      throw error;
+    }
+  }
+
+  async atualizarPorAuthUserId(authUserId: string, dados: Partial<Usuario>): Promise<Usuario> {
+    const usuarioExistente = await this.buscarPorAuthUserId(authUserId);
+    if (!usuarioExistente) {
+      throw new UsuarioNaoEncontradoError(authUserId);
+    }
+    if (dados.email && dados.email !== usuarioExistente.email) {
+      const usuarioComEmail = await this.buscarPorEmail(dados.email);
+      if (usuarioComEmail && usuarioComEmail.auth_user_id !== authUserId) {
+        throw new EmailJaExisteError(dados.email);
+      }
+    }
+    try {
+      const { data, error } = await this.supabase
+        .from('usuarios')
+        .update({
+          ...dados,
+          atualizado_em: new Date().toISOString()
+        })
+        .eq('auth_user_id', authUserId)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      this.logService.erro('Erro ao atualizar usuário por Auth User ID.', this.toError(error), { authUserId, dados });
+      throw error;
+    }
+  }
+
+  async excluir(id: string): Promise<boolean> {
+    const usuarioExistente = await this.buscarPorId(id);
+    if (!usuarioExistente) {
+      throw new UsuarioNaoEncontradoError(id);
+    }
+
+    try {
+      const { error } = await this.supabase
+        .from('usuarios')
+        .update({ ativo: false, atualizado_em: new Date().toISOString() })
+        .eq('id', id);
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      this.logService.erro('Erro ao excluir usuário.', this.toError(error), { id });
+      throw error;
+    }
+  }
+
+  async excluirPorAuthUserId(authUserId: string): Promise<boolean> {
+    const usuarioExistente = await this.buscarPorAuthUserId(authUserId);
+    if (!usuarioExistente) {
+      throw new UsuarioNaoEncontradoError(authUserId);
+    }
+    try {
+      const { error } = await this.supabase
+        .from('usuarios')
+        .update({ ativo: false, atualizado_em: new Date().toISOString() })
+        .eq('auth_user_id', authUserId);
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      this.logService.erro('Erro ao excluir usuário por Auth User ID.', this.toError(error), { authUserId });
+      throw error;
+    }
+  }
+
+  async existePorId(id: string): Promise<boolean> {
+    try {
+      const { data, error } = await this.supabase
+        .from('usuarios')
+        .select('id')
+        .eq('id', id)
+        .single();
+
+      return !error && !!data;
+    } catch {
+      return false;
+    }
+  }
+
+  async buscarPorEmail(email: string): Promise<Usuario | null> {
+    try {
+      const { data, error } = await this.supabase
+        .from('usuarios')
+        .select('*, senha_hash') // Garantir que senha_hash seja retornado
+        .eq('email', email)
+        .single();
+
+      console.log('[DEBUG] Usuario retornado por buscarPorEmail:', data); // Log para depuração
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 = não encontrado
+        await this.logService.erro('Erro ao buscar usuário por email', error, { email });
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      await this.logService.erro('Erro inesperado ao buscar usuário por email', this.toError(error), { email });
+      return null;
+    }
+  }
+
+  async atualizarUltimoLogin(id: string): Promise<void> {
+    try {
+      const { error } = await this.supabase
+        .from('usuarios')
+        .update({ 
+          ultimo_login: new Date().toISOString(),
+          atualizado_em: new Date().toISOString()
+        })
+        .eq('id', id);
+
+      if (error) {
+        await this.logService.erro('Erro ao atualizar último login', error, { id });
+      }
+    } catch (error) {
+      await this.logService.erro('Erro inesperado ao atualizar último login', this.toError(error), { id });
+    }
+  }
+
+  async atualizarUltimoLoginPorAuthUserId(authUserId: string): Promise<void> {
+    try {
+      const { error } = await this.supabase
+        .from('usuarios')
+        .update({ 
+          ultimo_login: new Date().toISOString(),
+          atualizado_em: new Date().toISOString()
+        })
+        .eq('auth_user_id', authUserId);
+      if (error) {
+        await this.logService.erro('Erro ao atualizar último login', error, { authUserId });
+      }
+    } catch (error) {
+      await this.logService.erro('Erro inesperado ao atualizar último login', this.toError(error), { authUserId });
+    }
+  }
+
+  async atualizarEstatisticas(id: string, estatisticas: Partial<EstatisticasUsuario>): Promise<void> {
+    try {
+      const dadosAtualizacao: Partial<Usuario> = {};
+
+      if (estatisticas.total_simulados_realizados !== undefined) {
+        // Buscar estatísticas atuais para incrementar
+        const usuario = await this.buscarPorId(id);
+        if (usuario) {
+          dadosAtualizacao.total_questoes_respondidas = 
+            (usuario.total_questoes_respondidas || 0) + (estatisticas.total_simulados_realizados || 0);
+        }
+      }
+
+      if (estatisticas.total_acertos !== undefined) {
+        dadosAtualizacao.total_acertos = estatisticas.total_acertos;
+      }
+
+      if (estatisticas.tempo_total_estudo_horas !== undefined) {
+        dadosAtualizacao.tempo_estudo_minutos = estatisticas.tempo_total_estudo_horas * 60;
+      }
+
+      if (estatisticas.media_pontuacao_simulados !== undefined) {
+        dadosAtualizacao.pontuacao_media = estatisticas.media_pontuacao_simulados;
+      }
+
+      const { error } = await this.supabase
+        .from('usuarios')
+        .update(dadosAtualizacao)
+        .eq('id', id);
+
+      if (error) {
+        await this.logService.erro('Erro ao atualizar estatísticas do usuário', error, { id, estatisticas });
+      }
+    } catch (error) {
+      await this.logService.erro('Erro inesperado ao atualizar estatísticas do usuário', this.toError(error), { id, estatisticas });
+    }
+  }
+
+  async atualizarEstatisticasPorAuthUserId(authUserId: string, estatisticas: Partial<EstatisticasUsuario>): Promise<void> {
+    try {
+      const dadosAtualizacao: Partial<Usuario> = {};
+      if (estatisticas.total_simulados_realizados !== undefined) {
+        const usuario = await this.buscarPorAuthUserId(authUserId);
+        if (usuario) {
+          dadosAtualizacao.total_questoes_respondidas = 
+            (usuario.total_questoes_respondidas || 0) + (estatisticas.total_simulados_realizados || 0);
+        }
+      }
+      if (estatisticas.total_acertos !== undefined) {
+        dadosAtualizacao.total_acertos = estatisticas.total_acertos;
+      }
+      if (estatisticas.tempo_total_estudo_horas !== undefined) {
+        dadosAtualizacao.tempo_estudo_minutos = estatisticas.tempo_total_estudo_horas * 60;
+      }
+      if (estatisticas.media_pontuacao_simulados !== undefined) {
+        dadosAtualizacao.pontuacao_media = estatisticas.media_pontuacao_simulados;
+      }
+      const { error } = await this.supabase
+        .from('usuarios')
+        .update(dadosAtualizacao)
+        .eq('auth_user_id', authUserId);
+      if (error) {
+        await this.logService.erro('Erro ao atualizar estatísticas do usuário', error, { authUserId, estatisticas });
+      }
+    } catch (error) {
+      await this.logService.erro('Erro inesperado ao atualizar estatísticas do usuário', this.toError(error), { authUserId, estatisticas });
+    }
+  }
+
+  // Métodos específicos para usuários
+
+  async buscarUsuariosAtivos(): Promise<Usuario[]> {
+    try {
+      const { data, error } = await this.supabase
+        .from('usuarios')
+        .select('*')
+        .eq('ativo', true)
+        .order('criado_em', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      this.logService.erro('Erro ao buscar usuários ativos.', this.toError(error));
+      throw error;
+    }
+  }
+
+  async buscarUsuariosPorConcurso(concursoId: string): Promise<Usuario[]> {
+    try {
+      const { data, error } = await this.supabase
+        .from('usuarios')
+        .select(`
+          *,
+          preferencias_usuario_concurso!inner(concurso_id)
+        `)
+        .eq('preferencias_usuario_concurso.concurso_id', concursoId)
+        .eq('preferencias_usuario_concurso.ativo', true)
+        .eq('ativo', true);
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      this.logService.erro('Erro ao buscar usuários por concurso.', this.toError(error), { concursoId });
+      throw error;
+    }
+  }
+
+  async obterEstatisticasUsuario(id: string): Promise<EstatisticasUsuario> {
+    try {
+      // Buscar dados básicos do usuário
+      const usuario = await this.buscarPorId(id);
+      if (!usuario) {
+        throw new UsuarioNaoEncontradoError(id);
+      }
+
+      // Buscar estatísticas de simulados
+      const { data: simuladosData } = await this.supabase
+        .from('progresso_usuario_simulado')
+        .select('pontuacao, concluido_em')
+        .eq('usuario_id', id);
+
+      // Buscar estatísticas de questões semanais
+      const { data: questoesData } = await this.supabase
+        .from('progresso_usuario_questoes_semanais')
+        .select('total_questoes, pontuacao')
+        .eq('usuario_id', id);
+
+      // Buscar estatísticas de flashcards
+      const { data: flashcardsData } = await this.supabase
+        .from('progresso_usuario_flashcard')
+        .select('status')
+        .eq('usuario_id', id);
+
+      // Buscar estatísticas de apostilas
+      const { data: apostilasData } = await this.supabase
+        .from('progresso_usuario_apostila')
+        .select('concluido')
+        .eq('usuario_id', id);
+
+      // Calcular estatísticas
+      const totalSimuladosRealizados = simuladosData?.length || 0;
+      const mediaPontuacaoSimulados = simuladosData?.length 
+        ? simuladosData.reduce((acc, s) => acc + s.pontuacao, 0) / simuladosData.length 
+        : 0;
+
+      const totalQuestoesSemanaisRespondidas = questoesData?.reduce((acc, q) => acc + q.total_questoes, 0) || 0;
+
+      const totalFlashcardsDominados = flashcardsData?.filter(f => f.status === 'dominado').length || 0;
+
+      const totalApostilasConcluidias = apostilasData?.filter(a => a.concluido).length || 0;
+
+      // Calcular sequência de dias de estudo
+      const sequenciaDiasEstudo = await this.calcularSequenciaDiasEstudo(id);
+
+      // Buscar última atividade
+      const ultimaAtividade = await this.obterUltimaAtividade(id);
+
+      return {
+        total_simulados_realizados: totalSimuladosRealizados,
+        media_pontuacao_simulados: Math.round(mediaPontuacaoSimulados * 100) / 100,
+        total_questoes_semanais_respondidas: totalQuestoesSemanaisRespondidas,
+        total_flashcards_dominados: totalFlashcardsDominados,
+        total_apostilas_concluidas: totalApostilasConcluidias,
+        tempo_total_estudo_horas: Math.round((usuario.tempo_estudo_minutos || 0) / 60 * 100) / 100,
+        sequencia_dias_estudo: sequenciaDiasEstudo,
+        ultima_atividade: ultimaAtividade,
+        total_acertos: 0 // TODO: calcular se necessário
+      };
+    } catch (error) {
+      this.logService.erro('Erro ao obter estatísticas do usuário', this.toError(error), { id });
+      throw error;
+    }
+  }
+
+  private async calcularSequenciaDiasEstudo(usuarioId: string): Promise<number> {
+    try {
+      // Buscar atividades dos últimos 30 dias
+      const dataLimite = new Date();
+      dataLimite.setDate(dataLimite.getDate() - 30);
+
+      const { data } = await this.supabase
+        .from('progresso_usuario_simulado')
+        .select('concluido_em')
+        .eq('usuario_id', usuarioId)
+        .gte('concluido_em', dataLimite.toISOString())
+        .order('concluido_em', { ascending: false });
+
+      if (!data || data.length === 0) {
+        return 0;
+      }
+
+      // Agrupar por dia e calcular sequência
+      const diasComAtividade = new Set();
+      data.forEach(item => {
+        if (item.concluido_em) {
+          const dia = new Date(item.concluido_em).toDateString();
+          diasComAtividade.add(dia);
+        }
+      });
+
+      // Calcular sequência consecutiva a partir de hoje
+      let sequencia = 0;
+      const hoje = new Date();
+      
+      for (let i = 0; i < 30; i++) {
+        const dia = new Date(hoje);
+        dia.setDate(dia.getDate() - i);
+        const diaString = dia.toDateString();
+        
+        if (diasComAtividade.has(diaString)) {
+          sequencia++;
+        } else {
+          break;
+        }
+      }
+
+      return sequencia;
+    } catch (error) {
+      await this.logService.erro('Erro ao calcular sequência de dias de estudo', this.toError(error), { usuarioId });
+      return 0;
+    }
+  }
+
+  private async obterUltimaAtividade(usuarioId: string): Promise<Date> {
+    try {
+      const { data } = await this.supabase
+        .from('progresso_usuario_simulado')
+        .select('concluido_em')
+        .eq('usuario_id', usuarioId)
+        .order('concluido_em', { ascending: false })
+        .limit(1);
+
+      if (data && data.length > 0 && data[0].concluido_em) {
+        return new Date(data[0].concluido_em);
+      }
+
+      // Se não há atividade em simulados, verificar outras atividades
+      const usuario = await this.buscarPorId(usuarioId);
+      return usuario?.ultimo_login || usuario?.criado_em || new Date();
+    } catch (error) {
+      await this.logService.erro('Erro ao obter última atividade', this.toError(error), { usuarioId });
+      return new Date();
+    }
+  }
+
+  async marcarPrimeiroLoginCompleto(id: string): Promise<void> {
+    try {
+      const { error } = await this.supabase
+        .from('usuarios')
+        .update({ 
+          primeiro_login: false,
+          atualizado_em: new Date().toISOString()
+        })
+        .eq('id', id);
+
+      if (error) {
+        await this.logService.erro('Erro ao marcar primeiro login como completo', error, { id });
+        throw error;
+      }
+
+      await this.logService.info('Primeiro login marcado como completo', { usuarioId: id });
+    } catch (error) {
+      await this.logService.erro('Erro inesperado ao marcar primeiro login como completo', this.toError(error), { id });
+      throw error;
+    }
+  }
+
+  async obterUsuariosComPrimeiroLogin(): Promise<Usuario[]> {
+    try {
+      const { data, error } = await this.supabase
+        .from('usuarios')
+        .select('*')
+        .eq('primeiro_login', true)
+        .eq('ativo', true)
+        .order('criado_em', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      this.logService.erro('Erro ao obter usuários com primeiro login.', this.toError(error));
+      throw error;
+    }
+  }
+}
+
+export default UsuarioRepository;
+
+
+
+

@@ -1,22 +1,17 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { Request, Response } from 'express';
+import { supabase } from '../../../../config/supabase-unified.js';
 import { registerMetricHistory } from '../../../../utils/metrics-history';
 
-const supabaseUrl = process.env['SUPABASE_URL'] || '';
-const supabaseServiceKey = process.env['SUPABASE_SERVICE_ROLE_KEY'] || '';
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-export async function POST(req: NextRequest) {
+export const POST = async (req: Request, res: Response) => {
   // Autenticação manual admin
-  const authHeader = req.headers.get('authorization');
+  const authHeader = req.headers['authorization'] as string | undefined;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return NextResponse.json({ success: false, error: 'Token de autenticação necessário' }, { status: 401 });
+    return res.status(401).json({ success: false, error: 'Token de autenticação necessário' });
   }
   const token = authHeader.substring(7);
   const { data: { user }, error } = await supabase.auth.getUser(token);
   if (error || !user) {
-    return NextResponse.json({ success: false, error: 'Token de autenticação inválido' }, { status: 401 });
+    return res.status(401).json({ success: false, error: 'Token de autenticação inválido' });
   }
   const { data: userProfile, error: profileError } = await supabase
     .from('usuarios')
@@ -24,14 +19,13 @@ export async function POST(req: NextRequest) {
     .eq('id', user.id)
     .single();
   if (profileError || !userProfile || userProfile.role !== 'admin') {
-    return NextResponse.json({ success: false, error: 'Acesso negado. Permissão de administrador necessária.' }, { status: 403 });
+    return res.status(403).json({ success: false, error: 'Acesso negado. Permissão de administrador necessária.' });
   }
 
   // Receber métrica customizada
-  const body = await req.json();
-  const { type, value, unit, details } = body;
+  const { type, value, unit, details } = req.body;
   if (!type || typeof value !== 'number') {
-    return NextResponse.json({ success: false, error: 'Parâmetros obrigatórios: type (string), value (number)' }, { status: 400 });
+    return res.status(400).json({ success: false, error: 'Parâmetros obrigatórios: type (string), value (number)' });
   }
   try {
     await registerMetricHistory({
@@ -40,13 +34,11 @@ export async function POST(req: NextRequest) {
       unit,
       details,
       collected_by: userProfile.id,
-      collected_by_email: userProfile.email
+      collected_by_email: userProfile.email,
     });
-    return NextResponse.json({ success: true });
+    return res.json({ success: true });
   } catch (err) {
-    return NextResponse.json({ success: false, error: err instanceof Error ? err.message : 'Erro desconhecido' }, { status: 500 });
+    return res.status(500).json({ success: false, error: err instanceof Error ? err.message : 'Erro desconhecido' });
   }
-} 
-
-
+}; 
 

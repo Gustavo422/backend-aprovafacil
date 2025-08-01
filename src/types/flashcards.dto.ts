@@ -40,7 +40,7 @@ export interface UpdateFlashcardDTO {
 
 export interface UserFlashcardProgressDTO {
   id: string;
-  user_id: string;
+  usuario_id: string;
   flashcard_id: string;
   status: string;
   next_review?: string;
@@ -53,7 +53,7 @@ export interface UserFlashcardProgressDTO {
 }
 
 export interface CreateUserFlashcardProgressDTO {
-  user_id: string;
+  usuario_id: string;
   flashcard_id: string;
   status?: string;
   next_review?: string;

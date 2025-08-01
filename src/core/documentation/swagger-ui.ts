@@ -72,20 +72,20 @@ const SWAGGER_UI_HTML = `
 `;
 
 export function serveSwaggerUI(): Response {
-    return new Response(SWAGGER_UI_HTML, {
-        headers: {
-            'Content-Type': 'text/html; charset=utf-8',
-        },
-    });
+  return new Response(SWAGGER_UI_HTML, {
+    headers: {
+      'Content-Type': 'text/html; charset=utf-8',
+    },
+  });
 }
 
 export function serveOpenAPISpec(): Response {
-    const spec = generateOpenAPISpec();
-    return new Response(JSON.stringify(spec, null, 2), {
-        headers: {
-            'Content-Type': 'application/json; charset=utf-8',
-        },
-    });
+  const spec = generateOpenAPISpec();
+  return new Response(JSON.stringify(spec, null, 2), {
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+    },
+  });
 } 
 
 

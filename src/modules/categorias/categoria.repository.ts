@@ -44,7 +44,7 @@ export class CategoriaRepository extends BaseRepository<CategoriasConcursos, Fil
     super({
       tableName: 'categorias_concursos',
       softDelete: true,
-      ...options
+      ...options,
     });
     
     this.logger.info('Repositório de categorias inicializado');
@@ -64,7 +64,7 @@ export class CategoriaRepository extends BaseRepository<CategoriasConcursos, Fil
       }
       
       // Criar query
-      let query = this.supabase
+      const query = this.supabase
         .from(this.tableName)
         .select('*')
         .eq('slug', slug)
@@ -97,7 +97,7 @@ export class CategoriaRepository extends BaseRepository<CategoriasConcursos, Fil
       this.logger.debug('Buscando categorias ativas');
       
       // Criar query
-      let query = this.supabase
+      const query = this.supabase
         .from(this.tableName)
         .select('*')
         .eq('ativo', true)

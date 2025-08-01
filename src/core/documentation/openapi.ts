@@ -11,18 +11,18 @@ export const openApiConfig: OpenAPIV3.Document = {
     version: '1.0.0',
     contact: {
       name: 'AprovaFacil Team',
-      email: 'contato@aprovafacil.com'
-    }
+      email: 'contato@aprovafacil.com',
+    },
   },
   servers: [
     {
       url: 'http://localhost:3000/api',
-      description: 'Servidor de desenvolvimento'
+      description: 'Servidor de desenvolvimento',
     },
     {
       url: 'https://api.aprovafacil.com',
-      description: 'Servidor de produção'
-    }
+      description: 'Servidor de produção',
+    },
   ],
   paths: {
     '/auth/login': {
@@ -41,26 +41,26 @@ export const openApiConfig: OpenAPIV3.Document = {
                   email: {
                     type: 'string',
                     format: 'email',
-                    description: 'Email do usuário'
+                    description: 'Email do usuário',
                   },
                   senha: {
                     type: 'string',
                     minLength: 6,
-                    description: 'Senha do usuário'
-                  }
-                }
+                    description: 'Senha do usuário',
+                  },
+                },
               },
               examples: {
                 login: {
                   summary: 'Exemplo de login',
                   value: {
                     email: 'usuario@exemplo.com',
-                    senha: 'senha123'
-                  }
-                }
-              }
-            }
-          }
+                    senha: 'senha123',
+                  },
+                },
+              },
+            },
+          },
         },
         responses: {
           '200': {
@@ -72,33 +72,33 @@ export const openApiConfig: OpenAPIV3.Document = {
                   properties: {
                     success: {
                       type: 'boolean',
-                      example: true
+                      example: true,
                     },
                     user: {
                       type: 'object',
                       properties: {
                         id: {
                           type: 'string',
-                          example: 'user-123'
+                          example: 'user-123',
                         },
                         email: {
                           type: 'string',
-                          example: 'usuario@exemplo.com'
+                          example: 'usuario@exemplo.com',
                         },
                         nome: {
                           type: 'string',
-                          example: 'João Silva'
-                        }
-                      }
+                          example: 'João Silva',
+                        },
+                      },
                     },
                     message: {
                       type: 'string',
-                      example: 'Login realizado com sucesso'
-                    }
-                  }
-                }
-              }
-            }
+                      example: 'Login realizado com sucesso',
+                    },
+                  },
+                },
+              },
+            },
           },
           '400': {
             description: 'Dados inválidos',
@@ -109,31 +109,31 @@ export const openApiConfig: OpenAPIV3.Document = {
                   properties: {
                     success: {
                       type: 'boolean',
-                      example: false
+                      example: false,
                     },
                     error: {
                       type: 'object',
                       properties: {
                         code: {
                           type: 'string',
-                          example: 'VALIDATION_ERROR'
+                          example: 'VALIDATION_ERROR',
                         },
                         message: {
                           type: 'string',
-                          example: 'Dados inválidos'
+                          example: 'Dados inválidos',
                         },
                         details: {
                           type: 'array',
                           items: {
-                            type: 'object'
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
+                            type: 'object',
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
           },
           '401': {
             description: 'Credenciais inválidas',
@@ -144,28 +144,28 @@ export const openApiConfig: OpenAPIV3.Document = {
                   properties: {
                     success: {
                       type: 'boolean',
-                      example: false
+                      example: false,
                     },
                     error: {
                       type: 'object',
                       properties: {
                         code: {
                           type: 'string',
-                          example: 'INVALID_CREDENTIALS'
+                          example: 'INVALID_CREDENTIALS',
                         },
                         message: {
                           type: 'string',
-                          example: 'Email ou senha incorretos'
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
+                          example: 'Email ou senha incorretos',
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     },
     '/auth/register': {
       post: {
@@ -183,24 +183,24 @@ export const openApiConfig: OpenAPIV3.Document = {
                   email: {
                     type: 'string',
                     format: 'email',
-                    description: 'Email do usuário'
+                    description: 'Email do usuário',
                   },
                   senha: {
                     type: 'string',
                     minLength: 6,
-                    description: 'Senha do usuário'
+                    description: 'Senha do usuário',
                   },
                   password: {
                     type: 'string',
                     minLength: 6,
-                    description: 'Senha do usuário (alias para senha)'
+                    description: 'Senha do usuário (alias para senha)',
                   },
                   nome: {
                     type: 'string',
                     minLength: 2,
-                    description: 'Nome completo do usuário'
-                  }
-                }
+                    description: 'Nome completo do usuário',
+                  },
+                },
               },
               examples: {
                 register: {
@@ -209,12 +209,12 @@ export const openApiConfig: OpenAPIV3.Document = {
                     email: 'novo@exemplo.com',
                     senha: 'senha123',
                     nome: 'Maria Silva',
-                    password: 'senha123'
-                  }
-                }
-              }
-            }
-          }
+                    password: 'senha123',
+                  },
+                },
+              },
+            },
+          },
         },
         responses: {
           '200': {
@@ -226,36 +226,36 @@ export const openApiConfig: OpenAPIV3.Document = {
                   properties: {
                     success: {
                       type: 'boolean',
-                      example: true
+                      example: true,
                     },
                     message: {
                       type: 'string',
-                      example: 'Usuário criado com sucesso'
+                      example: 'Usuário criado com sucesso',
                     },
                     user: {
                       type: 'object',
                       properties: {
                         id: {
                           type: 'string',
-                          example: 'user-123'
+                          example: 'user-123',
                         },
                         email: {
                           type: 'string',
-                          example: 'novo@exemplo.com'
+                          example: 'novo@exemplo.com',
                         },
                         nome: {
                           type: 'string',
-                          example: 'Maria Silva'
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
+                          example: 'Maria Silva',
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     },
     '/auth/forgot-password': {
       post: {
@@ -273,20 +273,20 @@ export const openApiConfig: OpenAPIV3.Document = {
                   email: {
                     type: 'string',
                     format: 'email',
-                    description: 'Email do usuário'
-                  }
-                }
+                    description: 'Email do usuário',
+                  },
+                },
               },
               examples: {
                 forgot: {
                   summary: 'Exemplo de solicitação',
                   value: {
-                    email: 'usuario@exemplo.com'
-                  }
-                }
-              }
-            }
-          }
+                    email: 'usuario@exemplo.com',
+                  },
+                },
+              },
+            },
+          },
         },
         responses: {
           '200': {
@@ -297,22 +297,22 @@ export const openApiConfig: OpenAPIV3.Document = {
                   type: 'object',
                   properties: {
                     success: { type: 'boolean', example: true },
-                    message: { type: 'string', example: 'Email enviado com sucesso' }
-                  }
-                }
-              }
-            }
+                    message: { type: 'string', example: 'Email enviado com sucesso' },
+                  },
+                },
+              },
+            },
           },
           '400': {
             description: 'Email inválido',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
-      }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
     },
     '/auth/reset-password': {
       post: {
@@ -328,20 +328,20 @@ export const openApiConfig: OpenAPIV3.Document = {
                 required: ['token', 'novaSenha'],
                 properties: {
                   token: { type: 'string', description: 'Token de redefinição' },
-                  novaSenha: { type: 'string', minLength: 6, description: 'Nova senha' }
-                }
+                  novaSenha: { type: 'string', minLength: 6, description: 'Nova senha' },
+                },
               },
               examples: {
                 reset: {
                   summary: 'Exemplo de redefinição',
                   value: {
                     token: 'abcdef123456',
-                    novaSenha: 'novasenha123'
-                  }
-                }
-              }
-            }
-          }
+                    novaSenha: 'novasenha123',
+                  },
+                },
+              },
+            },
+          },
         },
         responses: {
           '200': {
@@ -352,22 +352,22 @@ export const openApiConfig: OpenAPIV3.Document = {
                   type: 'object',
                   properties: {
                     success: { type: 'boolean', example: true },
-                    message: { type: 'string', example: 'Senha redefinida com sucesso' }
-                  }
-                }
-              }
-            }
+                    message: { type: 'string', example: 'Senha redefinida com sucesso' },
+                  },
+                },
+              },
+            },
           },
           '400': {
             description: 'Token inválido ou senha fraca',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
-      }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
     },
     '/auth/verify-reset-token': {
       post: {
@@ -382,19 +382,19 @@ export const openApiConfig: OpenAPIV3.Document = {
                 type: 'object',
                 required: ['token'],
                 properties: {
-                  token: { type: 'string', description: 'Token de redefinição' }
-                }
+                  token: { type: 'string', description: 'Token de redefinição' },
+                },
               },
               examples: {
                 verify: {
                   summary: 'Exemplo de verificação',
                   value: {
-                    token: 'abcdef123456'
-                  }
-                }
-              }
-            }
-          }
+                    token: 'abcdef123456',
+                  },
+                },
+              },
+            },
+          },
         },
         responses: {
           '200': {
@@ -405,22 +405,22 @@ export const openApiConfig: OpenAPIV3.Document = {
                   type: 'object',
                   properties: {
                     success: { type: 'boolean', example: true },
-                    message: { type: 'string', example: 'Token válido' }
-                  }
-                }
-              }
-            }
+                    message: { type: 'string', example: 'Token válido' },
+                  },
+                },
+              },
+            },
           },
           '400': {
             description: 'Token inválido ou expirado',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
-      }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
     },
     '/apostilas': {
       get: {
@@ -432,38 +432,38 @@ export const openApiConfig: OpenAPIV3.Document = {
             name: 'id',
             in: 'query',
             description: 'ID da apostila específica',
-            schema: { type: 'string' }
+            schema: { type: 'string' },
           },
           {
             name: 'categoria',
             in: 'query',
             description: 'Filtrar por categoria',
-            schema: { type: 'string' }
+            schema: { type: 'string' },
           },
           {
             name: 'concurso',
             in: 'query',
             description: 'Filtrar por concurso',
-            schema: { type: 'string' }
+            schema: { type: 'string' },
           },
           {
             name: 'disciplina',
             in: 'query',
             description: 'Filtrar por disciplina',
-            schema: { type: 'string' }
+            schema: { type: 'string' },
           },
           {
             name: 'limit',
             in: 'query',
             description: 'Número máximo de resultados',
-            schema: { type: 'integer', default: 20, minimum: 1, maximum: 100 }
+            schema: { type: 'integer', default: 20, minimum: 1, maximum: 100 },
           },
           {
             name: 'offset',
             in: 'query',
             description: 'Número de resultados para pular',
-            schema: { type: 'integer', default: 0, minimum: 0 }
-          }
+            schema: { type: 'integer', default: 0, minimum: 0 },
+          },
         ],
         responses: {
           '200': {
@@ -490,9 +490,9 @@ export const openApiConfig: OpenAPIV3.Document = {
                           tamanho: { type: 'integer', example: 2048576 },
                           paginas: { type: 'integer', example: 150 },
                           avaliacao: { type: 'number', example: 4.5 },
-                          downloads: { type: 'integer', example: 1250 }
-                        }
-                      }
+                          downloads: { type: 'integer', example: 1250 },
+                        },
+                      },
                     },
                     paginacao: {
                       type: 'object',
@@ -500,23 +500,23 @@ export const openApiConfig: OpenAPIV3.Document = {
                         total: { type: 'integer', example: 50 },
                         limit: { type: 'integer', example: 20 },
                         offset: { type: 'integer', example: 0 },
-                        paginas: { type: 'integer', example: 3 }
-                      }
-                    }
-                  }
-                }
-              }
-            }
+                        paginas: { type: 'integer', example: 3 },
+                      },
+                    },
+                  },
+                },
+              },
+            },
           },
           '400': {
             description: 'Parâmetros inválidos',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
       },
       post: {
         summary: 'Criar nova apostila',
@@ -535,41 +535,41 @@ export const openApiConfig: OpenAPIV3.Document = {
                     type: 'string',
                     minLength: 3,
                     maxLength: 200,
-                    description: 'Título da apostila'
+                    description: 'Título da apostila',
                   },
                   categoria: {
                     type: 'string',
-                    description: 'Categoria da apostila'
+                    description: 'Categoria da apostila',
                   },
                   disciplina: {
                     type: 'string',
-                    description: 'Disciplina da apostila'
+                    description: 'Disciplina da apostila',
                   },
                   concurso: {
                     type: 'string',
-                    description: 'Concurso relacionado'
+                    description: 'Concurso relacionado',
                   },
                   description: {
                     type: 'string',
                     maxLength: 1000,
-                    description: 'Descrição da apostila'
+                    description: 'Descrição da apostila',
                   },
                   autor: {
                     type: 'string',
-                    description: 'Autor da apostila'
+                    description: 'Autor da apostila',
                   },
                   tags: {
                     type: 'array',
                     items: { type: 'string' },
-                    description: 'Tags para categorização'
+                    description: 'Tags para categorização',
                   },
                   visibilidade: {
                     type: 'string',
                     enum: ['publica', 'privada'],
                     default: 'publica',
-                    description: 'Visibilidade da apostila'
-                  }
-                }
+                    description: 'Visibilidade da apostila',
+                  },
+                },
               },
               examples: {
                 apostila: {
@@ -582,12 +582,12 @@ export const openApiConfig: OpenAPIV3.Document = {
                     description: 'Apostila completa sobre Direito Administrativo',
                     autor: 'Prof. Santos',
                     tags: ['direito', 'administrativo', 'oab'],
-                    visibilidade: 'publica'
-                  }
-                }
-              }
-            }
-          }
+                    visibilidade: 'publica',
+                  },
+                },
+              },
+            },
+          },
         },
         responses: {
           '201': {
@@ -605,32 +605,32 @@ export const openApiConfig: OpenAPIV3.Document = {
                         id: { type: 'string', example: 'apostila-456' },
                         titulo: { type: 'string', example: 'Direito Administrativo' },
                         categoria: { type: 'string', example: 'Direito' },
-                        dataCriacao: { type: 'string', format: 'date-time' }
-                      }
-                    }
-                  }
-                }
-              }
-            }
+                        dataCriacao: { type: 'string', format: 'date-time' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
           },
           '400': {
             description: 'Dados inválidos',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
           },
           '401': {
             description: 'Não autorizado',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
-      }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
     },
     '/apostilas/{id}': {
       get: {
@@ -643,8 +643,8 @@ export const openApiConfig: OpenAPIV3.Document = {
             in: 'path',
             required: true,
             description: 'ID da apostila',
-            schema: { type: 'string' }
-          }
+            schema: { type: 'string' },
+          },
         ],
         responses: {
           '200': {
@@ -680,26 +680,26 @@ export const openApiConfig: OpenAPIV3.Document = {
                             properties: {
                               capitulo: { type: 'string', example: 'Capítulo 1' },
                               titulo: { type: 'string', example: 'Introdução' },
-                              paginas: { type: 'integer', example: 15 }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
+                              paginas: { type: 'integer', example: 15 },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
           },
           '404': {
             description: 'Apostila não encontrada',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
       },
       put: {
         summary: 'Atualizar apostila',
@@ -712,8 +712,8 @@ export const openApiConfig: OpenAPIV3.Document = {
             in: 'path',
             required: true,
             description: 'ID da apostila',
-            schema: { type: 'string' }
-          }
+            schema: { type: 'string' },
+          },
         ],
         requestBody: {
           required: true,
@@ -729,11 +729,11 @@ export const openApiConfig: OpenAPIV3.Document = {
                   description: { type: 'string', maxLength: 1000 },
                   autor: { type: 'string' },
                   tags: { type: 'array', items: { type: 'string' } },
-                  visibilidade: { type: 'string', enum: ['publica', 'privada'] }
-                }
-              }
-            }
-          }
+                  visibilidade: { type: 'string', enum: ['publica', 'privada'] },
+                },
+              },
+            },
+          },
         },
         responses: {
           '200': {
@@ -745,21 +745,21 @@ export const openApiConfig: OpenAPIV3.Document = {
                   properties: {
                     success: { type: 'boolean', example: true },
                     message: { type: 'string', example: 'Apostila atualizada com sucesso' },
-                    apostila: { type: 'object' }
-                  }
-                }
-              }
-            }
+                    apostila: { type: 'object' },
+                  },
+                },
+              },
+            },
           },
           '404': {
             description: 'Apostila não encontrada',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
       },
       delete: {
         summary: 'Excluir apostila',
@@ -772,8 +772,8 @@ export const openApiConfig: OpenAPIV3.Document = {
             in: 'path',
             required: true,
             description: 'ID da apostila',
-            schema: { type: 'string' }
-          }
+            schema: { type: 'string' },
+          },
         ],
         responses: {
           '200': {
@@ -784,22 +784,22 @@ export const openApiConfig: OpenAPIV3.Document = {
                   type: 'object',
                   properties: {
                     success: { type: 'boolean', example: true },
-                    message: { type: 'string', example: 'Apostila excluída com sucesso' }
-                  }
-                }
-              }
-            }
+                    message: { type: 'string', example: 'Apostila excluída com sucesso' },
+                  },
+                },
+              },
+            },
           },
           '404': {
             description: 'Apostila não encontrada',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
-      }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
     },
     '/flashcards': {
       get: {
@@ -812,44 +812,44 @@ export const openApiConfig: OpenAPIV3.Document = {
             name: 'disciplina',
             in: 'query',
             description: 'Filtrar por disciplina',
-            schema: { type: 'string' }
+            schema: { type: 'string' },
           },
           {
             name: 'tema',
             in: 'query',
             description: 'Filtrar por tema',
-            schema: { type: 'string' }
+            schema: { type: 'string' },
           },
           {
             name: 'subtema',
             in: 'query',
             description: 'Filtrar por subtema',
-            schema: { type: 'string' }
+            schema: { type: 'string' },
           },
           {
             name: 'concurso',
             in: 'query',
             description: 'Filtrar por concurso',
-            schema: { type: 'string' }
+            schema: { type: 'string' },
           },
           {
             name: 'dificuldade',
             in: 'query',
             description: 'Filtrar por dificuldade',
-            schema: { type: 'string', enum: ['facil', 'medio', 'dificil'] }
+            schema: { type: 'string', enum: ['facil', 'medio', 'dificil'] },
           },
           {
             name: 'limit',
             in: 'query',
             description: 'Número máximo de resultados',
-            schema: { type: 'integer', default: 20, minimum: 1, maximum: 100 }
+            schema: { type: 'integer', default: 20, minimum: 1, maximum: 100 },
           },
           {
             name: 'offset',
             in: 'query',
             description: 'Número de resultados para pular',
-            schema: { type: 'integer', default: 0, minimum: 0 }
-          }
+            schema: { type: 'integer', default: 0, minimum: 0 },
+          },
         ],
         responses: {
           '200': {
@@ -878,9 +878,9 @@ export const openApiConfig: OpenAPIV3.Document = {
                           acertos: { type: 'integer', example: 15 },
                           erros: { type: 'integer', example: 3 },
                           proximaRevisao: { type: 'string', format: 'date-time' },
-                          nivel: { type: 'integer', example: 3 }
-                        }
-                      }
+                          nivel: { type: 'integer', example: 3 },
+                        },
+                      },
                     },
                     paginacao: {
                       type: 'object',
@@ -888,23 +888,23 @@ export const openApiConfig: OpenAPIV3.Document = {
                         total: { type: 'integer', example: 150 },
                         limit: { type: 'integer', example: 20 },
                         offset: { type: 'integer', example: 0 },
-                        paginas: { type: 'integer', example: 8 }
-                      }
-                    }
-                  }
-                }
-              }
-            }
+                        paginas: { type: 'integer', example: 8 },
+                      },
+                    },
+                  },
+                },
+              },
+            },
           },
           '401': {
             description: 'Não autorizado',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
       },
       post: {
         summary: 'Criar novo flashcard',
@@ -923,48 +923,48 @@ export const openApiConfig: OpenAPIV3.Document = {
                     type: 'string',
                     minLength: 1,
                     maxLength: 500,
-                    description: 'Frente do flashcard'
+                    description: 'Frente do flashcard',
                   },
                   back: {
                     type: 'string',
                     minLength: 1,
                     maxLength: 1000,
-                    description: 'Verso do flashcard'
+                    description: 'Verso do flashcard',
                   },
                   disciplina: {
                     type: 'string',
                     minLength: 1,
                     maxLength: 100,
-                    description: 'Disciplina do flashcard'
+                    description: 'Disciplina do flashcard',
                   },
                   tema: {
                     type: 'string',
                     minLength: 1,
                     maxLength: 100,
-                    description: 'Tema do flashcard'
+                    description: 'Tema do flashcard',
                   },
                   subtema: {
                     type: 'string',
                     maxLength: 100,
-                    description: 'Subtema do flashcard'
+                    description: 'Subtema do flashcard',
                   },
                   concurso: {
                     type: 'string',
                     maxLength: 100,
-                    description: 'Concurso relacionado'
+                    description: 'Concurso relacionado',
                   },
                   dificuldade: {
                     type: 'string',
                     enum: ['facil', 'medio', 'dificil'],
                     default: 'medio',
-                    description: 'Nível de dificuldade'
+                    description: 'Nível de dificuldade',
                   },
                   tags: {
                     type: 'array',
                     items: { type: 'string' },
-                    description: 'Tags para categorização'
-                  }
-                }
+                    description: 'Tags para categorização',
+                  },
+                },
               },
               examples: {
                 flashcard: {
@@ -977,12 +977,12 @@ export const openApiConfig: OpenAPIV3.Document = {
                     subtema: 'Brasil',
                     concurso: 'ENEM',
                     dificuldade: 'facil',
-                    tags: ['geografia', 'capitais', 'brasil']
-                  }
-                }
-              }
-            }
-          }
+                    tags: ['geografia', 'capitais', 'brasil'],
+                  },
+                },
+              },
+            },
+          },
         },
         responses: {
           '201': {
@@ -1002,32 +1002,32 @@ export const openApiConfig: OpenAPIV3.Document = {
                         back: { type: 'string', example: 'Brasília' },
                         disciplina: { type: 'string', example: 'Geografia' },
                         tema: { type: 'string', example: 'Capitais' },
-                        dataCriacao: { type: 'string', format: 'date-time' }
-                      }
-                    }
-                  }
-                }
-              }
-            }
+                        dataCriacao: { type: 'string', format: 'date-time' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
           },
           '400': {
             description: 'Dados inválidos',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
           },
           '401': {
             description: 'Não autorizado',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
-      }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
     },
     '/flashcards/progress': {
       get: {
@@ -1040,14 +1040,14 @@ export const openApiConfig: OpenAPIV3.Document = {
             name: 'disciplina',
             in: 'query',
             description: 'Filtrar por disciplina',
-            schema: { type: 'string' }
+            schema: { type: 'string' },
           },
           {
             name: 'periodo',
             in: 'query',
             description: 'Período para análise',
-            schema: { type: 'string', enum: ['dia', 'semana', 'mes', 'ano'], default: 'semana' }
-          }
+            schema: { type: 'string', enum: ['dia', 'semana', 'mes', 'ano'], default: 'semana' },
+          },
         ],
         responses: {
           '200': {
@@ -1077,34 +1077,34 @@ export const openApiConfig: OpenAPIV3.Document = {
                               disciplina: { type: 'string', example: 'Direito' },
                               total: { type: 'integer', example: 50 },
                               estudados: { type: 'integer', example: 40 },
-                              taxaAcerto: { type: 'number', example: 0.85 }
-                            }
-                          }
+                              taxaAcerto: { type: 'number', example: 0.85 },
+                            },
+                          },
                         },
                         porDificuldade: {
                           type: 'object',
                           properties: {
                             facil: { type: 'integer', example: 30 },
                             medio: { type: 'integer', example: 60 },
-                            dificil: { type: 'integer', example: 30 }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
+                            dificil: { type: 'integer', example: 30 },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
           },
           '401': {
             description: 'Não autorizado',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
       },
       post: {
         summary: 'Registrar progresso do flashcard',
@@ -1121,22 +1121,22 @@ export const openApiConfig: OpenAPIV3.Document = {
                 properties: {
                   flashcardId: {
                     type: 'string',
-                    description: 'ID do flashcard'
+                    description: 'ID do flashcard',
                   },
                   acertou: {
                     type: 'boolean',
-                    description: 'Se o usuário acertou ou não'
+                    description: 'Se o usuário acertou ou não',
                   },
                   tempoResposta: {
                     type: 'integer',
-                    description: 'Tempo de resposta em segundos'
+                    description: 'Tempo de resposta em segundos',
                   },
                   dificuldade: {
                     type: 'string',
                     enum: ['facil', 'medio', 'dificil'],
-                    description: 'Dificuldade percebida pelo usuário'
-                  }
-                }
+                    description: 'Dificuldade percebida pelo usuário',
+                  },
+                },
               },
               examples: {
                 progresso: {
@@ -1145,12 +1145,12 @@ export const openApiConfig: OpenAPIV3.Document = {
                     flashcardId: 'flashcard-123',
                     acertou: true,
                     tempoResposta: 5,
-                    dificuldade: 'medio'
-                  }
-                }
-              }
-            }
-          }
+                    dificuldade: 'medio',
+                  },
+                },
+              },
+            },
+          },
         },
         responses: {
           '200': {
@@ -1163,30 +1163,30 @@ export const openApiConfig: OpenAPIV3.Document = {
                     success: { type: 'boolean', example: true },
                     message: { type: 'string', example: 'Progresso registrado com sucesso' },
                     proximaRevisao: { type: 'string', format: 'date-time' },
-                    nivel: { type: 'integer', example: 4 }
-                  }
-                }
-              }
-            }
+                    nivel: { type: 'integer', example: 4 },
+                  },
+                },
+              },
+            },
           },
           '400': {
             description: 'Dados inválidos',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
           },
           '404': {
             description: 'Flashcard não encontrado',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
-      }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
     },
     '/simulados': {
       get: {
@@ -1199,38 +1199,38 @@ export const openApiConfig: OpenAPIV3.Document = {
             name: 'concurso',
             in: 'query',
             description: 'Filtrar por concurso',
-            schema: { type: 'string' }
+            schema: { type: 'string' },
           },
           {
             name: 'disciplina',
             in: 'query',
             description: 'Filtrar por disciplina',
-            schema: { type: 'string' }
+            schema: { type: 'string' },
           },
           {
             name: 'nivel',
             in: 'query',
             description: 'Filtrar por nível de dificuldade',
-            schema: { type: 'string', enum: ['basico', 'intermediario', 'avancado'] }
+            schema: { type: 'string', enum: ['basico', 'intermediario', 'avancado'] },
           },
           {
             name: 'status',
             in: 'query',
             description: 'Filtrar por status',
-            schema: { type: 'string', enum: ['disponivel', 'em_andamento', 'concluido'] }
+            schema: { type: 'string', enum: ['disponivel', 'em_andamento', 'concluido'] },
           },
           {
             name: 'limit',
             in: 'query',
             description: 'Número máximo de resultados',
-            schema: { type: 'integer', default: 20, minimum: 1, maximum: 100 }
+            schema: { type: 'integer', default: 20, minimum: 1, maximum: 100 },
           },
           {
             name: 'offset',
             in: 'query',
             description: 'Número de resultados para pular',
-            schema: { type: 'integer', default: 0, minimum: 0 }
-          }
+            schema: { type: 'integer', default: 0, minimum: 0 },
+          },
         ],
         responses: {
           '200': {
@@ -1258,9 +1258,9 @@ export const openApiConfig: OpenAPIV3.Document = {
                           dataCriacao: { type: 'string', format: 'date-time' },
                           status: { type: 'string', example: 'disponivel' },
                           tentativas: { type: 'integer', example: 0 },
-                          melhorPontuacao: { type: 'number', example: 0 }
-                        }
-                      }
+                          melhorPontuacao: { type: 'number', example: 0 },
+                        },
+                      },
                     },
                     paginacao: {
                       type: 'object',
@@ -1268,23 +1268,23 @@ export const openApiConfig: OpenAPIV3.Document = {
                         total: { type: 'integer', example: 25 },
                         limit: { type: 'integer', example: 20 },
                         offset: { type: 'integer', example: 0 },
-                        paginas: { type: 'integer', example: 2 }
-                      }
-                    }
-                  }
-                }
-              }
-            }
+                        paginas: { type: 'integer', example: 2 },
+                      },
+                    },
+                  },
+                },
+              },
+            },
           },
           '401': {
             description: 'Não autorizado',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
       },
       post: {
         summary: 'Criar novo simulado',
@@ -1303,32 +1303,32 @@ export const openApiConfig: OpenAPIV3.Document = {
                     type: 'string',
                     minLength: 3,
                     maxLength: 200,
-                    description: 'Título do simulado'
+                    description: 'Título do simulado',
                   },
                   description: {
                     type: 'string',
                     maxLength: 1000,
-                    description: 'Descrição do simulado'
+                    description: 'Descrição do simulado',
                   },
                   concurso: {
                     type: 'string',
-                    description: 'Concurso relacionado'
+                    description: 'Concurso relacionado',
                   },
                   disciplina: {
                     type: 'string',
-                    description: 'Disciplina do simulado'
+                    description: 'Disciplina do simulado',
                   },
                   nivel: {
                     type: 'string',
                     enum: ['basico', 'intermediario', 'avancado'],
                     default: 'intermediario',
-                    description: 'Nível de dificuldade'
+                    description: 'Nível de dificuldade',
                   },
                   tempoLimite: {
                     type: 'integer',
                     minimum: 300,
                     maximum: 14400,
-                    description: 'Tempo limite em segundos'
+                    description: 'Tempo limite em segundos',
                   },
                   questoes: {
                     type: 'array',
@@ -1343,15 +1343,15 @@ export const openApiConfig: OpenAPIV3.Document = {
                           type: 'array',
                           minItems: 2,
                           maxItems: 5,
-                          items: { type: 'string' }
+                          items: { type: 'string' },
                         },
                         respostaCorreta: { type: 'integer', minimum: 0 },
                         explicacao: { type: 'string' },
-                        nivel: { type: 'string', enum: ['facil', 'medio', 'dificil'] }
-                      }
-                    }
-                  }
-                }
+                        nivel: { type: 'string', enum: ['facil', 'medio', 'dificil'] },
+                      },
+                    },
+                  },
+                },
               },
               examples: {
                 simulado: {
@@ -1370,18 +1370,18 @@ export const openApiConfig: OpenAPIV3.Document = {
                           'A soberania',
                           'A cidadania',
                           'A dignidade da pessoa humana',
-                          'O pluralismo político'
+                          'O pluralismo político',
                         ],
                         respostaCorreta: 2,
                         explicacao: 'A dignidade da pessoa humana é o fundamento da República',
-                        nivel: 'medio'
-                      }
-                    ]
-                  }
-                }
-              }
-            }
-          }
+                        nivel: 'medio',
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          },
         },
         responses: {
           '201': {
@@ -1399,32 +1399,32 @@ export const openApiConfig: OpenAPIV3.Document = {
                         id: { type: 'string', example: 'simulado-456' },
                         titulo: { type: 'string', example: 'Simulado OAB - Direito Constitucional' },
                         totalQuestoes: { type: 'integer', example: 1 },
-                        dataCriacao: { type: 'string', format: 'date-time' }
-                      }
-                    }
-                  }
-                }
-              }
-            }
+                        dataCriacao: { type: 'string', format: 'date-time' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
           },
           '400': {
             description: 'Dados inválidos',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
           },
           '401': {
             description: 'Não autorizado',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
-      }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
     },
     '/simulados/{id}': {
       get: {
@@ -1438,8 +1438,8 @@ export const openApiConfig: OpenAPIV3.Document = {
             in: 'path',
             required: true,
             description: 'ID do simulado',
-            schema: { type: 'string' }
-          }
+            schema: { type: 'string' },
+          },
         ],
         responses: {
           '200': {
@@ -1474,27 +1474,27 @@ export const openApiConfig: OpenAPIV3.Document = {
                               id: { type: 'string', example: 'questao-1' },
                               enunciado: { type: 'string', example: 'Qual é o princípio fundamental?' },
                               alternativas: { type: 'array', items: { type: 'string' } },
-                              nivel: { type: 'string', example: 'medio' }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
+                              nivel: { type: 'string', example: 'medio' },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
           },
           '404': {
             description: 'Simulado não encontrado',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
-      }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
     },
     '/simulados/create': {
       post: {
@@ -1514,27 +1514,27 @@ export const openApiConfig: OpenAPIV3.Document = {
                     type: 'string',
                     minLength: 3,
                     maxLength: 200,
-                    description: 'Título do simulado'
+                    description: 'Título do simulado',
                   },
                   description: {
                     type: 'string',
                     maxLength: 1000,
-                    description: 'Descrição do simulado'
+                    description: 'Descrição do simulado',
                   },
                   questoesIds: {
                     type: 'array',
                     minItems: 5,
                     maxItems: 200,
                     items: { type: 'string' },
-                    description: 'IDs das questões selecionadas'
+                    description: 'IDs das questões selecionadas',
                   },
                   tempoLimite: {
                     type: 'integer',
                     minimum: 300,
                     maximum: 14400,
-                    description: 'Tempo limite em segundos'
-                  }
-                }
+                    description: 'Tempo limite em segundos',
+                  },
+                },
               },
               examples: {
                 personalizado: {
@@ -1543,12 +1543,12 @@ export const openApiConfig: OpenAPIV3.Document = {
                     titulo: 'Meu Simulado Personalizado',
                     description: 'Simulado criado com questões selecionadas',
                     questoesIds: ['questao-1', 'questao-2', 'questao-3'],
-                    tempoLimite: 1800
-                  }
-                }
-              }
-            }
-          }
+                    tempoLimite: 1800,
+                  },
+                },
+              },
+            },
+          },
         },
         responses: {
           '201': {
@@ -1560,14 +1560,14 @@ export const openApiConfig: OpenAPIV3.Document = {
                   properties: {
                     success: { type: 'boolean', example: true },
                     message: { type: 'string', example: 'Simulado personalizado criado com sucesso' },
-                    simulado: { type: 'object' }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
+                    simulado: { type: 'object' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     },
     '/estatisticas': {
       get: {
@@ -1580,14 +1580,14 @@ export const openApiConfig: OpenAPIV3.Document = {
             name: 'periodo',
             in: 'query',
             description: 'Período para análise',
-            schema: { type: 'string', enum: ['dia', 'semana', 'mes', 'ano'], default: 'mes' }
+            schema: { type: 'string', enum: ['dia', 'semana', 'mes', 'ano'], default: 'mes' },
           },
           {
             name: 'concurso',
             in: 'query',
             description: 'Filtrar por concurso',
-            schema: { type: 'string' }
-          }
+            schema: { type: 'string' },
+          },
         ],
         responses: {
           '200': {
@@ -1619,35 +1619,35 @@ export const openApiConfig: OpenAPIV3.Document = {
                               disciplina: { type: 'string', example: 'Direito' },
                               questoes: { type: 'integer', example: 50 },
                               acertos: { type: 'integer', example: 40 },
-                              taxaAcerto: { type: 'number', example: 0.8 }
-                            }
-                          }
+                              taxaAcerto: { type: 'number', example: 0.8 },
+                            },
+                          },
                         },
                         progresso: {
                           type: 'object',
                           properties: {
                             objetivo: { type: 'string', example: 'OAB' },
                             progresso: { type: 'number', example: 0.65 },
-                            tempoRestante: { type: 'integer', example: 86400 }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
+                            tempoRestante: { type: 'integer', example: 86400 },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
           },
           '401': {
             description: 'Não autorizado',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
-      }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
     },
     '/plano-estudos': {
       get: {
@@ -1660,14 +1660,14 @@ export const openApiConfig: OpenAPIV3.Document = {
             name: 'status',
             in: 'query',
             description: 'Filtrar por status',
-            schema: { type: 'string', enum: ['ativo', 'pausado', 'concluido'] }
+            schema: { type: 'string', enum: ['ativo', 'pausado', 'concluido'] },
           },
           {
             name: 'concurso',
             in: 'query',
             description: 'Filtrar por concurso',
-            schema: { type: 'string' }
-          }
+            schema: { type: 'string' },
+          },
         ],
         responses: {
           '200': {
@@ -1697,27 +1697,27 @@ export const openApiConfig: OpenAPIV3.Document = {
                               properties: {
                                 disciplina: { type: 'string', example: 'Direito Constitucional' },
                                 tempoAlocado: { type: 'integer', example: 3600 },
-                                progresso: { type: 'number', example: 0.8 }
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
+                                progresso: { type: 'number', example: 0.8 },
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
           },
           '401': {
             description: 'Não autorizado',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
       },
       post: {
         summary: 'Criar plano de estudo',
@@ -1736,23 +1736,23 @@ export const openApiConfig: OpenAPIV3.Document = {
                     type: 'string',
                     minLength: 3,
                     maxLength: 200,
-                    description: 'Título do plano'
+                    description: 'Título do plano',
                   },
                   objetivo: {
                     type: 'string',
                     minLength: 10,
                     maxLength: 500,
-                    description: 'Objetivo do plano'
+                    description: 'Objetivo do plano',
                   },
                   dataInicio: {
                     type: 'string',
                     format: 'date',
-                    description: 'Data de início'
+                    description: 'Data de início',
                   },
                   dataFim: {
                     type: 'string',
                     format: 'date',
-                    description: 'Data de término'
+                    description: 'Data de término',
                   },
                   disciplinas: {
                     type: 'array',
@@ -1763,22 +1763,22 @@ export const openApiConfig: OpenAPIV3.Document = {
                       properties: {
                         disciplina: { type: 'string', description: 'Nome da disciplina' },
                         tempoAlocado: { type: 'integer', minimum: 300, description: 'Tempo em segundos' },
-                        prioridade: { type: 'string', enum: ['baixa', 'media', 'alta'], default: 'media' }
-                      }
-                    }
+                        prioridade: { type: 'string', enum: ['baixa', 'media', 'alta'], default: 'media' },
+                      },
+                    },
                   },
                   metaDiaria: {
                     type: 'integer',
                     minimum: 900,
                     maximum: 28800,
-                    description: 'Meta de estudo diário em segundos'
+                    description: 'Meta de estudo diário em segundos',
                   },
                   diasEstudo: {
                     type: 'array',
                     items: { type: 'integer', minimum: 0, maximum: 6 },
-                    description: 'Dias da semana para estudo (0=domingo, 6=sábado)'
-                  }
-                }
+                    description: 'Dias da semana para estudo (0=domingo, 6=sábado)',
+                  },
+                },
               },
               examples: {
                 plano: {
@@ -1792,21 +1792,21 @@ export const openApiConfig: OpenAPIV3.Document = {
                       {
                         disciplina: 'Direito Constitucional',
                         tempoAlocado: 3600,
-                        prioridade: 'alta'
+                        prioridade: 'alta',
                       },
                       {
                         disciplina: 'Direito Administrativo',
                         tempoAlocado: 2700,
-                        prioridade: 'media'
-                      }
+                        prioridade: 'media',
+                      },
                     ],
                     metaDiaria: 7200,
-                    diasEstudo: [1, 2, 3, 4, 5, 6]
-                  }
-                }
-              }
-            }
-          }
+                    diasEstudo: [1, 2, 3, 4, 5, 6],
+                  },
+                },
+              },
+            },
+          },
         },
         responses: {
           '201': {
@@ -1823,32 +1823,32 @@ export const openApiConfig: OpenAPIV3.Document = {
                       properties: {
                         id: { type: 'string', example: 'plano-456' },
                         titulo: { type: 'string', example: 'Plano OAB 2024' },
-                        dataCriacao: { type: 'string', format: 'date-time' }
-                      }
-                    }
-                  }
-                }
-              }
-            }
+                        dataCriacao: { type: 'string', format: 'date-time' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
           },
           '400': {
             description: 'Dados inválidos',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
           },
           '401': {
             description: 'Não autorizado',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
-      }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
     },
     '/plano-estudos/{id}': {
       get: {
@@ -1862,8 +1862,8 @@ export const openApiConfig: OpenAPIV3.Document = {
             in: 'path',
             required: true,
             description: 'ID do plano de estudo',
-            schema: { type: 'string' }
-          }
+            schema: { type: 'string' },
+          },
         ],
         responses: {
           '200': {
@@ -1895,9 +1895,9 @@ export const openApiConfig: OpenAPIV3.Document = {
                               tempoAlocado: { type: 'integer', example: 3600 },
                               progresso: { type: 'number', example: 0.8 },
                               prioridade: { type: 'string', example: 'alta' },
-                              tempoEstudado: { type: 'integer', example: 2880 }
-                            }
-                          }
+                              tempoEstudado: { type: 'integer', example: 2880 },
+                            },
+                          },
                         },
                         atividades: {
                           type: 'array',
@@ -1906,26 +1906,26 @@ export const openApiConfig: OpenAPIV3.Document = {
                             properties: {
                               data: { type: 'string', format: 'date' },
                               tempoEstudado: { type: 'integer', example: 7200 },
-                              disciplinas: { type: 'array', items: { type: 'string' } }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
+                              disciplinas: { type: 'array', items: { type: 'string' } },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
           },
           '404': {
             description: 'Plano de estudo não encontrado',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
       },
       put: {
         summary: 'Atualizar plano de estudo',
@@ -1938,8 +1938,8 @@ export const openApiConfig: OpenAPIV3.Document = {
             in: 'path',
             required: true,
             description: 'ID do plano de estudo',
-            schema: { type: 'string' }
-          }
+            schema: { type: 'string' },
+          },
         ],
         requestBody: {
           required: true,
@@ -1959,16 +1959,16 @@ export const openApiConfig: OpenAPIV3.Document = {
                       properties: {
                         disciplina: { type: 'string' },
                         tempoAlocado: { type: 'integer', minimum: 300 },
-                        prioridade: { type: 'string', enum: ['baixa', 'media', 'alta'] }
-                      }
-                    }
+                        prioridade: { type: 'string', enum: ['baixa', 'media', 'alta'] },
+                      },
+                    },
                   },
                   metaDiaria: { type: 'integer', minimum: 900, maximum: 28800 },
-                  diasEstudo: { type: 'array', items: { type: 'integer', minimum: 0, maximum: 6 } }
-                }
-              }
-            }
-          }
+                  diasEstudo: { type: 'array', items: { type: 'integer', minimum: 0, maximum: 6 } },
+                },
+              },
+            },
+          },
         },
         responses: {
           '200': {
@@ -1980,21 +1980,21 @@ export const openApiConfig: OpenAPIV3.Document = {
                   properties: {
                     success: { type: 'boolean', example: true },
                     message: { type: 'string', example: 'Plano de estudo atualizado com sucesso' },
-                    plano: { type: 'object' }
-                  }
-                }
-              }
-            }
+                    plano: { type: 'object' },
+                  },
+                },
+              },
+            },
           },
           '404': {
             description: 'Plano de estudo não encontrado',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
       },
       delete: {
         summary: 'Excluir plano de estudo',
@@ -2007,8 +2007,8 @@ export const openApiConfig: OpenAPIV3.Document = {
             in: 'path',
             required: true,
             description: 'ID do plano de estudo',
-            schema: { type: 'string' }
-          }
+            schema: { type: 'string' },
+          },
         ],
         responses: {
           '200': {
@@ -2019,22 +2019,22 @@ export const openApiConfig: OpenAPIV3.Document = {
                   type: 'object',
                   properties: {
                     success: { type: 'boolean', example: true },
-                    message: { type: 'string', example: 'Plano de estudo excluído com sucesso' }
-                  }
-                }
-              }
-            }
+                    message: { type: 'string', example: 'Plano de estudo excluído com sucesso' },
+                  },
+                },
+              },
+            },
           },
           '404': {
             description: 'Plano de estudo não encontrado',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
-      }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
     },
     '/questoes-semanais': {
       get: {
@@ -2047,26 +2047,26 @@ export const openApiConfig: OpenAPIV3.Document = {
             name: 'concurso',
             in: 'query',
             description: 'Filtrar por concurso',
-            schema: { type: 'string' }
+            schema: { type: 'string' },
           },
           {
             name: 'disciplina',
             in: 'query',
             description: 'Filtrar por disciplina',
-            schema: { type: 'string' }
+            schema: { type: 'string' },
           },
           {
             name: 'semana',
             in: 'query',
             description: 'Número da semana',
-            schema: { type: 'integer', minimum: 1, maximum: 52 }
+            schema: { type: 'integer', minimum: 1, maximum: 52 },
           },
           {
             name: 'ano',
             in: 'query',
             description: 'Ano de referência',
-            schema: { type: 'integer', minimum: 2020 }
-          }
+            schema: { type: 'integer', minimum: 2020 },
+          },
         ],
         responses: {
           '200': {
@@ -2092,24 +2092,24 @@ export const openApiConfig: OpenAPIV3.Document = {
                           dataPublicacao: { type: 'string', format: 'date' },
                           status: { type: 'string', example: 'disponivel' },
                           tentativas: { type: 'integer', example: 0 },
-                          acertos: { type: 'integer', example: 0 }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
+                          acertos: { type: 'integer', example: 0 },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
           },
           '401': {
             description: 'Não autorizado',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
       },
       post: {
         summary: 'Criar questão semanal',
@@ -2128,60 +2128,60 @@ export const openApiConfig: OpenAPIV3.Document = {
                     type: 'string',
                     minLength: 3,
                     maxLength: 200,
-                    description: 'Título da questão'
+                    description: 'Título da questão',
                   },
                   description: {
                     type: 'string',
                     maxLength: 500,
-                    description: 'Descrição da questão'
+                    description: 'Descrição da questão',
                   },
                   concurso: {
                     type: 'string',
-                    description: 'Concurso relacionado'
+                    description: 'Concurso relacionado',
                   },
                   disciplina: {
                     type: 'string',
-                    description: 'Disciplina da questão'
+                    description: 'Disciplina da questão',
                   },
                   semana: {
                     type: 'integer',
                     minimum: 1,
                     maximum: 52,
-                    description: 'Número da semana'
+                    description: 'Número da semana',
                   },
                   ano: {
                     type: 'integer',
                     minimum: 2020,
-                    description: 'Ano de referência'
+                    description: 'Ano de referência',
                   },
                   enunciado: {
                     type: 'string',
                     minLength: 10,
-                    description: 'Enunciado da questão'
+                    description: 'Enunciado da questão',
                   },
                   alternativas: {
                     type: 'array',
                     minItems: 2,
                     maxItems: 5,
                     items: { type: 'string' },
-                    description: 'Alternativas da questão'
+                    description: 'Alternativas da questão',
                   },
                   respostaCorreta: {
                     type: 'integer',
                     minimum: 0,
-                    description: 'Índice da resposta correta'
+                    description: 'Índice da resposta correta',
                   },
                   explicacao: {
                     type: 'string',
-                    description: 'Explicação da resposta'
+                    description: 'Explicação da resposta',
                   },
                   nivel: {
                     type: 'string',
                     enum: ['facil', 'medio', 'dificil'],
                     default: 'medio',
-                    description: 'Nível de dificuldade'
-                  }
-                }
+                    description: 'Nível de dificuldade',
+                  },
+                },
               },
               examples: {
                 questao: {
@@ -2198,16 +2198,16 @@ export const openApiConfig: OpenAPIV3.Document = {
                       'A soberania',
                       'A cidadania',
                       'A dignidade da pessoa humana',
-                      'O pluralismo político'
+                      'O pluralismo político',
                     ],
                     respostaCorreta: 2,
                     explicacao: 'A dignidade da pessoa humana é o fundamento da República',
-                    nivel: 'medio'
-                  }
-                }
-              }
-            }
-          }
+                    nivel: 'medio',
+                  },
+                },
+              },
+            },
+          },
         },
         responses: {
           '201': {
@@ -2224,32 +2224,32 @@ export const openApiConfig: OpenAPIV3.Document = {
                       properties: {
                         id: { type: 'string', example: 'questao-semanal-456' },
                         titulo: { type: 'string', example: 'Questão Semanal #15' },
-                        dataCriacao: { type: 'string', format: 'date-time' }
-                      }
-                    }
-                  }
-                }
-              }
-            }
+                        dataCriacao: { type: 'string', format: 'date-time' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
           },
           '400': {
             description: 'Dados inválidos',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
           },
           '401': {
             description: 'Não autorizado',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
-      }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
     },
     '/mapa-assuntos': {
       get: {
@@ -2262,14 +2262,14 @@ export const openApiConfig: OpenAPIV3.Document = {
             name: 'concurso',
             in: 'query',
             description: 'Filtrar por concurso',
-            schema: { type: 'string' }
+            schema: { type: 'string' },
           },
           {
             name: 'disciplina',
             in: 'query',
             description: 'Filtrar por disciplina específica',
-            schema: { type: 'string' }
-          }
+            schema: { type: 'string' },
+          },
         ],
         responses: {
           '200': {
@@ -2311,31 +2311,31 @@ export const openApiConfig: OpenAPIV3.Document = {
                                       id: { type: 'string', example: 'subassunto-1' },
                                       nome: { type: 'string', example: 'Dignidade da Pessoa Humana' },
                                       status: { type: 'string', example: 'estudado' },
-                                      progresso: { type: 'number', example: 1.0 }
-                                    }
-                                  }
-                                }
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
+                                      progresso: { type: 'number', example: 1.0 },
+                                    },
+                                  },
+                                },
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
           },
           '401': {
             description: 'Não autorizado',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
-      }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
     },
     '/mapa-assuntos/{id}': {
       get: {
@@ -2349,8 +2349,8 @@ export const openApiConfig: OpenAPIV3.Document = {
             in: 'path',
             required: true,
             description: 'ID do assunto',
-            schema: { type: 'string' }
-          }
+            schema: { type: 'string' },
+          },
         ],
         responses: {
           '200': {
@@ -2386,9 +2386,9 @@ export const openApiConfig: OpenAPIV3.Document = {
                               status: { type: 'string', example: 'estudado' },
                               progresso: { type: 'number', example: 1.0 },
                               questoes: { type: 'integer', example: 5 },
-                              acertos: { type: 'integer', example: 4 }
-                            }
-                          }
+                              acertos: { type: 'integer', example: 4 },
+                            },
+                          },
                         },
                         recursos: {
                           type: 'array',
@@ -2397,26 +2397,26 @@ export const openApiConfig: OpenAPIV3.Document = {
                             properties: {
                               tipo: { type: 'string', example: 'apostila' },
                               titulo: { type: 'string', example: 'Apostila de Direito Constitucional' },
-                              url: { type: 'string', example: '/apostilas/direito-constitucional' }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
+                              url: { type: 'string', example: '/apostilas/direito-constitucional' },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
           },
           '404': {
             description: 'Assunto não encontrado',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
       },
       put: {
         summary: 'Atualizar status do assunto',
@@ -2429,8 +2429,8 @@ export const openApiConfig: OpenAPIV3.Document = {
             in: 'path',
             required: true,
             description: 'ID do assunto',
-            schema: { type: 'string' }
-          }
+            schema: { type: 'string' },
+          },
         ],
         requestBody: {
           required: true,
@@ -2443,20 +2443,20 @@ export const openApiConfig: OpenAPIV3.Document = {
                   status: {
                     type: 'string',
                     enum: ['nao_estudado', 'em_andamento', 'estudado', 'revisao'],
-                    description: 'Novo status do assunto'
+                    description: 'Novo status do assunto',
                   },
                   progresso: {
                     type: 'number',
                     minimum: 0,
                     maximum: 1,
-                    description: 'Progresso do estudo (0-1)'
+                    description: 'Progresso do estudo (0-1)',
                   },
                   tempoEstudo: {
                     type: 'integer',
                     minimum: 0,
-                    description: 'Tempo adicional de estudo em segundos'
-                  }
-                }
+                    description: 'Tempo adicional de estudo em segundos',
+                  },
+                },
               },
               examples: {
                 atualizacao: {
@@ -2464,12 +2464,12 @@ export const openApiConfig: OpenAPIV3.Document = {
                   value: {
                     status: 'estudado',
                     progresso: 1.0,
-                    tempoEstudo: 1800
-                  }
-                }
-              }
-            }
-          }
+                    tempoEstudo: 1800,
+                  },
+                },
+              },
+            },
+          },
         },
         responses: {
           '200': {
@@ -2481,22 +2481,22 @@ export const openApiConfig: OpenAPIV3.Document = {
                   properties: {
                     success: { type: 'boolean', example: true },
                     message: { type: 'string', example: 'Status atualizado com sucesso' },
-                    assunto: { type: 'object' }
-                  }
-                }
-              }
-            }
+                    assunto: { type: 'object' },
+                  },
+                },
+              },
+            },
           },
           '404': {
             description: 'Assunto não encontrado',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
-      }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
     },
     '/dashboard': {
       get: {
@@ -2509,8 +2509,8 @@ export const openApiConfig: OpenAPIV3.Document = {
             name: 'periodo',
             in: 'query',
             description: 'Período para análise',
-            schema: { type: 'string', enum: ['hoje', 'semana', 'mes'], default: 'semana' }
-          }
+            schema: { type: 'string', enum: ['hoje', 'semana', 'mes'], default: 'semana' },
+          },
         ],
         responses: {
           '200': {
@@ -2532,8 +2532,8 @@ export const openApiConfig: OpenAPIV3.Document = {
                             acertos: { type: 'integer', example: 40 },
                             taxaAcerto: { type: 'number', example: 0.8 },
                             streak: { type: 'integer', example: 7 },
-                            ranking: { type: 'integer', example: 15 }
-                          }
+                            ranking: { type: 'integer', example: 15 },
+                          },
                         },
                         atividades: {
                           type: 'array',
@@ -2544,9 +2544,9 @@ export const openApiConfig: OpenAPIV3.Document = {
                               tempoEstudado: { type: 'integer', example: 3600 },
                               questoes: { type: 'integer', example: 20 },
                               acertos: { type: 'integer', example: 16 },
-                              disciplinas: { type: 'array', items: { type: 'string' } }
-                            }
-                          }
+                              disciplinas: { type: 'array', items: { type: 'string' } },
+                            },
+                          },
                         },
                         proximasAtividades: {
                           type: 'array',
@@ -2556,9 +2556,9 @@ export const openApiConfig: OpenAPIV3.Document = {
                               tipo: { type: 'string', example: 'simulado' },
                               titulo: { type: 'string', example: 'Simulado OAB' },
                               data: { type: 'string', format: 'date' },
-                              prioridade: { type: 'string', example: 'alta' }
-                            }
-                          }
+                              prioridade: { type: 'string', example: 'alta' },
+                            },
+                          },
                         },
                         disciplinas: {
                           type: 'array',
@@ -2569,27 +2569,27 @@ export const openApiConfig: OpenAPIV3.Document = {
                               progresso: { type: 'number', example: 0.75 },
                               questoes: { type: 'integer', example: 100 },
                               acertos: { type: 'integer', example: 75 },
-                              tempoEstudo: { type: 'integer', example: 14400 }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
+                              tempoEstudo: { type: 'integer', example: 14400 },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
           },
           '401': {
             description: 'Não autorizado',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
-      }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
     },
     '/admin/clear-cache': {
       post: {
@@ -2608,20 +2608,20 @@ export const openApiConfig: OpenAPIV3.Document = {
                     type: 'string',
                     enum: ['todos', 'usuarios', 'simulados', 'estatisticas'],
                     default: 'todos',
-                    description: 'Tipo de cache a ser limpo'
-                  }
-                }
+                    description: 'Tipo de cache a ser limpo',
+                  },
+                },
               },
               examples: {
                 limpeza: {
                   summary: 'Exemplo de limpeza de cache',
                   value: {
-                    tipo: 'todos'
-                  }
-                }
-              }
-            }
-          }
+                    tipo: 'todos',
+                  },
+                },
+              },
+            },
+          },
         },
         responses: {
           '200': {
@@ -2638,32 +2638,32 @@ export const openApiConfig: OpenAPIV3.Document = {
                       properties: {
                         tipo: { type: 'string', example: 'todos' },
                         itensRemovidos: { type: 'integer', example: 150 },
-                        tempoExecucao: { type: 'number', example: 0.5 }
-                      }
-                    }
-                  }
-                }
-              }
-            }
+                        tempoExecucao: { type: 'number', example: 0.5 },
+                      },
+                    },
+                  },
+                },
+              },
+            },
           },
           '401': {
             description: 'Não autorizado',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
           },
           '403': {
             description: 'Acesso negado - requer privilégios de administrador',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
-      }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
     },
     '/admin/database-usage': {
       get: {
@@ -2695,35 +2695,35 @@ export const openApiConfig: OpenAPIV3.Document = {
                             properties: {
                               nome: { type: 'string', example: 'usuarios' },
                               registros: { type: 'integer', example: 1250 },
-                              tamanho: { type: 'string', example: '500 MB' }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
+                              tamanho: { type: 'string', example: '500 MB' },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
           },
           '401': {
             description: 'Não autorizado',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
           },
           '403': {
             description: 'Acesso negado - requer privilégios de administrador',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
-      }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
     },
     '/admin/validate-schema': {
       post: {
@@ -2748,32 +2748,32 @@ export const openApiConfig: OpenAPIV3.Document = {
                         tabelasValidas: { type: 'integer', example: 15 },
                         tabelasComErro: { type: 'integer', example: 0 },
                         erros: { type: 'array', items: { type: 'string' } },
-                        avisos: { type: 'array', items: { type: 'string' } }
-                      }
-                    }
-                  }
-                }
-              }
-            }
+                        avisos: { type: 'array', items: { type: 'string' } },
+                      },
+                    },
+                  },
+                },
+              },
+            },
           },
           '401': {
             description: 'Não autorizado',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
           },
           '403': {
             description: 'Acesso negado - requer privilégios de administrador',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
-      }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
     },
     '/concursos': {
       get: {
@@ -2785,20 +2785,20 @@ export const openApiConfig: OpenAPIV3.Document = {
             name: 'page',
             in: 'query',
             description: 'Número da página',
-            schema: { type: 'integer', default: 1 }
+            schema: { type: 'integer', default: 1 },
           },
           {
             name: 'limit',
             in: 'query',
             description: 'Itens por página',
-            schema: { type: 'integer', default: 10 }
+            schema: { type: 'integer', default: 10 },
           },
           {
             name: 'search',
             in: 'query',
             description: 'Termo de busca',
-            schema: { type: 'string' }
-          }
+            schema: { type: 'string' },
+          },
         ],
         responses: {
           '200': {
@@ -2811,7 +2811,7 @@ export const openApiConfig: OpenAPIV3.Document = {
                     success: { type: 'boolean', example: true },
                     data: {
                       type: 'array',
-                      items: { $ref: '#/components/schemas/Concurso' }
+                      items: { $ref: '#/components/schemas/Concurso' },
                     },
                     pagination: {
                       type: 'object',
@@ -2819,15 +2819,15 @@ export const openApiConfig: OpenAPIV3.Document = {
                         page: { type: 'integer', example: 1 },
                         limit: { type: 'integer', example: 10 },
                         total: { type: 'integer', example: 50 },
-                        pages: { type: 'integer', example: 5 }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
+                        pages: { type: 'integer', example: 5 },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
       },
       post: {
         summary: 'Criar concurso',
@@ -2838,37 +2838,37 @@ export const openApiConfig: OpenAPIV3.Document = {
           required: true,
           content: {
             'application/json': {
-              schema: { $ref: '#/components/schemas/ConcursoInput' }
-            }
-          }
+              schema: { $ref: '#/components/schemas/ConcursoInput' },
+            },
+          },
         },
         responses: {
           '201': {
             description: 'Concurso criado com sucesso',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Concurso' }
-              }
-            }
+                schema: { $ref: '#/components/schemas/Concurso' },
+              },
+            },
           },
           '400': {
             description: 'Dados inválidos',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
           },
           '401': {
             description: 'Não autorizado',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
-      }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
     },
     '/concursos/{id}': {
       get: {
@@ -2881,27 +2881,27 @@ export const openApiConfig: OpenAPIV3.Document = {
             in: 'path',
             required: true,
             description: 'ID do concurso',
-            schema: { type: 'string' }
-          }
+            schema: { type: 'string' },
+          },
         ],
         responses: {
           '200': {
             description: 'Detalhes do concurso',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Concurso' }
-              }
-            }
+                schema: { $ref: '#/components/schemas/Concurso' },
+              },
+            },
           },
           '404': {
             description: 'Concurso não encontrado',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
       },
       put: {
         summary: 'Atualizar concurso',
@@ -2914,51 +2914,51 @@ export const openApiConfig: OpenAPIV3.Document = {
             in: 'path',
             required: true,
             description: 'ID do concurso',
-            schema: { type: 'string' }
-          }
+            schema: { type: 'string' },
+          },
         ],
         requestBody: {
           required: true,
           content: {
             'application/json': {
-              schema: { $ref: '#/components/schemas/ConcursoInput' }
-            }
-          }
+              schema: { $ref: '#/components/schemas/ConcursoInput' },
+            },
+          },
         },
         responses: {
           '200': {
             description: 'Concurso atualizado com sucesso',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Concurso' }
-              }
-            }
+                schema: { $ref: '#/components/schemas/Concurso' },
+              },
+            },
           },
           '400': {
             description: 'Dados inválidos',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
           },
           '401': {
             description: 'Não autorizado',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
           },
           '404': {
             description: 'Concurso não encontrado',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
       },
       delete: {
         summary: 'Excluir concurso',
@@ -2971,8 +2971,8 @@ export const openApiConfig: OpenAPIV3.Document = {
             in: 'path',
             required: true,
             description: 'ID do concurso',
-            schema: { type: 'string' }
-          }
+            schema: { type: 'string' },
+          },
         ],
         responses: {
           '200': {
@@ -2983,30 +2983,30 @@ export const openApiConfig: OpenAPIV3.Document = {
                   type: 'object',
                   properties: {
                     success: { type: 'boolean', example: true },
-                    message: { type: 'string', example: 'Concurso excluído com sucesso' }
-                  }
-                }
-              }
-            }
+                    message: { type: 'string', example: 'Concurso excluído com sucesso' },
+                  },
+                },
+              },
+            },
           },
           '401': {
             description: 'Não autorizado',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
           },
           '404': {
             description: 'Concurso não encontrado',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
-      }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
     },
     '/user': {
       get: {
@@ -3019,20 +3019,20 @@ export const openApiConfig: OpenAPIV3.Document = {
             description: 'Dados do usuário',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/User' }
-              }
-            }
+                schema: { $ref: '#/components/schemas/User' },
+              },
+            },
           },
           '401': {
             description: 'Não autorizado',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
-      }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
     },
     '/user/concurso-preference': {
       get: {
@@ -3053,23 +3053,23 @@ export const openApiConfig: OpenAPIV3.Document = {
                       type: 'object',
                       properties: {
                         concursoId: { type: 'string', example: 'concurso-123' },
-                        nome: { type: 'string', example: 'Concurso Exemplo' }
-                      }
-                    }
-                  }
-                }
-              }
-            }
+                        nome: { type: 'string', example: 'Concurso Exemplo' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
           },
           '401': {
             description: 'Não autorizado',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
       },
       post: {
         summary: 'Criar preferência de concurso',
@@ -3086,12 +3086,12 @@ export const openApiConfig: OpenAPIV3.Document = {
                 properties: {
                   concursoId: {
                     type: 'string',
-                    description: 'ID do concurso'
-                  }
-                }
-              }
-            }
-          }
+                    description: 'ID do concurso',
+                  },
+                },
+              },
+            },
+          },
         },
         responses: {
           '201': {
@@ -3102,29 +3102,29 @@ export const openApiConfig: OpenAPIV3.Document = {
                   type: 'object',
                   properties: {
                     success: { type: 'boolean', example: true },
-                    message: { type: 'string', example: 'Preferência criada com sucesso' }
-                  }
-                }
-              }
-            }
+                    message: { type: 'string', example: 'Preferência criada com sucesso' },
+                  },
+                },
+              },
+            },
           },
           '400': {
             description: 'Dados inválidos',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
           },
           '401': {
             description: 'Não autorizado',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
       },
       put: {
         summary: 'Atualizar preferência de concurso',
@@ -3141,12 +3141,12 @@ export const openApiConfig: OpenAPIV3.Document = {
                 properties: {
                   concursoId: {
                     type: 'string',
-                    description: 'ID do concurso'
-                  }
-                }
-              }
-            }
-          }
+                    description: 'ID do concurso',
+                  },
+                },
+              },
+            },
+          },
         },
         responses: {
           '200': {
@@ -3157,30 +3157,30 @@ export const openApiConfig: OpenAPIV3.Document = {
                   type: 'object',
                   properties: {
                     success: { type: 'boolean', example: true },
-                    message: { type: 'string', example: 'Preferência atualizada com sucesso' }
-                  }
-                }
-              }
-            }
+                    message: { type: 'string', example: 'Preferência atualizada com sucesso' },
+                  },
+                },
+              },
+            },
           },
           '400': {
             description: 'Dados inválidos',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
           },
           '401': {
             description: 'Não autorizado',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
-      }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
     },
     '/conteudo/filtrado': {
       get: {
@@ -3192,14 +3192,14 @@ export const openApiConfig: OpenAPIV3.Document = {
             name: 'tipo',
             in: 'query',
             description: 'Tipo de conteúdo',
-            schema: { type: 'string', enum: ['apostila', 'flashcard', 'questao'] }
+            schema: { type: 'string', enum: ['apostila', 'flashcard', 'questao'] },
           },
           {
             name: 'concursoId',
             in: 'query',
             description: 'ID do concurso',
-            schema: { type: 'string' }
-          }
+            schema: { type: 'string' },
+          },
         ],
         responses: {
           '200': {
@@ -3212,15 +3212,15 @@ export const openApiConfig: OpenAPIV3.Document = {
                     success: { type: 'boolean', example: true },
                     data: {
                       type: 'array',
-                      items: { type: 'object' }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
+                      items: { type: 'object' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     },
     '/weak-points': {
       get: {
@@ -3243,25 +3243,25 @@ export const openApiConfig: OpenAPIV3.Document = {
                         type: 'object',
                         properties: {
                           disciplina: { type: 'string', example: 'Matemática' },
-                          percentual: { type: 'number', example: 65.5 }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
+                          percentual: { type: 'number', example: 65.5 },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
           },
           '401': {
             description: 'Não autorizado',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
-      }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
     },
     '/categoria-disciplinas': {
       get: {
@@ -3284,17 +3284,17 @@ export const openApiConfig: OpenAPIV3.Document = {
                         properties: {
                           id: { type: 'string', example: 'cat-123' },
                           nome: { type: 'string', example: 'Exatas' },
-                          description: { type: 'string', example: 'Disciplinas exatas' }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
+                          description: { type: 'string', example: 'Disciplinas exatas' },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     },
     '/concurso-categorias': {
       get: {
@@ -3317,18 +3317,18 @@ export const openApiConfig: OpenAPIV3.Document = {
                         properties: {
                           id: { type: 'string', example: 'cat-123' },
                           nome: { type: 'string', example: 'Federal' },
-                          description: { type: 'string', example: 'Concursos federais' }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
+                          description: { type: 'string', example: 'Concursos federais' },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
   },
   components: {
     schemas: {
@@ -3342,72 +3342,72 @@ export const openApiConfig: OpenAPIV3.Document = {
       bearerAuth: {
         type: 'http',
         scheme: 'bearer',
-        bearerFormat: 'JWT'
-      }
-    }
+        bearerFormat: 'JWT',
+      },
+    },
   },
   tags: [
     {
       name: 'Autenticação',
-      description: 'Endpoints relacionados à autenticação de usuários'
+      description: 'Endpoints relacionados à autenticação de usuários',
     },
     {
       name: 'Concursos',
-      description: 'Endpoints relacionados ao gerenciamento de concursos'
+      description: 'Endpoints relacionados ao gerenciamento de concursos',
     },
     {
       name: 'Usuário',
-      description: 'Endpoints relacionados aos dados do usuário'
+      description: 'Endpoints relacionados aos dados do usuário',
     },
     {
       name: 'Conteúdo',
-      description: 'Endpoints relacionados ao conteúdo filtrado'
+      description: 'Endpoints relacionados ao conteúdo filtrado',
     },
     {
       name: 'Pontos Fracos',
-      description: 'Endpoints relacionados aos pontos fracos do usuário'
+      description: 'Endpoints relacionados aos pontos fracos do usuário',
     },
     {
       name: 'Categorias',
-      description: 'Endpoints relacionados às categorias'
+      description: 'Endpoints relacionados às categorias',
     },
     {
       name: 'Apostilas',
-      description: 'Endpoints relacionados ao gerenciamento de apostilas'
+      description: 'Endpoints relacionados ao gerenciamento de apostilas',
     },
     {
       name: 'Flashcards',
-      description: 'Endpoints relacionados ao gerenciamento de flashcards'
+      description: 'Endpoints relacionados ao gerenciamento de flashcards',
     },
     {
       name: 'Simulados',
-      description: 'Endpoints relacionados ao gerenciamento de simulados'
+      description: 'Endpoints relacionados ao gerenciamento de simulados',
     },
     {
       name: 'Estatísticas',
-      description: 'Endpoints relacionados à obtenção de estatísticas'
+      description: 'Endpoints relacionados à obtenção de estatísticas',
     },
     {
       name: 'Plano de Estudos',
-      description: 'Endpoints relacionados ao gerenciamento de planos de estudo'
+      description: 'Endpoints relacionados ao gerenciamento de planos de estudo',
     },
     {
       name: 'Questões Semanais',
-      description: 'Endpoints relacionados ao gerenciamento de questões semanais'
+      description: 'Endpoints relacionados ao gerenciamento de questões semanais',
     },
     {
       name: 'Mapa de Assuntos',
-      description: 'Endpoints relacionados ao mapa de assuntos e progresso'
+      description: 'Endpoints relacionados ao mapa de assuntos e progresso',
     },
     {
       name: 'Dashboard',
-      description: 'Endpoints relacionados ao dashboard do usuário'
+      description: 'Endpoints relacionados ao dashboard do usuário',
     },
     {
       name: 'Admin',
-      description: 'Endpoints administrativos para gerenciamento do sistema'
-    }
-  ]
+      description: 'Endpoints administrativos para gerenciamento do sistema',
+    },
+  ],
 };
 
 export function generateOpenAPISpec(): OpenAPIV3.Document {

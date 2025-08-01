@@ -9,7 +9,7 @@ import {
   PermissionError,
   RateLimitError,
   TimeoutError,
-  ValidationError
+  ValidationError,
 } from './error-types';
 
 /**
@@ -38,13 +38,13 @@ export function toBaseError(error: unknown): BaseError {
     const errorObj = error as Record<string, unknown>;
     const message = typeof errorObj.message === 'string' ? errorObj.message : 'Unknown error';
     const statusCode = typeof errorObj.statusCode === 'number' ? errorObj.statusCode :
-                      typeof errorObj.status === 'number' ? errorObj.status : undefined;
+      typeof errorObj.status === 'number' ? errorObj.status : undefined;
     const code = typeof errorObj.code === 'string' ? errorObj.code : undefined;
     
     return new BaseError(message, {
       statusCode,
       code,
-      details: errorObj
+      details: errorObj,
     });
   }
   
@@ -63,76 +63,76 @@ export function createSpecificError(error: unknown): BaseError {
   
   // Create specific error based on category
   switch (baseError.category) {
-    case ErrorCategory.AUTH:
-      return new AuthError(baseError.message, {
-        statusCode: baseError.statusCode,
-        code: baseError.code,
-        retryable: baseError.retryable,
-        details: baseError.details,
-        cause: baseError.cause
-      });
+  case ErrorCategory.AUTH:
+    return new AuthError(baseError.message, {
+      statusCode: baseError.statusCode,
+      code: baseError.code,
+      retryable: baseError.retryable,
+      details: baseError.details,
+      cause: baseError.cause,
+    });
       
-    case ErrorCategory.NETWORK:
-      return new NetworkError(baseError.message, {
-        statusCode: baseError.statusCode,
-        code: baseError.code,
-        retryable: baseError.retryable,
-        details: baseError.details,
-        cause: baseError.cause
-      });
+  case ErrorCategory.NETWORK:
+    return new NetworkError(baseError.message, {
+      statusCode: baseError.statusCode,
+      code: baseError.code,
+      retryable: baseError.retryable,
+      details: baseError.details,
+      cause: baseError.cause,
+    });
       
-    case ErrorCategory.DATABASE:
-      return new DatabaseError(baseError.message, {
-        statusCode: baseError.statusCode,
-        code: baseError.code,
-        retryable: baseError.retryable,
-        details: baseError.details,
-        cause: baseError.cause
-      });
+  case ErrorCategory.DATABASE:
+    return new DatabaseError(baseError.message, {
+      statusCode: baseError.statusCode,
+      code: baseError.code,
+      retryable: baseError.retryable,
+      details: baseError.details,
+      cause: baseError.cause,
+    });
       
-    case ErrorCategory.VALIDATION:
-      return new ValidationError(
-        baseError.message,
+  case ErrorCategory.VALIDATION:
+    return new ValidationError(
+      baseError.message,
         baseError.details?.validationErrors as Record<string, string[]> || {},
         {
           statusCode: baseError.statusCode,
           code: baseError.code,
           retryable: baseError.retryable,
           details: baseError.details,
-          cause: baseError.cause
-        }
-      );
+          cause: baseError.cause,
+        },
+    );
       
-    case ErrorCategory.PERMISSION:
-      return new PermissionError(baseError.message, {
-        statusCode: baseError.statusCode,
-        code: baseError.code,
-        retryable: baseError.retryable,
-        details: baseError.details,
-        cause: baseError.cause
-      });
+  case ErrorCategory.PERMISSION:
+    return new PermissionError(baseError.message, {
+      statusCode: baseError.statusCode,
+      code: baseError.code,
+      retryable: baseError.retryable,
+      details: baseError.details,
+      cause: baseError.cause,
+    });
       
-    case ErrorCategory.RATE_LIMIT:
-      return new RateLimitError(baseError.message, {
-        statusCode: baseError.statusCode,
-        code: baseError.code,
-        retryable: baseError.retryable,
-        details: baseError.details,
-        cause: baseError.cause,
-        resetAt: baseError.details?.resetAt as Date
-      });
+  case ErrorCategory.RATE_LIMIT:
+    return new RateLimitError(baseError.message, {
+      statusCode: baseError.statusCode,
+      code: baseError.code,
+      retryable: baseError.retryable,
+      details: baseError.details,
+      cause: baseError.cause,
+      resetAt: baseError.details?.resetAt as Date,
+    });
       
-    case ErrorCategory.CONFIG:
-      return new ConfigError(baseError.message, {
-        statusCode: baseError.statusCode,
-        code: baseError.code,
-        retryable: baseError.retryable,
-        details: baseError.details,
-        cause: baseError.cause
-      });
+  case ErrorCategory.CONFIG:
+    return new ConfigError(baseError.message, {
+      statusCode: baseError.statusCode,
+      code: baseError.code,
+      retryable: baseError.retryable,
+      details: baseError.details,
+      cause: baseError.cause,
+    });
       
-    default:
-      return baseError;
+  default:
+    return baseError;
   }
 }
 
@@ -151,60 +151,60 @@ export function createErrorFromStatusCode(
     retryable?: boolean;
     details?: Record<string, unknown>;
     cause?: Error;
-  } = {}
+  } = {},
 ): BaseError {
   switch (statusCode) {
-    case 400:
-      return new ValidationError(message || 'Bad request', {}, {
-        ...options,
-        statusCode
-      });
+  case 400:
+    return new ValidationError(message || 'Bad request', {}, {
+      ...options,
+      statusCode,
+    });
       
-    case 401:
-      return new AuthError(message || 'Unauthorized', {
-        ...options,
-        statusCode
-      });
+  case 401:
+    return new AuthError(message || 'Unauthorized', {
+      ...options,
+      statusCode,
+    });
       
-    case 403:
-      return new PermissionError(message || 'Forbidden', {
-        ...options,
-        statusCode
-      });
+  case 403:
+    return new PermissionError(message || 'Forbidden', {
+      ...options,
+      statusCode,
+    });
       
-    case 404:
-      return new NotFoundError(message || 'Not found', {
-        ...options,
-        statusCode
-      });
+  case 404:
+    return new NotFoundError(message || 'Not found', {
+      ...options,
+      statusCode,
+    });
       
-    case 408:
-      return new TimeoutError(message || 'Request timeout', {
-        ...options,
-        statusCode
-      });
+  case 408:
+    return new TimeoutError(message || 'Request timeout', {
+      ...options,
+      statusCode,
+    });
       
-    case 429:
-      return new RateLimitError(message || 'Too many requests', {
-        ...options,
-        statusCode
-      });
+  case 429:
+    return new RateLimitError(message || 'Too many requests', {
+      ...options,
+      statusCode,
+    });
       
-    case 500:
-    case 502:
-    case 503:
-    case 504:
-      return new NetworkError(message || 'Server error', {
-        ...options,
-        statusCode,
-        retryable: options.retryable !== undefined ? options.retryable : true
-      });
+  case 500:
+  case 502:
+  case 503:
+  case 504:
+    return new NetworkError(message || 'Server error', {
+      ...options,
+      statusCode,
+      retryable: options.retryable !== undefined ? options.retryable : true,
+    });
       
-    default:
-      return new BaseError(message || 'Error', {
-        ...options,
-        statusCode
-      });
+  default:
+    return new BaseError(message || 'Error', {
+      ...options,
+      statusCode,
+    });
   }
 }
 
@@ -224,35 +224,35 @@ export function isRetryable(error: unknown): boolean {
   
   // Check by category
   switch (baseError.category) {
-    case ErrorCategory.NETWORK:
-    case ErrorCategory.RATE_LIMIT:
-      return true;
+  case ErrorCategory.NETWORK:
+  case ErrorCategory.RATE_LIMIT:
+    return true;
       
-    case ErrorCategory.AUTH:
-    case ErrorCategory.PERMISSION:
-    case ErrorCategory.VALIDATION:
-    case ErrorCategory.CONFIG:
-      return false;
+  case ErrorCategory.AUTH:
+  case ErrorCategory.PERMISSION:
+  case ErrorCategory.VALIDATION:
+  case ErrorCategory.CONFIG:
+    return false;
       
-    case ErrorCategory.DATABASE:
-      // Some database errors are retryable (e.g., deadlocks)
-      return baseError.code === 'deadlock' || baseError.code === 'connection_error';
+  case ErrorCategory.DATABASE:
+    // Some database errors are retryable (e.g., deadlocks)
+    return baseError.code === 'deadlock' || baseError.code === 'connection_error';
       
-    default:
-      // Check by status code
-      if (baseError.statusCode) {
-        // 5xx errors are generally retryable
-        if (baseError.statusCode >= 500 && baseError.statusCode < 600) {
-          return true;
-        }
-        
-        // 408 (timeout) and 429 (rate limit) are retryable
-        if (baseError.statusCode === 408 || baseError.statusCode === 429) {
-          return true;
-        }
+  default:
+    // Check by status code
+    if (baseError.statusCode) {
+      // 5xx errors are generally retryable
+      if (baseError.statusCode >= 500 && baseError.statusCode < 600) {
+        return true;
       }
+        
+      // 408 (timeout) and 429 (rate limit) are retryable
+      if (baseError.statusCode === 408 || baseError.statusCode === 429) {
+        return true;
+      }
+    }
       
-      return false;
+    return false;
   }
 }
 
@@ -267,28 +267,28 @@ export function getUserFriendlyMessage(error: unknown): string {
   
   // Check by category
   switch (baseError.category) {
-    case ErrorCategory.NETWORK:
-      return 'N�o foi poss�vel conectar ao servidor. Verifique sua conex�o com a internet e tente novamente.';
+  case ErrorCategory.NETWORK:
+    return 'N�o foi poss�vel conectar ao servidor. Verifique sua conex�o com a internet e tente novamente.';
       
-    case ErrorCategory.AUTH:
-      return 'Erro de autentica��o. Verifique suas credenciais e tente novamente.';
+  case ErrorCategory.AUTH:
+    return 'Erro de autentica��o. Verifique suas credenciais e tente novamente.';
       
-    case ErrorCategory.PERMISSION:
-      return 'Voc� n�o tem permiss�o para realizar esta a��o.';
+  case ErrorCategory.PERMISSION:
+    return 'Voc� n�o tem permiss�o para realizar esta a��o.';
       
-    case ErrorCategory.VALIDATION:
-      return 'Os dados fornecidos s�o inv�lidos. Verifique os campos e tente novamente.';
+  case ErrorCategory.VALIDATION:
+    return 'Os dados fornecidos s�o inv�lidos. Verifique os campos e tente novamente.';
       
-    case ErrorCategory.RATE_LIMIT:
-      return 'Muitas solicita��es. Aguarde um momento e tente novamente.';
+  case ErrorCategory.RATE_LIMIT:
+    return 'Muitas solicita��es. Aguarde um momento e tente novamente.';
       
-    case ErrorCategory.CONFIG:
-      return 'Erro de configura��o. Entre em contato com o suporte.';
+  case ErrorCategory.CONFIG:
+    return 'Erro de configura��o. Entre em contato com o suporte.';
       
-    case ErrorCategory.DATABASE:
-      return 'Erro no banco de dados. Tente novamente mais tarde.';
+  case ErrorCategory.DATABASE:
+    return 'Erro no banco de dados. Tente novamente mais tarde.';
       
-    default:
-      return 'Ocorreu um erro. Tente novamente mais tarde.';
+  default:
+    return 'Ocorreu um erro. Tente novamente mais tarde.';
   }
 }

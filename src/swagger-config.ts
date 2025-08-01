@@ -10,22 +10,22 @@ const options = {
       contact: {
         nome: 'AprovaFacil Team',
         email: 'contato@aprovafacil.com',
-        url: 'https://aprovafacil.com'
+        url: 'https://aprovafacil.com',
       },
       license: {
         nome: 'MIT',
-        url: 'https://opensource.org/licenses/MIT'
-      }
+        url: 'https://opensource.org/licenses/MIT',
+      },
     },
     servers: [
       {
         url: 'http://localhost:5000/api',
-        descricao: 'Servidor de desenvolvimento'
+        descricao: 'Servidor de desenvolvimento',
       },
       {
         url: 'https://api.aprovafacil.com',
-        descricao: 'Servidor de produção'
-      }
+        descricao: 'Servidor de produção',
+      },
     ],
     components: {
       securitySchemes: {
@@ -33,8 +33,8 @@ const options = {
           type: 'http',
           scheme: 'bearer',
           bearerFormat: 'JWT',
-          descricao: 'Token JWT obtido através do login'
-        }
+          descricao: 'Token JWT obtido através do login',
+        },
       },
       schemas: {
         // Schemas baseados no Supabase
@@ -52,9 +52,9 @@ const options = {
             pontuacao_media: { type: 'number', default: 0 },
             avatar_url: { type: 'string', nullable: true },
             ativo: { type: 'boolean', default: true },
-            ultimo_login: { type: 'string', format: 'date-time', nullable: true }
+            ultimo_login: { type: 'string', format: 'date-time', nullable: true },
           },
-          required: ['email']
+          required: ['email'],
         },
         Concurso: {
           type: 'object',
@@ -71,23 +71,23 @@ const options = {
             vagas: { type: 'integer' },
             salario: { type: 'number' },
             criado_em: { type: 'string', format: 'date-time' },
-            atualizado_em: { type: 'string', format: 'date-time' }
+            atualizado_em: { type: 'string', format: 'date-time' },
           },
-          required: ['nome']
+          required: ['nome'],
         },
         UserConcursoPreference: {
           type: 'object',
           properties: {
             id: { type: 'string', format: 'uuid' },
-            user_id: { type: 'string', format: 'uuid' },
+            usuario_id: { type: 'string', format: 'uuid' },
             concurso_id: { type: 'string', format: 'uuid' },
             selecionado_em: { type: 'string', format: 'date-time' },
             pode_alterar_ate: { type: 'string', format: 'date-time' },
             ativo: { type: 'boolean', default: true },
             criado_em: { type: 'string', format: 'date-time' },
-            atualizado_em: { type: 'string', format: 'date-time' }
+            atualizado_em: { type: 'string', format: 'date-time' },
           },
-          required: ['user_id', 'concurso_id', 'pode_alterar_ate']
+          required: ['usuario_id', 'concurso_id', 'pode_alterar_ate'],
         },
         Simulado: {
           type: 'object',
@@ -107,9 +107,9 @@ const options = {
             categoria_id: { type: 'string', format: 'uuid' },
             disciplinas: { type: 'object' },
             criado_em: { type: 'string', format: 'date-time' },
-            atualizado_em: { type: 'string', format: 'date-time' }
+            atualizado_em: { type: 'string', format: 'date-time' },
           },
-          required: ['titulo']
+          required: ['titulo'],
         },
         Flashcard: {
           type: 'object',
@@ -125,15 +125,15 @@ const options = {
             peso_disciplina: { type: 'integer' },
             ativo: { type: 'boolean', default: true },
             criado_em: { type: 'string', format: 'date-time' },
-            atualizado_em: { type: 'string', format: 'date-time' }
+            atualizado_em: { type: 'string', format: 'date-time' },
           },
-          required: ['front', 'back', 'disciplina', 'tema']
+          required: ['front', 'back', 'disciplina', 'tema'],
         },
         PlanoEstudo: {
           type: 'object',
           properties: {
             id: { type: 'string', format: 'uuid' },
-            user_id: { type: 'string', format: 'uuid' },
+            usuario_id: { type: 'string', format: 'uuid' },
             nome: { type: 'string', example: 'Plano de Estudos PF 2024' },
             descricao: { type: 'string' },
             ativo: { type: 'boolean', default: true },
@@ -142,29 +142,29 @@ const options = {
             concurso_id: { type: 'string', format: 'uuid' },
             categoria_id: { type: 'string', format: 'uuid' },
             criado_em: { type: 'string', format: 'date-time' },
-            atualizado_em: { type: 'string', format: 'date-time' }
+            atualizado_em: { type: 'string', format: 'date-time' },
           },
-          required: ['user_id', 'nome', 'start_date', 'end_date']
+          required: ['usuario_id', 'nome', 'start_date', 'end_date'],
         },
         Error: {
           type: 'object',
           properties: {
             error: { type: 'string', example: 'Mensagem de erro' },
             code: { type: 'string', example: 'VALIDATION_ERROR' },
-            details: { type: 'object' }
+            details: { type: 'object' },
           },
-          required: ['error']
+          required: ['error'],
         },
         Success: {
           type: 'object',
           properties: {
             success: { type: 'boolean', example: true },
             message: { type: 'string', example: 'Operação realizada com sucesso' },
-            data: { type: 'object' }
+            data: { type: 'object' },
           },
-          required: ['success']
-        }
-      }
+          required: ['success'],
+        },
+      },
     },
     tags: [
       { nome: 'Autenticação', descricao: 'Endpoints de autenticação e autorização' },
@@ -175,15 +175,15 @@ const options = {
       { nome: 'Flashcards', descricao: 'Sistema de flashcards' },
       { nome: 'Planos de Estudo', descricao: 'Gerenciamento de planos de estudo' },
       { nome: 'Estatísticas', descricao: 'Estatísticas e relatórios' },
-      { nome: 'Sistema', descricao: 'Endpoints do sistema' }
-    ]
+      { nome: 'Sistema', descricao: 'Endpoints do sistema' },
+    ],
   },
   apis: [
     './src/api/**/*.ts',
     './src/api/**/*.js',
     './src/index.ts',
-    './src/docs.ts'
-  ]
+    './src/docs.ts',
+  ],
 };
 
 export const specs = swaggerJsdoc(options); 

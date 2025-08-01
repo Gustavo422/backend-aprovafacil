@@ -1,7 +1,7 @@
 // DTO de Progresso de Simulado do Usuário - Atualizado para corresponder ao schema real
 export interface UsuarioSimuladoProgressDTO {
   id: string;
-  user_id: string;
+  usuario_id: string;
   simulado_id: string;
   start_time: string;
   end_time?: string;
@@ -21,7 +21,7 @@ export interface UsuarioSimuladoProgressDTO {
 }
 
 export interface CreateusuariosimuladoProgressDTO {
-  user_id: string;
+  usuario_id: string;
   simulado_id: string;
   start_time?: string;
   end_time?: string;

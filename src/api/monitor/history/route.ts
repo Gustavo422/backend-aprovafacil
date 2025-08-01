@@ -1,36 +1,28 @@
-import { NextResponse } from 'next/server';
+import { Request, Response } from 'express';
 import { metricsStore } from '../../../core/monitoring/metrics-store.js';
+import { logger } from '../../../lib/logger.js';
 
-export async function GET(request: globalThis.Request) {
+export const GET = async (req: Request, res: Response) => {
   try {
-    const { searchParams } = new globalThis.URL(request.url);
-    const hours = parseInt(searchParams.get('hours') || '24');
+    const hours = parseInt(req.query.hours as string || '24');
     
     const history = {
       system: metricsStore.getSystemHistory(hours),
       database: metricsStore.getDatabaseHistory(hours),
       logs: metricsStore.getLogsHistory(hours),
       alerts: metricsStore.getAlerts(),
-      stats: metricsStore.getStats()
+      stats: metricsStore.getStats(),
     };
 
-    return NextResponse.json(history, {
-      headers: {
-        'Content-Type': 'application/json; charset=utf-8',
-        'Cache-Control': 'no-cache, no-store, must-revalidate'
-      }
-    });
+    return res.json(history);
   } catch (error) {
-    console.error('Erro ao obter histórico de métricas:', error);
-    return NextResponse.json(
-      { 
-        error: 'Erro interno do servidor',
-        timestamp: new Date().toISOString()
-      },
-      { status: 500 }
-    );
+    logger.error('Erro ao buscar histórico de monitoramento:', error);
+    return res.status(500).json({
+      error: 'Erro interno do servidor',
+      timestamp: new Date().toISOString(),
+    });
   }
-} 
+}; 
 
 
 

@@ -60,7 +60,7 @@ export class ConcursoRepository extends BaseRepository<Concurso, FiltroConcurso>
     super({
       tableName: 'concursos',
       softDelete: true,
-      ...options
+      ...options,
     });
     
     this.logger.info('Repositório de concursos inicializado');
@@ -80,7 +80,7 @@ export class ConcursoRepository extends BaseRepository<Concurso, FiltroConcurso>
       }
       
       // Criar query
-      let query = this.supabase
+      const query = this.supabase
         .from(this.tableName)
         .select('*')
         .eq('slug', slug)
@@ -118,7 +118,7 @@ export class ConcursoRepository extends BaseRepository<Concurso, FiltroConcurso>
       }
       
       // Criar query
-      let query = this.supabase
+      const query = this.supabase
         .from(this.tableName)
         .select('*')
         .eq('categoria_id', categoriaId);
@@ -148,7 +148,7 @@ export class ConcursoRepository extends BaseRepository<Concurso, FiltroConcurso>
       this.logger.debug('Buscando concursos ativos');
       
       // Criar query
-      let query = this.supabase
+      const query = this.supabase
         .from(this.tableName)
         .select('*')
         .eq('ativo', true);
@@ -183,7 +183,7 @@ export class ConcursoRepository extends BaseRepository<Concurso, FiltroConcurso>
       }
       
       // Criar query
-      let query = this.supabase
+      const query = this.supabase
         .from(this.tableName)
         .select('*')
         .ilike('banca', `%${banca}%`);
@@ -218,7 +218,7 @@ export class ConcursoRepository extends BaseRepository<Concurso, FiltroConcurso>
       }
       
       // Criar query
-      let query = this.supabase
+      const query = this.supabase
         .from(this.tableName)
         .select('*')
         .eq('ano', ano);

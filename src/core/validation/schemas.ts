@@ -35,7 +35,7 @@ export const ApostilaSchema = z.object({
   descricao: z.string().optional(),
   categoria: z.string().min(1, 'Categoria é obrigatória'),
   conteudo: z.string().optional(),
-  userId: z.string().optional(),
+  usuarioId: z.string().optional(),
 });
 
 // Schema de validação para flashcards
@@ -44,7 +44,7 @@ export const FlashcardSchema = z.object({
   pergunta: z.string().min(1, 'Pergunta é obrigatória'),
   resposta: z.string().min(1, 'Resposta é obrigatória'),
   categoria: z.string().min(1, 'Categoria é obrigatória'),
-  userId: z.string().optional(),
+  usuarioId: z.string().optional(),
 });
 
 // Schema de validação para simulados
@@ -54,7 +54,7 @@ export const SimuladoSchema = z.object({
   descricao: z.string().optional(),
   questoes: z.array(z.string()).optional(),
   tempoLimite: z.number().positive('Tempo limite deve ser positivo').optional(),
-  userId: z.string().optional(),
+  usuarioId: z.string().optional(),
 });
 
 // Schema de validação para plano de estudos
@@ -64,7 +64,7 @@ export const PlanoEstudosSchema = z.object({
   descricao: z.string().optional(),
   disciplinas: z.array(z.string()).optional(),
   cronograma: z.record(z.unknown()).optional(),
-  userId: z.string().optional(),
+  usuarioId: z.string().optional(),
 });
 
 // Schema de validação para mapa de assuntos
@@ -73,7 +73,7 @@ export const MapaAssuntosSchema = z.object({
   titulo: z.string().min(1, 'Título é obrigatório'),
   descricao: z.string().optional(),
   assuntos: z.array(z.string()).optional(),
-  userId: z.string().optional(),
+  usuarioId: z.string().optional(),
 });
 
 // Schema de validação para questões semanais
@@ -82,7 +82,7 @@ export const QuestoesSemanaisSchema = z.object({
   titulo: z.string().min(1, 'Título é obrigatório'),
   questoes: z.array(z.string()).optional(),
   semana: z.number().positive('Semana deve ser positiva'),
-  userId: z.string().optional(),
+  usuarioId: z.string().optional(),
 });
 
 // Schema de validação para estatísticas
@@ -90,7 +90,7 @@ export const EstatisticasSchema = z.object({
   id: z.string().optional(),
   tipo: z.string().min(1, 'Tipo é obrigatório'),
   dados: z.record(z.unknown()).optional(),
-  userId: z.string().optional(),
+  usuarioId: z.string().optional(),
 });
 
 // Schema de validação para conteúdo
@@ -129,7 +129,7 @@ export const ConcursoCategoriaSchema = z.object({
 // Schema de validação para preferências de usuário
 export const UserPreferenceSchema = z.object({
   id: z.string().optional(),
-  userId: z.string().min(1, 'ID do usuário é obrigatório'),
+  usuarioId: z.string().min(1, 'ID do usuário é obrigatório'),
   concursoId: z.string().optional(),
   configuracoes: z.record(z.unknown()).optional(),
 });
@@ -137,7 +137,7 @@ export const UserPreferenceSchema = z.object({
 // Schema de validação para weak points
 export const WeakPointsSchema = z.object({
   id: z.string().optional(),
-  userId: z.string().min(1, 'ID do usuário é obrigatório'),
+  usuarioId: z.string().min(1, 'ID do usuário é obrigatório'),
   disciplina: z.string().min(1, 'Disciplina é obrigatória'),
   pontos: z.array(z.string()).optional(),
   nivel: z.enum(['baixo', 'medio', 'alto']).optional(),
@@ -146,7 +146,7 @@ export const WeakPointsSchema = z.object({
 // Schema de validação para dashboard
 export const DashboardSchema = z.object({
   id: z.string().optional(),
-  userId: z.string().min(1, 'ID do usuário é obrigatório'),
+  usuarioId: z.string().min(1, 'ID do usuário é obrigatório'),
   tipo: z.string().min(1, 'Tipo é obrigatório'),
   dados: z.record(z.unknown()).optional(),
 });

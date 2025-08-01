@@ -1,18 +1,14 @@
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env['SUPABASE_URL'] || '';
-const supabaseServiceKey = process.env['SUPABASE_SERVICE_ROLE_KEY'] || '';
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+import { supabase } from '../config/supabase-unified.js';
 
 export async function registerLogHistory({
-  user_id,
+  usuario_id,
   user_email,
   level,
   service,
   message,
-  details
+  details,
 }: {
-  user_id?: string,
+  usuario_id?: string,
   user_email?: string,
   level: string,
   service?: string,
@@ -20,14 +16,12 @@ export async function registerLogHistory({
   details?: string
 }) {
   await supabase.from('historico_logs').insert({
-    user_id,
+    usuario_id,
     user_email,
     level,
     service,
     message,
-    details
+    details,
   });
 } 
-
-
 

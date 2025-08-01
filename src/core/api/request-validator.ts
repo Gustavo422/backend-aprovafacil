@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import { Request } from 'express';
 import { z } from 'zod';
 import { ValidationError } from '../../lib/errors';
 
@@ -11,13 +11,12 @@ export class RequestValidator {
   /**
    * Validate request body against schema
    */
-  static async validateBody<T>(
-    request: NextRequest,
-    schema: z.ZodSchema<T>
-  ): Promise<T> {
+  static validateBody<T>(
+    req: Request,
+    schema: z.ZodSchema<T>,
+  ): T {
     try {
-      const body = await request.json();
-      const result = schema.safeParse(body);
+      const result = schema.safeParse(req.body);
       
       if (!result.success) {
         throw new ValidationError('Invalid request body', {
@@ -38,14 +37,11 @@ export class RequestValidator {
    * Validate query parameters against schema
    */
   static validateQuery<T>(
-    request: NextRequest,
-    schema: z.ZodSchema<T>
+    req: Request,
+    schema: z.ZodSchema<T>,
   ): T {
     try {
-      const url = new globalThis.URL(request.url);
-      const queryParams = Object.fromEntries(url.searchParams.entries());
-      
-      const result = schema.safeParse(queryParams);
+      const result = schema.safeParse(req.query);
       
       if (!result.success) {
         throw new ValidationError('Invalid query parameters', {
@@ -67,7 +63,7 @@ export class RequestValidator {
    */
   static validateParams<T>(
     params: Record<string, string | string[]>,
-    schema: z.ZodSchema<T>
+    schema: z.ZodSchema<T>,
   ): T {
     try {
       const result = schema.safeParse(params);
@@ -91,11 +87,11 @@ export class RequestValidator {
    * Validate headers against schema
    */
   static validateHeaders<T>(
-    request: NextRequest,
-    schema: z.ZodSchema<T>
+    req: Request,
+    schema: z.ZodSchema<T>,
   ): T {
     try {
-      const headers = Object.fromEntries(request.headers.entries());
+      const headers = Object.fromEntries(Object.entries(req.headers));
       const result = schema.safeParse(headers);
       
       if (!result.success) {
@@ -151,8 +147,8 @@ export class RequestValidator {
   /**
    * Validate pagination parameters
    */
-  static validatePagination(request: NextRequest) {
-    return this.validateQuery(request, this.schemas.pagination);
+  static validatePagination(req: Request) {
+    return this.validateQuery(req, this.schemas.pagination);
   }
 
   /**
@@ -165,22 +161,22 @@ export class RequestValidator {
   /**
    * Validate search parameters
    */
-  static validateSearch(request: NextRequest) {
-    return this.validateQuery(request, this.schemas.search);
+  static validateSearch(req: Request) {
+    return this.validateQuery(req, this.schemas.search);
   }
 
   /**
    * Validate date range parameters
    */
-  static validateDateRange(request: NextRequest) {
-    return this.validateQuery(request, this.schemas.dateRange);
+  static validateDateRange(req: Request) {
+    return this.validateQuery(req, this.schemas.dateRange);
   }
 
   /**
    * Validate authorization header
    */
-  static validateAuthHeaders(request: NextRequest) {
-    return this.validateHeaders(request, this.schemas.authHeaders);
+  static validateAuthHeaders(req: Request) {
+    return this.validateHeaders(req, this.schemas.authHeaders);
   }
 
   /**

@@ -138,7 +138,7 @@ export type questoes_simuladoUpdate = Partial<Omit<questoes_simulado, 'id' | 'cr
 
 export interface progresso_usuario_simulado {
   id?: string;
-  user_id: string;
+  usuario_id: string;
   simulado_id: string;
   score: number;
   time_taken_minutes: number;
@@ -171,7 +171,7 @@ export type Cartoes_memorizacaoUpdate = Partial<Omit<Cartoes_memorizacao, 'id' |
 
 export interface progresso_usuario_flashcard {
   id?: string;
-  user_id: string;
+  usuario_id: string;
   flashcard_id: string;
   next_review?: Date;
   status?: string;
@@ -220,7 +220,7 @@ export type conteudo_apostilaUpdate = Partial<Omit<conteudo_apostila, 'id' | 'cr
 
 export interface progresso_usuario_apostila {
   id?: string;
-  user_id: string;
+  usuario_id: string;
   conteudo_apostila_id: string;
   concluido?: boolean;
   percentual_progresso?: number;
@@ -251,7 +251,7 @@ export type Questoes_semanaisUpdate = Partial<Omit<Questoes_semanais, 'id' | 'cr
 
 export interface progresso_usuario_questoes_semanais {
   id?: string;
-  user_id: string;
+  usuario_id: string;
   questoes_semanais_id: string;
   score: number;
   answers: unknown;
@@ -281,7 +281,7 @@ export type Mapa_assuntosUpdate = Partial<Omit<Mapa_assuntos, 'id' | 'criado_em'
 
 export interface progresso_usuario_mapa_assuntos {
   id?: string;
-  user_id: string;
+  usuario_id: string;
   mapa_assunto_id: string;
   status?: string;
   atualizado_em?: Date;
@@ -295,7 +295,7 @@ export type progresso_usuario_mapa_assuntosUpdate = Partial<Omit<progresso_usuar
 
 export interface Planos_estudo {
   id?: string;
-  user_id: string;
+  usuario_id: string;
   concurso_id?: string;
   start_date: Date;
   end_date: Date;
@@ -328,7 +328,7 @@ export type preferencias_usuario_concursoUpdate = Partial<Omit<preferencias_usua
 
 export interface estatisticas_usuario_disciplina {
   id?: string;
-  user_id: string;
+  usuario_id: string;
   total_questions?: number;
   resposta_corretas?: number;
   pontuacao_media?: number;
@@ -351,7 +351,7 @@ export type estatisticas_usuario_disciplinaUpdate = Partial<Omit<estatisticas_us
 
 export interface User_performance_cache {
   id?: string;
-  user_id: string;
+  usuario_id: string;
   cache_key: string;
   cache_data: unknown;
   expires_at: Date;
@@ -366,7 +366,7 @@ export type User_performance_cacheUpdate = Partial<Omit<User_performance_cache, 
 
 export interface logs_auditoria {
   id?: string;
-  user_id?: string;
+  usuario_id?: string;
   action: string;
   table_nome: string;
   record_id?: string;
@@ -455,7 +455,7 @@ export interface CacheConfig {
 
 // Tipos para logs de auditoria
 export interface AuditLog {
-  user_id?: string;
+  usuario_id?: string;
   action: string;
   table_nome: string;
   record_id?: string;
@@ -467,7 +467,7 @@ export interface AuditLog {
 
 // Tipos para progresso de simulado
 export interface SimuladoProgress {
-  user_id: string;
+  usuario_id: string;
   simulado_id: string;
   score: number;
   time_taken_minutes: number;
@@ -477,7 +477,7 @@ export interface SimuladoProgress {
 
 // Tipos para progresso de questões semanais
 export interface QuestoesSemanaisProgress {
-  user_id: string;
+  usuario_id: string;
   questoes_semanais_id: string;
   score: number;
   answers: unknown;
@@ -486,7 +486,7 @@ export interface QuestoesSemanaisProgress {
 
 // Tipos para progresso de apostila
 export interface ApostilaProgress {
-  user_id: string;
+  usuario_id: string;
   conteudo_apostila_id: string;
   concluido: boolean;
   percentual_progresso: number;
@@ -494,7 +494,7 @@ export interface ApostilaProgress {
 
 // Tipos para progresso de flashcards
 export interface FlashcardProgress {
-  user_id: string;
+  usuario_id: string;
   flashcard_id: string;
   next_review?: Date;
   status: string;
@@ -503,14 +503,14 @@ export interface FlashcardProgress {
 
 // Tipos para status de mapa de assuntos
 export interface MapaAssuntosStatus {
-  user_id: string;
+  usuario_id: string;
   mapa_assunto_id: string;
   status: string;
 }
 
 // Tipos para planos de estudo
 export interface PlanoEstudo {
-  user_id: string;
+  usuario_id: string;
   concurso_id?: string;
   start_date: Date;
   end_date: Date;
@@ -519,7 +519,7 @@ export interface PlanoEstudo {
 
 // Tipos para preferências de concurso
 export interface ConcursoPreferences {
-  user_id: string;
+  usuario_id: string;
   concurso_id: string;
   pode_alterar_ate: Date;
   selecionado_em?: Date;
@@ -528,7 +528,7 @@ export interface ConcursoPreferences {
 
 // Tipos para estatísticas de disciplina (renomeado para evitar conflito)
 export interface UserdisciplinaStatsDetail {
-  user_id: string;
+  usuario_id: string;
   disciplina: string;
   total_questions: number;
   resposta_corretas: number;
@@ -539,7 +539,7 @@ export interface UserdisciplinaStatsDetail {
 
 // Tipos para cache de performance
 export interface PerformanceCache {
-  user_id: string;
+  usuario_id: string;
   cache_key: string;
   cache_data: unknown;
   expires_at: Date;
@@ -677,7 +677,7 @@ export interface User {
 
 // Tipos para logs de auditoria (renomeado para evitar conflito)
 export interface AuditLogEntry {
-  user_id?: string;
+  usuario_id?: string;
   action: string;
   table_nome: string;
   record_id?: string;

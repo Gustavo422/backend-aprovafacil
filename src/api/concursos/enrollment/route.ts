@@ -1,463 +1,422 @@
-import { NextRequest } from 'next/server';
+import { Request, Response } from 'express';
 import { z } from 'zod';
-import { BaseRouteHandler } from '../../../core/api/base-route-handler';
-import { ResponseFormatter } from '../../../core/api/response-formatter';
-import { supabase } from '../../../config/supabase';
-import { requestLoggingMiddleware, corsMiddleware } from '../../../core/api';
-import { URL } from 'url';
+import { supabase } from '../../../config/supabase-unified.js';
+import { logger } from '../../../lib/logger.js';
+
+// Validation schema for enrollment
+const enrollmentSchema = z.object({
+  concurso_id: z.string().uuid(),
+  categoria_ids: z.array(z.string().uuid()).optional(),
+});
+
+// Interface para request com usuário autenticado
+interface AuthenticatedRequest extends Request {
+  user?: {
+    id: string;
+    email: string;
+    role: string;
+    [key: string]: unknown;
+  };
+}
 
 /**
- * Concurso enrollment API route handler
+ * GET /api/concursos/enrollment - Get user enrollments
  */
-export class ConcursoEnrollmentRouteHandler extends BaseRouteHandler {
-  constructor() {
-    super('enrollment');
+export const getEnrollmentHandler = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    // Get user from auth middleware (assuming it's attached to req.user)
+    const user = req.user;
     
-    // Add middleware
-    this.use(requestLoggingMiddleware)
-      .use(corsMiddleware);
-  }
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated',
+      });
+    }
 
-  /**
-   * Get validation schema for enrollment
-   */
-  protected getPOSTBodySchema(): z.ZodSchema {
-    return z.object({
-      concurso_id: z.string().uuid(),
-      categoria_ids: z.array(z.string().uuid()).optional(),
+    // Get concurso ID from URL if present
+    const pathParts = req.path.split('/');
+    const concursoId = pathParts[pathParts.length - 2]; // Assuming URL pattern is /concursos/{id}/enrollment
+    
+    // If concurso ID is provided, get specific enrollment
+    if (concursoId && concursoId !== 'concursos') {
+      return await getSpecificEnrollment(user.id, concursoId, res);
+    }
+
+    // Otherwise, get all user enrollments
+    return await getAllUserEnrollments(user.id, res);
+  } catch (error) {
+    logger.error('Error handling get enrollments request', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+
+    return res.status(500).json({
+      success: false,
+      error: 'Error retrieving enrollments',
     });
   }
+};
 
-  /**
-   * Handle GET request - Get user enrollments
-   */
-  protected async handleGET(
-    request: NextRequest,
-    context: { requestId: string }
-  ): Promise<unknown> {
-    try {
-      // Get user from context (added by auth middleware)
-      const user = (request as { context?: { user?: { id: string; role?: string } } }).context?.user;
-      
-      if (!user) {
-        return ResponseFormatter.authError('User not authenticated', context.requestId);
-      }
-
-      // Get concurso ID from URL if present
-      const url = new URL(request.url);
-      const pathParts = url.pathname.split('/');
-      const concursoId = pathParts[pathParts.length - 2]; // Assuming URL pattern is /concursos/{id}/enrollment
-      
-      // If concurso ID is provided, get specific enrollment
-      if (concursoId && concursoId !== 'concursos') {
-        return this.getUserConcursoEnrollment(user.id, concursoId, context.requestId);
-      }
-
-      // Otherwise, get all user enrollments
-      return this.getUserEnrollments(user.id, context.requestId);
-    } catch (error) {
-      this.logger.error('Error handling get enrollments request', {
-        requestId: context.requestId,
-        error: error instanceof Error ? error.message : String(error),
-      });
-
-      return ResponseFormatter.error('Error retrieving enrollments', {
-        status: 500,
-        requestId: context.requestId,
+/**
+ * POST /api/concursos/enrollment - Enroll user in concurso
+ */
+export const postEnrollmentHandler = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    // Get user from auth middleware
+    const user = req.user;
+    
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated',
       });
     }
-  }
 
-  /**
-   * Handle POST request - Enroll user in concurso
-   */
-  protected async handlePOST(
-    request: NextRequest,
-    context: {
-      body?: unknown;
-      requestId: string;
-    }
-  ): Promise<unknown> {
-    try {
-      // Get user from context (added by auth middleware)
-      const user = (request as { context?: { user?: { id: string; role?: string } } }).context?.user;
-      
-      if (!user) {
-        return ResponseFormatter.authError('User not authenticated', context.requestId);
-      }
-
-      const enrollmentData = context.body as {
-        concurso_id: string;
-        categoria_ids?: string[];
-      };
-
-      // Check if concurso exists
-      const { data: concurso, error: concursoError } = await supabase
-        .from('concursos')
-        .select('id, nome, status')
-        .eq('id', enrollmentData.concurso_id)
-        .single();
-
-      if (concursoError) {
-        if (concursoError.code === 'PGRST116') {
-          return ResponseFormatter.notFoundError('Concurso not found', context.requestId);
-        }
-
-        this.logger.error('Error fetching concurso', {
-          requestId: context.requestId,
-          concursoId: enrollmentData.concurso_id,
-          error: concursoError.message,
-        });
-
-        return ResponseFormatter.error('Error retrieving concurso', {
-          status: 500,
-          requestId: context.requestId,
-        });
-      }
-
-      // Check if concurso is active
-      if (concurso.status !== 'ativo') {
-        return ResponseFormatter.error('Cannot enroll in inactive concurso', {
-          status: 400,
-          requestId: context.requestId,
-        });
-      }
-
-      // Check if user is already enrolled
-      const { data: existingEnrollment } = await supabase
-        .from('user_concurso_enrollments')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('concurso_id', enrollmentData.concurso_id)
-        .single();
-
-      if (existingEnrollment) {
-        return ResponseFormatter.error('User already enrolled in this concurso', {
-          status: 409,
-          code: 'ALREADY_ENROLLED',
-          requestId: context.requestId,
-        });
-      }
-
-      // Create enrollment
-      const { data: enrollment, error: enrollmentError } = await supabase
-        .from('user_concurso_enrollments')
-        .insert({
-          user_id: user.id,
-          concurso_id: enrollmentData.concurso_id,
-          enrolled_at: new Date().toISOString(),
-          status: 'active',
-        })
-        .select()
-        .single();
-
-      if (enrollmentError) {
-        this.logger.error('Error creating enrollment', {
-          requestId: context.requestId,
-          userId: user.id,
-          concursoId: enrollmentData.concurso_id,
-          error: enrollmentError.message,
-        });
-
-        return ResponseFormatter.error('Error creating enrollment', {
-          status: 500,
-          requestId: context.requestId,
-        });
-      }
-
-      // If categoria_ids are provided, create categoria enrollments
-      if (enrollmentData.categoria_ids && enrollmentData.categoria_ids.length > 0) {
-        const categoriaEnrollments = enrollmentData.categoria_ids.map(categoriaId => ({
-          user_id: user.id,
-          concurso_id: enrollmentData.concurso_id,
-          categoria_id: categoriaId,
-          enrolled_at: new Date().toISOString(),
-          status: 'active',
-        }));
-
-        const { error: categoriaError } = await supabase
-          .from('user_categoria_enrollments')
-          .insert(categoriaEnrollments);
-
-        if (categoriaError) {
-          this.logger.error('Error creating categoria enrollments', {
-            requestId: context.requestId,
-            userId: user.id,
-            concursoId: enrollmentData.concurso_id,
-            error: categoriaError.message,
-          });
-        }
-      }
-
-      // Create initial progress record
-      await supabase
-        .from('user_concurso_progress')
-        .insert({
-          user_id: user.id,
-          concurso_id: enrollmentData.concurso_id,
-          progress_percentage: 0,
-          last_activity_at: new Date().toISOString(),
-        });
-
-      return ResponseFormatter.success(
-        {
-          enrollment_id: enrollment.id,
-          user_id: user.id,
-          concurso_id: enrollmentData.concurso_id,
-          concurso_name: concurso.nome,
-          enrolled_at: enrollment.enrolled_at,
-          status: enrollment.status,
-        },
-        {
-          status: 201,
-          requestId: context.requestId,
-          message: 'Enrolled successfully',
-        }
-      );
-    } catch (error) {
-      this.logger.error('Error handling enrollment request', {
-        requestId: context.requestId,
-        error: error instanceof Error ? error.message : String(error),
-      });
-
-      return ResponseFormatter.error('Error processing enrollment', {
-        status: 500,
-        requestId: context.requestId,
+    // Validate request body
+    const validationResult = enrollmentSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid request data',
+        details: validationResult.error.format(),
       });
     }
-  }
 
-  /**
-   * Handle DELETE request - Cancel enrollment
-   */
-  protected async handleDELETE(
-    request: NextRequest,
-    context: { requestId: string }
-  ): Promise<unknown> {
-    try {
-      // Get user from context (added by auth middleware)
-      const user = (request as { context?: { user?: { id: string; role?: string } } }).context?.user;
-      
-      if (!user) {
-        return ResponseFormatter.authError('User not authenticated', context.requestId);
-      }
+    const enrollmentData = validationResult.data;
 
-      // Get concurso ID from URL
-      const url = new URL(request.url);
-      const pathParts = url.pathname.split('/');
-      const concursoId = pathParts[pathParts.length - 2]; // Assuming URL pattern is /concursos/{id}/enrollment
-      
-      if (!concursoId || concursoId === 'concursos') {
-        return ResponseFormatter.error('Concurso ID is required', {
-          status: 400,
-          requestId: context.requestId,
+    // Check if concurso exists
+    const { data: concurso, error: concursoError } = await supabase
+      .from('concursos')
+      .select('id, nome, status')
+      .eq('id', enrollmentData.concurso_id)
+      .single();
+
+    if (concursoError) {
+      if (concursoError.code === 'PGRST116') {
+        return res.status(404).json({
+          success: false,
+          error: 'Concurso not found',
         });
       }
 
-      // Check if enrollment exists
-      const { data: existingEnrollment, error: checkError } = await supabase
-        .from('user_concurso_enrollments')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('concurso_id', concursoId)
-        .single();
+      logger.error('Error fetching concurso', {
+        concursoId: enrollmentData.concurso_id,
+        error: concursoError.message,
+      });
 
-      if (checkError || !existingEnrollment) {
-        return ResponseFormatter.notFoundError('Enrollment not found', context.requestId);
-      }
+      return res.status(500).json({
+        success: false,
+        error: 'Error retrieving concurso',
+      });
+    }
 
-      // Delete categoria enrollments first
-      await supabase
+    // Check if concurso is active
+    if (concurso.status !== 'ativo') {
+      return res.status(400).json({
+        success: false,
+        error: 'Cannot enroll in inactive concurso',
+      });
+    }
+
+    // Check if user is already enrolled
+    const { data: existingEnrollment } = await supabase
+      .from('user_concurso_enrollments')
+      .select('id')
+      .eq('usuario_id', user.id)
+      .eq('concurso_id', enrollmentData.concurso_id)
+      .single();
+
+    if (existingEnrollment) {
+      return res.status(409).json({
+        success: false,
+        error: 'User already enrolled in this concurso',
+        code: 'ALREADY_ENROLLED',
+      });
+    }
+
+    // Create enrollment
+    const { data: enrollment, error: enrollmentError } = await supabase
+      .from('user_concurso_enrollments')
+      .insert({
+        usuario_id: user.id,
+        concurso_id: enrollmentData.concurso_id,
+        enrolled_at: new Date().toISOString(),
+        status: 'active',
+      })
+      .select()
+      .single();
+
+    if (enrollmentError) {
+      logger.error('Error creating enrollment', {
+        usuarioId: user.id,
+        concursoId: enrollmentData.concurso_id,
+        error: enrollmentError.message,
+      });
+
+      return res.status(500).json({
+        success: false,
+        error: 'Error creating enrollment',
+      });
+    }
+
+    // If categoria_ids are provided, create categoria enrollments
+    if (enrollmentData.categoria_ids && enrollmentData.categoria_ids.length > 0) {
+      const categoriaEnrollments = enrollmentData.categoria_ids.map(categoriaId => ({
+        usuario_id: user.id,
+        concurso_id: enrollmentData.concurso_id,
+        categoria_id: categoriaId,
+        enrolled_at: new Date().toISOString(),
+        status: 'active',
+      }));
+
+      const { error: categoriaError } = await supabase
         .from('user_categoria_enrollments')
-        .delete()
-        .eq('user_id', user.id)
-        .eq('concurso_id', concursoId);
+        .insert(categoriaEnrollments);
 
-      // Delete progress records
-      await supabase
-        .from('user_concurso_progress')
-        .delete()
-        .eq('user_id', user.id)
-        .eq('concurso_id', concursoId);
-
-      // Delete enrollment
-      const { error } = await supabase
-        .from('user_concurso_enrollments')
-        .delete()
-        .eq('user_id', user.id)
-        .eq('concurso_id', concursoId);
-
-      if (error) {
-        this.logger.error('Error deleting enrollment', {
-          requestId: context.requestId,
-          userId: user.id,
-          concursoId,
-          error: error.message,
-        });
-
-        return ResponseFormatter.error('Error canceling enrollment', {
-          status: 500,
-          requestId: context.requestId,
+      if (categoriaError) {
+        logger.error('Error creating categoria enrollments', {
+          usuarioId: user.id,
+          concursoId: enrollmentData.concurso_id,
+          error: categoriaError.message,
         });
       }
-
-      return ResponseFormatter.success(
-        { canceled: true },
-        {
-          requestId: context.requestId,
-          message: 'Enrollment canceled successfully',
-        }
-      );
-    } catch (error) {
-      this.logger.error('Error handling cancel enrollment request', {
-        requestId: context.requestId,
-        error: error instanceof Error ? error.message : String(error),
-      });
-
-      return ResponseFormatter.error('Error canceling enrollment', {
-        status: 500,
-        requestId: context.requestId,
-      });
     }
-  }
 
-  /**
-   * Get all enrollments for a user
-   */
-  private async getUserEnrollments(userId: string, requestId: string): Promise<unknown> {
-    // Get user enrollments with concurso details
-    const { data, error }: { data: unknown; error: unknown } = await supabase
-      .from('user_concurso_enrollments')
-      .select(`
-        id,
-        enrolled_at,
-        status,
-        concursos:concurso_id (
-          id,
-          nome,
-          organizador,
-          data_prova,
-          status
-        )
-      `)
-      .eq('user_id', userId);
-
-    if (error) {
-      this.logger.error('Error fetching user enrollments', {
-        requestId,
-        userId,
-        error: error instanceof Error ? error.message : String(error),
+    // Create initial progress record
+    await supabase
+      .from('user_concurso_progress')
+      .insert({
+        usuario_id: user.id,
+        concurso_id: enrollmentData.concurso_id,
+        progress_percentage: 0,
+        last_activity_at: new Date().toISOString(),
       });
 
-      return ResponseFormatter.error('Error retrieving enrollments', {
-        status: 500,
-        requestId,
+    return res.status(201).json({
+      success: true,
+      data: {
+        enrollment_id: enrollment.id,
+        usuario_id: user.id,
+        concurso_id: enrollmentData.concurso_id,
+        concurso_name: concurso.nome,
+        enrolled_at: enrollment.enrolled_at,
+        status: enrollment.status,
+      },
+      message: 'Enrolled successfully',
+    });
+  } catch (error) {
+    logger.error('Error handling enrollment request', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+
+    return res.status(500).json({
+      success: false,
+      error: 'Error processing enrollment',
+    });
+  }
+};
+
+/**
+ * DELETE /api/concursos/enrollment - Cancel enrollment
+ */
+export const deleteEnrollmentHandler = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    // Get user from auth middleware
+    const user = req.user;
+    
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated',
       });
     }
 
-    // Format enrollments
-    const enrollments = Array.isArray(data) ? data.map((item: unknown) => {
-      if (typeof item === 'object' && item !== null && 'id' in item && 'enrolled_at' in item) {
-        return {
-          id: (item as { id: string }).id,
-          enrolled_at: (item as { enrolled_at: string }).enrolled_at,
-          // ... outros campos conforme necessário
-        };
-      }
-      return undefined;
-    }).filter(Boolean) : [];
+    // Get concurso ID from URL
+    const pathParts = req.path.split('/');
+    const concursoId = pathParts[pathParts.length - 2]; // Assuming URL pattern is /concursos/{id}/enrollment
+    
+    if (!concursoId || concursoId === 'concursos') {
+      return res.status(400).json({
+        success: false,
+        error: 'Concurso ID is required',
+      });
+    }
 
-    return ResponseFormatter.success(enrollments, { requestId });
-  }
-
-  /**
-   * Get specific enrollment for a user
-   */
-  private async getUserConcursoEnrollment(userId: string, concursoId: string, requestId: string): Promise<unknown> {
-    // Get enrollment
-    const { data: enrollment, error } = await supabase
+    // Check if enrollment exists
+    const { data: existingEnrollment, error: checkError } = await supabase
       .from('user_concurso_enrollments')
-      .select(`
-        id,
-        enrolled_at,
-        status,
-        concursos:concurso_id (
-          id,
-          nome,
-          organizador,
-          data_prova,
-          status
-        )
-      `)
-      .eq('user_id', userId)
+      .select('id')
+      .eq('usuario_id', user.id)
       .eq('concurso_id', concursoId)
       .single();
 
-    if (error) {
-      if (error.code === 'PGRST116') {
-        return ResponseFormatter.notFoundError('Enrollment not found', requestId);
-      }
+    if (checkError || !existingEnrollment) {
+      return res.status(404).json({
+        success: false,
+        error: 'Enrollment not found',
+      });
+    }
 
-      this.logger.error('Error fetching enrollment', {
-        requestId,
-        userId,
+    // Delete categoria enrollments first
+    await supabase
+      .from('user_categoria_enrollments')
+      .delete()
+      .eq('usuario_id', user.id)
+      .eq('concurso_id', concursoId);
+
+    // Delete progress records
+    await supabase
+      .from('user_concurso_progress')
+      .delete()
+      .eq('usuario_id', user.id)
+      .eq('concurso_id', concursoId);
+
+    // Delete enrollment
+    const { error } = await supabase
+      .from('user_concurso_enrollments')
+      .delete()
+      .eq('usuario_id', user.id)
+      .eq('concurso_id', concursoId);
+
+    if (error) {
+      logger.error('Error deleting enrollment', {
+        usuarioId: user.id,
         concursoId,
         error: error.message,
       });
 
-      return ResponseFormatter.error('Error retrieving enrollment', {
-        status: 500,
-        requestId,
+      return res.status(500).json({
+        success: false,
+        error: 'Error canceling enrollment',
       });
     }
 
-    // Get categoria enrollments
-    const { data: categoriaEnrollments } = await supabase
-      .from('user_categoria_enrollments')
-      .select(`
-        id,
-        enrolled_at,
-        status,
-        categorias:categoria_id (
-          id,
-          nome
-        )
-      `)
-      .eq('user_id', userId)
-      .eq('concurso_id', concursoId);
+    return res.json({
+      success: true,
+      data: { canceled: true },
+      message: 'Enrollment canceled successfully',
+    });
+  } catch (error) {
+    logger.error('Error handling cancel enrollment request', {
+      error: error instanceof Error ? error.message : String(error),
+    });
 
-    // Get progress
-    const { data: progress } = await supabase
-      .from('user_concurso_progress')
-      .select('progress_percentage, last_activity_at')
-      .eq('user_id', userId)
-      .eq('concurso_id', concursoId)
-      .single();
-
-    // Format response
-    const response = {
-      id: enrollment.id,
-      enrolled_at: enrollment.enrolled_at,
-      status: enrollment.status,
-      concurso: enrollment.concursos,
-      categorias: Array.isArray(categoriaEnrollments) ? categoriaEnrollments.map((item: unknown) => {
-        if (typeof item === 'object' && item !== null && 'categorias' in item) {
-          return (item as { categorias: unknown }).categorias;
-        }
-        return undefined;
-      }).filter(Boolean) : [],
-      progress: progress || { progress_percentage: 0, last_activity_at: enrollment.enrolled_at },
-    };
-
-    return ResponseFormatter.success(response, { requestId });
+    return res.status(500).json({
+      success: false,
+      error: 'Error canceling enrollment',
+    });
   }
+};
+
+// Helper functions
+async function getAllUserEnrollments(usuarioId: string, res: Response) {
+  const { data, error } = await supabase
+    .from('user_concurso_enrollments')
+    .select(`
+      id,
+      enrolled_at,
+      status,
+      concursos:concurso_id (
+        id,
+        nome,
+        organizador,
+        data_prova,
+        status
+      )
+    `)
+    .eq('usuario_id', usuarioId);
+
+  if (error) {
+    logger.error('Error fetching user enrollments', {
+      usuarioId,
+      error: error.message,
+    });
+
+    return res.status(500).json({
+      success: false,
+      error: 'Error retrieving enrollments',
+    });
+  }
+
+  return res.json({
+    success: true,
+    data: data || [],
+  });
 }
 
-// Create route handler
-const concursoEnrollmentRouteHandler = new ConcursoEnrollmentRouteHandler();
-const routeHandlers = concursoEnrollmentRouteHandler.createRouteHandlers();
+async function getSpecificEnrollment(usuarioId: string, concursoId: string, res: Response) {
+  const { data: enrollment, error } = await supabase
+    .from('user_concurso_enrollments')
+    .select(`
+      id,
+      enrolled_at,
+      status,
+      concursos:concurso_id (
+        id,
+        nome,
+        organizador,
+        data_prova,
+        status
+      )
+    `)
+    .eq('usuario_id', usuarioId)
+    .eq('concurso_id', concursoId)
+    .single();
 
-// Export route handlers for Next.js App Router
-export const GET = routeHandlers.GET;
-export const POST = routeHandlers.POST;
-export const DELETE = routeHandlers.DELETE;
+  if (error) {
+    if (error.code === 'PGRST116') {
+      return res.status(404).json({
+        success: false,
+        error: 'Enrollment not found',
+      });
+    }
+
+    logger.error('Error fetching enrollment', {
+      usuarioId,
+      concursoId,
+      error: error.message,
+    });
+
+    return res.status(500).json({
+      success: false,
+      error: 'Error retrieving enrollment',
+    });
+  }
+
+  // Get categoria enrollments
+  const { data: categoriaEnrollments } = await supabase
+    .from('user_categoria_enrollments')
+    .select(`
+      id,
+      enrolled_at,
+      status,
+      categorias:categoria_id (
+        id,
+        nome
+      )
+    `)
+    .eq('usuario_id', usuarioId)
+    .eq('concurso_id', concursoId);
+
+  // Get progress
+  const { data: progress } = await supabase
+    .from('user_concurso_progress')
+    .select('progress_percentage, last_activity_at')
+    .eq('usuario_id', usuarioId)
+    .eq('concurso_id', concursoId)
+    .single();
+
+  const response = {
+    id: enrollment.id,
+    enrolled_at: enrollment.enrolled_at,
+    status: enrollment.status,
+    concurso: enrollment.concursos,
+    categorias: categoriaEnrollments || [],
+    progress: progress || { progress_percentage: 0, last_activity_at: enrollment.enrolled_at },
+  };
+
+  return res.json({
+    success: true,
+    data: response,
+  });
+}

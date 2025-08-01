@@ -27,13 +27,13 @@ router.post('/', (req, res) => {
       }
       
       // Verificar se o token tem um ID de usuário
-      const userId = decoded.userId || decoded.id || decoded.sub;
+      const usuarioId = decoded.usuarioId || decoded.id || decoded.sub;
       
       return res.json({
         success: true,
         message: 'Token decodificado com sucesso',
         decoded,
-        userId: userId || null
+        usuarioId: usuarioId || null
       });
     } catch (error) {
       return res.status(400).json({

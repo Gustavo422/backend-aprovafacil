@@ -21,7 +21,7 @@ export class CacheFactory {
   static createCacheService(
     provider: CacheProvider,
     logService: ILogService,
-    supabase?: SupabaseClient
+    supabase?: SupabaseClient,
   ): ICacheService {
     // Get provider from environment variable if not specified
     const cacheProvider = provider || 
@@ -29,24 +29,24 @@ export class CacheFactory {
       CacheProvider.MEMORY;
     
     switch (cacheProvider) {
-      case CacheProvider.REDIS:
-        return new RedisCacheService(logService);
+    case CacheProvider.REDIS:
+      return new RedisCacheService(logService);
       
-      case CacheProvider.MEMORY:
-        if (!supabase) {
-          throw new Error('Supabase client is required for memory cache');
-        }
-        return new CacheService(supabase, logService);
+    case CacheProvider.MEMORY:
+      if (!supabase) {
+        throw new Error('Supabase client is required for memory cache');
+      }
+      return new CacheService(supabase, logService);
       
-      case CacheProvider.HYBRID:
-        // Implement hybrid cache if needed in the future
-        throw new Error('Hybrid cache provider not implemented yet');
+    case CacheProvider.HYBRID:
+      // Implement hybrid cache if needed in the future
+      throw new Error('Hybrid cache provider not implemented yet');
       
-      default:
-        if (!supabase) {
-          throw new Error('Supabase client is required for memory cache');
-        }
-        return new CacheService(supabase, logService);
+    default:
+      if (!supabase) {
+        throw new Error('Supabase client is required for memory cache');
+      }
+      return new CacheService(supabase, logService);
     }
   }
 }

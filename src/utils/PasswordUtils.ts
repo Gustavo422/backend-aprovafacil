@@ -1,4 +1,7 @@
 import bcrypt from 'bcrypt';
+import { getLogger } from '../lib/logging/logging-service.js';
+
+const logger = getLogger('password-utils');
 
 /**
  * Utility class for secure password handling
@@ -31,8 +34,8 @@ export class PasswordUtils {
       
       return hashedPassword;
     } catch (error) {
-      console.error('Error hashing password:', error);
-      throw new Error('Failed to hash password');
+      logger.error('Erro ao hashear senha:', { error });
+      throw new Error('Erro ao processar senha');
     }
   }
 
@@ -51,7 +54,7 @@ export class PasswordUtils {
       // Compare the password with the hash
       return await bcrypt.compare(password, hashedPassword);
     } catch (error) {
-      console.error('Error comparing passwords:', error);
+      logger.error('Erro ao verificar senha:', { error });
       return false;
     }
   }

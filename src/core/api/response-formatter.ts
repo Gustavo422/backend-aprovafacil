@@ -1,5 +1,17 @@
-import { NextResponse } from 'next/server';
-import { ApiResponse } from './base-api-handler';
+export interface ApiResponse<T = unknown> {
+  success: boolean;
+  data?: T;
+  error?: {
+    code: string;
+    message: string;
+    details?: unknown;
+  };
+  meta: {
+    timestamp: string;
+    requestId: string;
+    version: string;
+  };
+}
 
 export class ResponseFormatter {
   /**
@@ -11,9 +23,9 @@ export class ResponseFormatter {
       status?: number;
       requestId?: string;
       message?: string;
-    } = {}
-  ): NextResponse {
-    const { status = 200, requestId = '', message } = options;
+    } = {},
+  ): ApiResponse<T> {
+    const { requestId = '', message } = options;
 
     const response: ApiResponse<T> = {
       success: true,
@@ -26,7 +38,7 @@ export class ResponseFormatter {
       },
     };
 
-    return NextResponse.json(response, { status });
+    return response;
   }
 
   /**
@@ -39,13 +51,12 @@ export class ResponseFormatter {
       code?: string;
       details?: unknown;
       requestId?: string;
-    } = {}
-  ): NextResponse {
+    } = {},
+  ): ApiResponse {
     const { 
-      status = 500, 
       code = 'INTERNAL_SERVER_ERROR', 
       details,
-      requestId = '' 
+      requestId = '', 
     } = options;
 
     const response: ApiResponse = {
@@ -62,7 +73,7 @@ export class ResponseFormatter {
       },
     };
 
-    return NextResponse.json(response, { status });
+    return response;
   }
 
   /**
@@ -71,10 +82,9 @@ export class ResponseFormatter {
   static validationError(
     message: string,
     details: unknown,
-    requestId?: string
-  ): NextResponse {
+    requestId?: string,
+  ): ApiResponse {
     return this.error(message, {
-      status: 400,
       code: 'VALIDATION_ERROR',
       details,
       requestId,
@@ -86,10 +96,9 @@ export class ResponseFormatter {
    */
   static authError(
     message: string = 'Authentication required',
-    requestId?: string
-  ): NextResponse {
+    requestId?: string,
+  ): ApiResponse {
     return this.error(message, {
-      status: 401,
       code: 'AUTHENTICATION_ERROR',
       requestId,
     });
@@ -100,10 +109,9 @@ export class ResponseFormatter {
    */
   static forbiddenError(
     message: string = 'Access forbidden',
-    requestId?: string
-  ): NextResponse {
+    requestId?: string,
+  ): ApiResponse {
     return this.error(message, {
-      status: 403,
       code: 'AUTHORIZATION_ERROR',
       requestId,
     });
@@ -114,10 +122,9 @@ export class ResponseFormatter {
    */
   static notFoundError(
     message: string = 'Resource not found',
-    requestId?: string
-  ): NextResponse {
+    requestId?: string,
+  ): ApiResponse {
     return this.error(message, {
-      status: 404,
       code: 'NOT_FOUND',
       requestId,
     });
@@ -128,10 +135,9 @@ export class ResponseFormatter {
    */
   static conflictError(
     message: string = 'Resource conflict',
-    requestId?: string
-  ): NextResponse {
+    requestId?: string,
+  ): ApiResponse {
     return this.error(message, {
-      status: 409,
       code: 'CONFLICT',
       requestId,
     });
@@ -142,10 +148,9 @@ export class ResponseFormatter {
    */
   static rateLimitError(
     message: string = 'Rate limit exceeded',
-    requestId?: string
-  ): NextResponse {
+    requestId?: string,
+  ): ApiResponse {
     return this.error(message, {
-      status: 429,
       code: 'RATE_LIMIT_EXCEEDED',
       requestId,
     });
@@ -162,8 +167,11 @@ export class ResponseFormatter {
       total: number;
       totalPages: number;
     },
-    requestId?: string
-  ): NextResponse {
+    requestId?: string,
+  ): ApiResponse<{
+    items: T[];
+    pagination: typeof pagination;
+  }> {
     const response: ApiResponse<{
       items: T[];
       pagination: typeof pagination;
@@ -180,13 +188,13 @@ export class ResponseFormatter {
       },
     };
 
-    return NextResponse.json(response, { status: 200 });
+    return response;
   }
 
   /**
    * Create a no content response
    */
-  static noContent(requestId?: string): NextResponse {
+  static noContent(requestId?: string): ApiResponse {
     const response: ApiResponse = {
       success: true,
       meta: {
@@ -196,6 +204,6 @@ export class ResponseFormatter {
       },
     };
 
-    return NextResponse.json(response, { status: 204 });
+    return response;
   }
-}
+} 

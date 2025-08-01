@@ -76,11 +76,11 @@ export class CacheInvalidationStrategy {
       // Store dependency map in cache for persistence across restarts
       await this.cacheService.definir('cache_dependency_map', 
         Array.from(this.dependencyMap.entries()).map(([k, v]) => [k, Array.from(v)]), 
-        1440 // 24 hours
+        1440, // 24 hours
       );
       
       await this.logService.debug(`Dependências de cache registradas para: ${key}`, { 
-        dependencies: dependencies.map(d => `${d.type}:${d.id}`).join(', ') 
+        dependencies: dependencies.map(d => `${d.type}:${d.id}`).join(', '), 
       });
     } catch (error) {
       await this.logService.erro('Erro ao registrar dependências de cache', error as Error, { key });
@@ -106,7 +106,7 @@ export class CacheInvalidationStrategy {
       }
       
       await this.logService.info(`Cache invalidado por dependência: ${dependencyKey}`, {
-        keys_invalidated: Array.from(keysToInvalidate)
+        keys_invalidated: Array.from(keysToInvalidate),
       });
       
       // Remove the dependency from the map
@@ -115,12 +115,12 @@ export class CacheInvalidationStrategy {
       // Update dependency map in cache
       await this.cacheService.definir('cache_dependency_map', 
         Array.from(this.dependencyMap.entries()).map(([k, v]) => [k, Array.from(v)]), 
-        1440 // 24 hours
+        1440, // 24 hours
       );
     } catch (error) {
       await this.logService.erro('Erro ao invalidar cache por dependência', error as Error, { 
         dependency_type: dependency.type,
-        dependency_id: dependency.id
+        dependency_id: dependency.id,
       });
     }
   }
@@ -140,16 +140,16 @@ export class CacheInvalidationStrategy {
   
   /**
    * Invalidate all cache entries related to a user
-   * @param userId The user ID
+   * @param usuarioId The user ID
    */
-  async invalidateUserCache(userId: string): Promise<void> {
+  async invalidateUserCache(usuarioId: string): Promise<void> {
     await this.invalidateByDependency({
       type: CacheDependencyType.USER,
-      id: userId
+      id: usuarioId,
     });
     
     // Also invalidate by pattern for keys that might not be registered
-    await this.invalidateByPattern(`user_${userId}`);
+    await this.invalidateByPattern(`user_${usuarioId}`);
   }
   
   /**
@@ -159,7 +159,7 @@ export class CacheInvalidationStrategy {
   async invalidateConcursoCache(concursoId: string): Promise<void> {
     await this.invalidateByDependency({
       type: CacheDependencyType.CONCURSO,
-      id: concursoId
+      id: concursoId,
     });
     
     // Also invalidate by pattern
@@ -173,7 +173,7 @@ export class CacheInvalidationStrategy {
   async invalidateSimuladoCache(simuladoId: string): Promise<void> {
     await this.invalidateByDependency({
       type: CacheDependencyType.SIMULADO,
-      id: simuladoId
+      id: simuladoId,
     });
     
     // Also invalidate by pattern
@@ -187,7 +187,7 @@ export class CacheInvalidationStrategy {
   async invalidateApostilaCache(apostilaId: string): Promise<void> {
     await this.invalidateByDependency({
       type: CacheDependencyType.APOSTILA,
-      id: apostilaId
+      id: apostilaId,
     });
     
     // Also invalidate by pattern
@@ -204,13 +204,19 @@ export class CacheInvalidationStrategy {
       
       if (storedMap) {
         this.dependencyMap = new Map(
-          storedMap.map(([key, values]) => [key, new Set(values)])
+          storedMap.map(([key, values]) => [key, new Set(values)]),
         );
         
         await this.logService.info(`Mapa de dependências de cache carregado: ${this.dependencyMap.size} entradas`);
+      } else {
+        // Se não há mapa armazenado, inicializar com mapa vazio
+        this.dependencyMap = new Map();
+        await this.logService.info('Mapa de dependências de cache inicializado vazio');
       }
     } catch (error) {
-      await this.logService.erro('Erro ao carregar mapa de dependências de cache', error as Error);
+      // Se há erro ao carregar, inicializar com mapa vazio
+      this.dependencyMap = new Map();
+      await this.logService.info('Mapa de dependências de cache inicializado vazio devido a erro');
     }
   }
 }

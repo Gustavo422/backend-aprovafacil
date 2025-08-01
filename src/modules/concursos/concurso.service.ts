@@ -52,13 +52,13 @@ export class ConcursoService extends BaseService<Concurso, FiltroConcurso> imple
    */
   constructor(
     concursoRepository: IConcursoRepository,
-    options?: Partial<BaseServiceOptions>
+    options?: Partial<BaseServiceOptions>,
   ) {
     super(concursoRepository, {
       serviceName: 'Concurso',
       enableCache: true,
       cacheTime: 600, // 10 minutos
-      ...options
+      ...options,
     });
     
     this.logger.info('Serviço de concursos inicializado');
@@ -92,7 +92,7 @@ export class ConcursoService extends BaseService<Concurso, FiltroConcurso> imple
           this.logger.debug('Cache hit para buscarPorSlug', { operationId });
           return {
             success: true,
-            data: cached as Concurso
+            data: cached as Concurso,
           };
         }
       }
@@ -105,13 +105,13 @@ export class ConcursoService extends BaseService<Concurso, FiltroConcurso> imple
         this.logger.warn('Concurso não encontrado por slug', {
           operationId,
           slug,
-          executionTimeMs: executionTime.toFixed(2)
+          executionTimeMs: executionTime.toFixed(2),
         });
         
         return {
           success: false,
           message: 'Concurso não encontrado',
-          error: 'NOT_FOUND'
+          error: 'NOT_FOUND',
         };
       }
       
@@ -127,12 +127,12 @@ export class ConcursoService extends BaseService<Concurso, FiltroConcurso> imple
       this.logger.debug('Concurso encontrado por slug', {
         operationId,
         concursoId: concurso.id,
-        executionTimeMs: executionTime.toFixed(2)
+        executionTimeMs: executionTime.toFixed(2),
       });
       
       return {
         success: true,
-        data: processedConcurso
+        data: processedConcurso,
       };
     } catch (error) {
       const executionTime = performance.now() - startTime;
@@ -164,7 +164,7 @@ export class ConcursoService extends BaseService<Concurso, FiltroConcurso> imple
           this.logger.debug('Cache hit para buscarPorCategoria', { operationId });
           return {
             success: true,
-            data: cached as Concurso[]
+            data: cached as Concurso[],
           };
         }
       }
@@ -174,7 +174,7 @@ export class ConcursoService extends BaseService<Concurso, FiltroConcurso> imple
       
       // Processar dados após busca
       const processedConcursos = await Promise.all(
-        concursos.map(concurso => this.processAfterFind(concurso))
+        concursos.map(concurso => this.processAfterFind(concurso)),
       );
       
       // Salvar no cache
@@ -187,12 +187,12 @@ export class ConcursoService extends BaseService<Concurso, FiltroConcurso> imple
         operationId,
         categoriaId,
         count: processedConcursos.length,
-        executionTimeMs: executionTime.toFixed(2)
+        executionTimeMs: executionTime.toFixed(2),
       });
       
       return {
         success: true,
-        data: processedConcursos
+        data: processedConcursos,
       };
     } catch (error) {
       const executionTime = performance.now() - startTime;
@@ -223,7 +223,7 @@ export class ConcursoService extends BaseService<Concurso, FiltroConcurso> imple
           this.logger.debug('Cache hit para buscarAtivos', { operationId });
           return {
             success: true,
-            data: cached as Concurso[]
+            data: cached as Concurso[],
           };
         }
       }
@@ -233,7 +233,7 @@ export class ConcursoService extends BaseService<Concurso, FiltroConcurso> imple
       
       // Processar dados após busca
       const processedConcursos = await Promise.all(
-        concursos.map(concurso => this.processAfterFind(concurso))
+        concursos.map(concurso => this.processAfterFind(concurso)),
       );
       
       // Salvar no cache
@@ -245,12 +245,12 @@ export class ConcursoService extends BaseService<Concurso, FiltroConcurso> imple
       this.logger.debug('Concursos ativos encontrados', {
         operationId,
         count: processedConcursos.length,
-        executionTimeMs: executionTime.toFixed(2)
+        executionTimeMs: executionTime.toFixed(2),
       });
       
       return {
         success: true,
-        data: processedConcursos
+        data: processedConcursos,
       };
     } catch (error) {
       const executionTime = performance.now() - startTime;
@@ -275,7 +275,7 @@ export class ConcursoService extends BaseService<Concurso, FiltroConcurso> imple
     try {
       this.logger.debug('Criando novo concurso', { 
         operationId,
-        dados: this.sanitizeLogData(dados)
+        dados: this.sanitizeLogData(dados),
       });
       
       // Validar entrada
@@ -289,7 +289,7 @@ export class ConcursoService extends BaseService<Concurso, FiltroConcurso> imple
         return {
           success: false,
           error: 'CONCURSO_ALREADY_EXISTS',
-          message: 'Já existe um concurso com este nome'
+          message: 'Já existe um concurso com este nome',
         };
       }
       
@@ -307,7 +307,7 @@ export class ConcursoService extends BaseService<Concurso, FiltroConcurso> imple
         salario: dados.salario,
         nivel_dificuldade: dados.nivel_dificuldade || 'medio',
         multiplicador_questoes: dados.multiplicador_questoes || 1,
-        ativo: true
+        ativo: true,
       };
       
       // Criar concurso
@@ -327,13 +327,13 @@ export class ConcursoService extends BaseService<Concurso, FiltroConcurso> imple
       this.logger.info('Concurso criado com sucesso', {
         operationId,
         concursoId: concurso.id,
-        executionTimeMs: executionTime.toFixed(2)
+        executionTimeMs: executionTime.toFixed(2),
       });
       
       return {
         success: true,
         data: processedConcurso,
-        message: 'Concurso criado com sucesso'
+        message: 'Concurso criado com sucesso',
       };
     } catch (error) {
       const executionTime = performance.now() - startTime;
@@ -355,7 +355,7 @@ export class ConcursoService extends BaseService<Concurso, FiltroConcurso> imple
       this.logger.debug('Atualizando concurso', { 
         operationId,
         concursoId: id,
-        dados: this.sanitizeLogData(dados)
+        dados: this.sanitizeLogData(dados),
       });
       
       // Validar entrada
@@ -377,7 +377,7 @@ export class ConcursoService extends BaseService<Concurso, FiltroConcurso> imple
           return {
             success: false,
             error: 'CONCURSO_ALREADY_EXISTS',
-            message: 'Já existe um concurso com este nome'
+            message: 'Já existe um concurso com este nome',
           };
         }
       }
@@ -458,13 +458,13 @@ export class ConcursoService extends BaseService<Concurso, FiltroConcurso> imple
       this.logger.info('Concurso atualizado com sucesso', {
         operationId,
         concursoId: id,
-        executionTimeMs: executionTime.toFixed(2)
+        executionTimeMs: executionTime.toFixed(2),
       });
       
       return {
         success: true,
         data: processedConcurso,
-        message: 'Concurso atualizado com sucesso'
+        message: 'Concurso atualizado com sucesso',
       };
     } catch (error) {
       const executionTime = performance.now() - startTime;

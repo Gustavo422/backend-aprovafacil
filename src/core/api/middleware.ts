@@ -1,9 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { Request, Response } from 'express';
 import { getLogger } from '../../lib/logging';
 import { AuthError, RateLimitError } from '../../lib/errors';
 
 export interface MiddlewareContext {
-  request: NextRequest;
+  req: Request;
+  res: Response;
   requestId: string;
   startTime: number;
   user?: {
@@ -16,12 +17,11 @@ export interface MiddlewareContext {
 
 export type MiddlewareFunction = (
   context: MiddlewareContext,
-  next: () => Promise<NextResponse>
-) => Promise<NextResponse>;
+  next: () => Promise<void>
+) => Promise<void>;
 
 export class MiddlewareChain {
   private middlewares: MiddlewareFunction[] = [];
-  // private logger: Logger;
 
   constructor() {
     // this.logger = new Logger('MiddlewareChain');
@@ -39,18 +39,20 @@ export class MiddlewareChain {
    * Execute the middleware chain
    */
   async execute(
-    request: NextRequest,
-    handler: (context: MiddlewareContext) => Promise<NextResponse>
-  ): Promise<NextResponse> {
+    req: Request,
+    res: Response,
+    handler: (context: MiddlewareContext) => Promise<void>,
+  ): Promise<void> {
     const context: MiddlewareContext = {
-      request,
+      req,
+      res,
       requestId: this.generateRequestId(),
       startTime: Date.now(),
     };
 
     let index = 0;
 
-    const next = async (): Promise<NextResponse> => {
+    const next = async (): Promise<void> => {
       if (index < this.middlewares.length) {
         const middleware = this.middlewares[index++];
         return middleware(context, next);
@@ -72,30 +74,28 @@ export class MiddlewareChain {
  */
 export const requestLoggingMiddleware: MiddlewareFunction = async (
   context,
-  next
+  next,
 ) => {
   const logger = getLogger('RequestLogger');
-  const { request, requestId, startTime } = context;
+  const { req, requestId, startTime } = context;
 
   logger.info('Request started', {
     requestId,
-    method: request.method,
-    url: request.url,
-    userAgent: request.headers.get('user-agent'),
-    ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
+    method: req.method,
+    url: req.url,
+    userAgent: req.headers['user-agent'],
+    ip: req.headers['x-forwarded-for'] || req.headers['x-real-ip'],
   });
 
   try {
-    const response = await next();
+    await next();
     const duration = Date.now() - startTime;
 
     logger.info('Request completed', {
       requestId,
       duration,
-      status: response.status,
+      status: context.res.statusCode,
     });
-
-    return response;
   } catch (error) {
     const duration = Date.now() - startTime;
 
@@ -113,20 +113,20 @@ export const requestLoggingMiddleware: MiddlewareFunction = async (
  * CORS middleware
  */
 export const corsMiddleware: MiddlewareFunction = async (context, next) => {
-  const response = await next();
+  const { res } = context;
 
   // Add CORS headers
-  response.headers.set('Access-Control-Allow-Origin', '*');
-  response.headers.set(
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader(
     'Access-Control-Allow-Methods',
-    'GET, POST, PUT, DELETE, OPTIONS'
+    'GET, POST, PUT, DELETE, OPTIONS',
   );
-  response.headers.set(
+  res.setHeader(
     'Access-Control-Allow-Headers',
-    'Content-Type, Authorization'
+    'Content-Type, Authorization',
   );
 
-  return response;
+  await next();
 };
 
 /**
@@ -134,15 +134,12 @@ export const corsMiddleware: MiddlewareFunction = async (context, next) => {
  */
 export const rateLimitMiddleware = (
   requests: number = 100,
-  windowMs: number = 15 * 60 * 1000 // 15 minutes
+  windowMs: number = 15 * 60 * 1000, // 15 minutes
 ): MiddlewareFunction => {
   const requestCounts = new Map<string, { count: number; resetTime: number }>();
 
   return async (context, next) => {
-    const ip = context.request.headers.get('x-forwarded-for') || 
-               context.request.headers.get('x-real-ip') || 
-               'unknown';
-    
+    const ip = Array.isArray(context.req.ip) ? context.req.ip[0] : context.req.ip || 'unknown';
     const now = Date.now();
     const windowStart = now - windowMs;
 
@@ -162,7 +159,7 @@ export const rateLimitMiddleware = (
     current.count++;
     requestCounts.set(ip, current);
 
-    return next();
+    await next();
   };
 };
 
@@ -170,7 +167,7 @@ export const rateLimitMiddleware = (
  * Authentication middleware
  */
 export const authMiddleware: MiddlewareFunction = async (context, next) => {
-  const authHeader = context.request.headers.get('authorization');
+  const authHeader = context.req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     throw new AuthError('Missing or invalid authorization header');
@@ -190,14 +187,14 @@ export const authMiddleware: MiddlewareFunction = async (context, next) => {
     role: 'user',
   };
 
-  return next();
+  await next();
 };
 
 /**
  * Role-based authorization middleware
  */
 export const authorizationMiddleware = (
-  allowedRoles: string[]
+  allowedRoles: string[],
 ): MiddlewareFunction => {
   return async (context, next) => {
     if (!context.user) {
@@ -208,7 +205,7 @@ export const authorizationMiddleware = (
       throw new AuthError('Insufficient permissions');
     }
 
-    return next();
+    await next();
   };
 };
 
@@ -216,18 +213,18 @@ export const authorizationMiddleware = (
  * Content type validation middleware
  */
 export const contentTypeMiddleware = (
-  allowedTypes: string[] = ['application/json']
+  allowedTypes: string[] = ['application/json'],
 ): MiddlewareFunction => {
   return async (context, next) => {
-    const contentType = context.request.headers.get('content-type');
+    const contentType = context.req.headers['content-type'];
 
-    if (context.request.method !== 'GET' && context.request.method !== 'DELETE') {
+    if (context.req.method !== 'GET' && context.req.method !== 'DELETE') {
       if (!contentType || !allowedTypes.some(type => contentType.includes(type))) {
         throw new Error('Invalid content type');
       }
     }
 
-    return next();
+    await next();
   };
 };
 
@@ -235,15 +232,15 @@ export const contentTypeMiddleware = (
  * Request size limit middleware
  */
 export const requestSizeLimitMiddleware = (
-  maxSize: number = 1024 * 1024 // 1MB
+  maxSize: number = 1024 * 1024, // 1MB
 ): MiddlewareFunction => {
   return async (context, next) => {
-    const contentLength = context.request.headers.get('content-length');
+    const contentLength = context.req.headers['content-length'];
 
     if (contentLength && parseInt(contentLength, 10) > maxSize) {
       throw new Error('Request too large');
     }
 
-    return next();
+    await next();
   };
 };

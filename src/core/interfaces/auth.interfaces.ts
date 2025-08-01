@@ -12,15 +12,15 @@ export interface IAuthenticationService {
 }
 
 export interface ISessionManager {
-  createSession(userId: string, deviceInfo: DeviceInfo): Promise<UserSession>;
+  createSession(usuarioId: string, deviceInfo: DeviceInfo): Promise<UserSession>;
   validateSession(sessionId: string): Promise<UserSession | null>;
   invalidateSession(sessionId: string): Promise<void>;
-  invalidateAllUserSessions(userId: string, exceptSessionId?: string): Promise<void>;
+  invalidateAllUserSessions(usuarioId: string, exceptSessionId?: string): Promise<void>;
   cleanExpiredSessions(): Promise<number>;
-  getUserActiveSessions(userId: string): Promise<UserSession[]>;
+  getUserActiveSessions(usuarioId: string): Promise<UserSession[]>;
   // Métodos para concorrência de sessões
-  detectConcurrentSessions(userId: string, maxSessions: number): Promise<boolean>;
-  terminateOldestSessions(userId: string, maxSessions: number): Promise<void>;
+  detectConcurrentSessions(usuarioId: string, maxSessions: number): Promise<boolean>;
+  terminateOldestSessions(usuarioId: string, maxSessions: number): Promise<void>;
 }
 
 export interface ISecurityService {
@@ -28,7 +28,7 @@ export interface ISecurityService {
   recordLoginAttempt(attempt: LoginAttempt): Promise<void>;
   isAccountLocked(email: string): Promise<boolean>;
   unlockAccount(email: string): Promise<void>;
-  detectSuspiciousActivity(userId: string, deviceInfo: DeviceInfo): Promise<boolean>;
+  detectSuspiciousActivity(usuarioId: string, deviceInfo: DeviceInfo): Promise<boolean>;
 }
 
 export interface IPasswordService {
@@ -40,7 +40,7 @@ export interface IPasswordService {
 
 export interface ITokenService {
   generateAccessToken(payload: TokenPayload): Promise<string>;
-  generateRefreshToken(userId: string): Promise<string>;
+  generateRefreshToken(usuarioId: string): Promise<string>;
   verifyToken(token: string): Promise<TokenPayload | null>;
   revokeToken(token: string): Promise<void>;
   cleanExpiredTokens(): Promise<number>;
@@ -51,20 +51,20 @@ export interface ITokenService {
 }
 
 export interface IUserSecurityRepository {
-  getUserSecurityConfig(userId: string): Promise<UserSecurityConfig>;
-  updateSecurityConfig(userId: string, config: Partial<UserSecurityConfig>): Promise<void>;
-  createDefaultSecurityConfig(userId: string): Promise<UserSecurityConfig>;
+  getUserSecurityConfig(usuarioId: string): Promise<UserSecurityConfig>;
+  updateSecurityConfig(usuarioId: string, config: Partial<UserSecurityConfig>): Promise<void>;
+  createDefaultSecurityConfig(usuarioId: string): Promise<UserSecurityConfig>;
 }
 
 export interface ISessionRepository {
   create(session: CreateSessionData): Promise<UserSession>;
   findById(sessionId: string): Promise<UserSession | null>;
   findByTokenHash(tokenHash: string): Promise<UserSession | null>;
-  findActiveByUserId(userId: string): Promise<UserSession[]>;
+  findActiveByUserId(usuarioId: string): Promise<UserSession[]>;
   update(sessionId: string, data: Partial<UserSession>): Promise<UserSession>;
   delete(sessionId: string): Promise<void>;
   deleteExpired(): Promise<number>;
-  deleteAllByUserId(userId: string, exceptSessionId?: string): Promise<void>;
+  deleteAllByUserId(usuarioId: string, exceptSessionId?: string): Promise<void>;
 }
 
 export interface ISecurityRepository {
@@ -115,7 +115,7 @@ export interface TokenValidationResult {
 
 export interface UserSession {
   id: string;
-  userId: string;
+  usuarioId: string;
   tokenHash: string;
   deviceInfo?: DeviceInfo;
   ativo: boolean;
@@ -125,7 +125,7 @@ export interface UserSession {
 }
 
 export interface CreateSessionData {
-  userId: string;
+  usuarioId: string;
   tokenHash: string;
   deviceInfo?: DeviceInfo;
   expiresIn?: number; // em segundos
@@ -149,7 +149,7 @@ export interface SecurityCheckResult {
 
 export interface UserSecurityConfig {
   id: string;
-  userId: string;
+  usuarioId: string;
   autenticacaoDoisFatores: boolean;
   notificarLoginNovoDispositivo: boolean;
   sessoesMultiplasPermitidas: boolean;
@@ -173,7 +173,7 @@ export interface PasswordStrengthResult {
 }
 
 export interface TokenPayload {
-  userId: string;
+  usuarioId: string;
   sessionId: string;
   email: string;
   role: string;
@@ -184,7 +184,7 @@ export interface TokenPayload {
 
 export interface RecoveryToken {
   id: string;
-  userId: string;
+  usuarioId: string;
   tokenHash: string;
   usado: boolean;
   expiraEm: Date;
@@ -193,7 +193,7 @@ export interface RecoveryToken {
 }
 
 export interface CreateRecoveryTokenData {
-  userId: string;
+  usuarioId: string;
   tokenHash: string;
   expiresIn?: number; // em segundos, padrão 1 hora
 }

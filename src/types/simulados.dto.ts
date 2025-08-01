@@ -93,7 +93,7 @@ export interface SimuladoQuestaoDTO {
 // DTO para progresso do usuário com simulados
 export interface usuariosimuladoProgressDTO {
   id: string;
-  user_id: string;
+  usuario_id: string;
   simulado_id: string;
   start_time: string;
   end_time?: string;
@@ -143,7 +143,7 @@ export interface UpdateSimuladoQuestaoDTO {
 }
 
 export interface CreateusuariosimuladoProgressDTO {
-  user_id: string;
+  usuario_id: string;
   simulado_id: string;
   start_time?: string;
   time_taken_seconds?: number;

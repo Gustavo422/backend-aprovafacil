@@ -16,7 +16,7 @@ import {
   FiltroBase,
   MetricasGuruAprovacao,
   EstatisticasUsuario,
-  RelatorioDesempenho
+  RelatorioDesempenho,
 } from '../../shared/types/index.js';
 
 // Interface base para repositórios (Repository Pattern)
@@ -46,9 +46,10 @@ export interface IValidator<T> {
 // Interface para cache (Strategy Pattern)
 export interface ICacheService {
   obter<T>(chave: string): Promise<T | null>;
-  definir<T>(chave: string, valor: T, ttlMinutos?: number): Promise<void>;
+  definir<T>(chave: string, valor: T, ttlSegundos?: number): Promise<void>;
   remover(chave: string): Promise<void>;
   limpar(padrao?: string): Promise<void>;
+  limparPorPrefixo(prefixo: string): Promise<void>;
   existe(chave: string): Promise<boolean>;
   obterEstatisticas(): Promise<unknown>;
   limparCacheExpiradoBanco(): Promise<number>;

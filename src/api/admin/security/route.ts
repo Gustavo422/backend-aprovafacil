@@ -1,5 +1,5 @@
 import express from 'express';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { supabase } from '../../../config/supabase-unified.js';
 import { getEnhancedLogger } from '../../../lib/logging/enhanced-logging-service.js';
 
 const router = express.Router();
@@ -28,17 +28,13 @@ const requireAdmin = (req: express.Request, res: express.Response, next: express
   if (!req.user || req.user.role !== 'admin') {
     return res.status(403).json({
       success: false,
-      error: { message: 'Acesso negado. Permissões de administrador necessárias.', code: 'ADMIN_REQUIRED' }
+      error: { message: 'Acesso negado. Permissões de administrador necessárias.', code: 'ADMIN_REQUIRED' },
     });
   }
   next();
 };
 
 // Inicializar serviços
-const supabase: SupabaseClient = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 /**
  * GET /api/admin/security/stats
@@ -52,14 +48,14 @@ router.get('/stats', requireAdmin, async (req, res) => {
     const now = new Date();
     
     switch (timeframe) {
-      case 'hour':
-        startDate = new Date(now.getTime() - (60 * 60 * 1000));
-        break;
-      case 'week':
-        startDate = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
-        break;
-      default: // day
-        startDate = new Date(now.getTime() - (24 * 60 * 60 * 1000));
+    case 'hour':
+      startDate = new Date(now.getTime() - (60 * 60 * 1000));
+      break;
+    case 'week':
+      startDate = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
+      break;
+    default: // day
+      startDate = new Date(now.getTime() - (24 * 60 * 60 * 1000));
     }
 
     // Estatísticas de tentativas de login
@@ -92,29 +88,29 @@ router.get('/stats', requireAdmin, async (req, res) => {
       failedAttempts: attempts?.filter(a => !a.success).length || 0,
       totalBlocks: blocks?.length || 0,
       uniqueIPs: uniqueIPs.size,
-      timeframe
+      timeframe,
     };
 
     logger.info('Estatísticas de segurança consultadas', { 
       adminUserId: req.user.id,
       timeframe,
-      stats 
+      stats, 
     });
 
     res.json({
       success: true,
-      data: stats
+      data: stats,
     });
 
   } catch (error) {
     logger.error('Erro ao obter estatísticas de segurança', { 
       error: error.message,
-      adminUserId: req.user?.id 
+      adminUserId: req.user?.id, 
     });
     
     res.status(500).json({
       success: false,
-      error: { message: 'Erro interno do servidor', code: 'INTERNAL_ERROR' }
+      error: { message: 'Erro interno do servidor', code: 'INTERNAL_ERROR' },
     });
   }
 });
@@ -131,7 +127,7 @@ router.get('/attempts', requireAdmin, async (req, res) => {
       .from('login_attempts')
       .select(`
         *,
-        usuario:user_id (
+        usuario:usuario_id (
           nome,
           email
         )
@@ -145,23 +141,23 @@ router.get('/attempts', requireAdmin, async (req, res) => {
 
     logger.info('Tentativas de login consultadas', { 
       adminUserId: req.user.id,
-      count: attempts?.length 
+      count: attempts?.length, 
     });
 
     res.json({
       success: true,
-      data: attempts || []
+      data: attempts || [],
     });
 
   } catch (error) {
     logger.error('Erro ao obter tentativas de login', { 
       error: error.message,
-      adminUserId: req.user?.id 
+      adminUserId: req.user?.id, 
     });
     
     res.status(500).json({
       success: false,
-      error: { message: 'Erro interno do servidor', code: 'INTERNAL_ERROR' }
+      error: { message: 'Erro interno do servidor', code: 'INTERNAL_ERROR' },
     });
   }
 });
@@ -187,23 +183,23 @@ router.get('/blocks', requireAdmin, async (req, res) => {
 
     logger.info('Bloqueios de segurança consultados', { 
       adminUserId: req.user.id,
-      count: blocks?.length 
+      count: blocks?.length, 
     });
 
     res.json({
       success: true,
-      data: blocks || []
+      data: blocks || [],
     });
 
   } catch (error) {
     logger.error('Erro ao obter bloqueios de segurança', { 
       error: error.message,
-      adminUserId: req.user?.id 
+      adminUserId: req.user?.id, 
     });
     
     res.status(500).json({
       success: false,
-      error: { message: 'Erro interno do servidor', code: 'INTERNAL_ERROR' }
+      error: { message: 'Erro interno do servidor', code: 'INTERNAL_ERROR' },
     });
   }
 });
@@ -222,7 +218,7 @@ router.delete('/blocks/:blockId', requireAdmin, async (req, res) => {
         active: false,
         unblocked_at: new Date().toISOString(),
         unblocked_by: req.user.id,
-        unblock_reason: 'Removido pelo administrador'
+        unblock_reason: 'Removido pelo administrador',
       })
       .eq('id', blockId);
 
@@ -234,34 +230,34 @@ router.delete('/blocks/:blockId', requireAdmin, async (req, res) => {
     await supabase
       .from('audit_logs')
       .insert({
-        user_id: req.user.id,
+        usuario_id: req.user.id,
         action: 'SECURITY_UNBLOCK',
         resource: 'security_block',
         resource_id: blockId,
         details: { reason: 'Removido pelo administrador' },
-        ip_address: req.ip
+        ip_address: req.ip,
       });
 
     logger.info('Bloqueio de segurança removido', { 
       adminUserId: req.user.id,
-      blockId 
+      blockId, 
     });
 
     res.json({
       success: true,
-      message: 'Bloqueio removido com sucesso'
+      message: 'Bloqueio removido com sucesso',
     });
 
   } catch (error) {
     logger.error('Erro ao remover bloqueio', { 
       error: error.message,
       adminUserId: req.user?.id,
-      blockId: req.params.blockId 
+      blockId: req.params.blockId, 
     });
     
     res.status(500).json({
       success: false,
-      error: { message: 'Erro interno do servidor', code: 'INTERNAL_ERROR' }
+      error: { message: 'Erro interno do servidor', code: 'INTERNAL_ERROR' },
     });
   }
 });
@@ -278,7 +274,7 @@ router.get('/sessions', requireAdmin, async (req, res) => {
       .from('user_sessions')
       .select(`
         *,
-        usuario:user_id (
+        usuario:usuario_id (
           nome,
           email,
           role
@@ -297,28 +293,28 @@ router.get('/sessions', requireAdmin, async (req, res) => {
       ...session,
       userEmail: session.usuario?.email,
       userName: session.usuario?.nome,
-      userRole: session.usuario?.role
+      userRole: session.usuario?.role,
     })) || [];
 
     logger.info('Sessões ativas consultadas', { 
       adminUserId: req.user.id,
-      count: sessionsWithInfo.length 
+      count: sessionsWithInfo.length, 
     });
 
     res.json({
       success: true,
-      data: sessionsWithInfo
+      data: sessionsWithInfo,
     });
 
   } catch (error) {
     logger.error('Erro ao obter sessões ativas', { 
       error: error.message,
-      adminUserId: req.user?.id 
+      adminUserId: req.user?.id, 
     });
     
     res.status(500).json({
       success: false,
-      error: { message: 'Erro interno do servidor', code: 'INTERNAL_ERROR' }
+      error: { message: 'Erro interno do servidor', code: 'INTERNAL_ERROR' },
     });
   }
 });
@@ -338,7 +334,7 @@ router.post('/sessions/:sessionId/revoke', requireAdmin, async (req, res) => {
         active: false,
         revoked_at: new Date().toISOString(),
         revoked_by: req.user.id,
-        revoke_reason: 'Revogada pelo administrador'
+        revoke_reason: 'Revogada pelo administrador',
       })
       .eq('id', sessionId);
 
@@ -352,42 +348,42 @@ router.post('/sessions/:sessionId/revoke', requireAdmin, async (req, res) => {
       .update({
         revoked: true,
         revoked_at: new Date().toISOString(),
-        revoked_reason: 'Sessão revogada pelo administrador'
+        revoked_reason: 'Sessão revogada pelo administrador',
       })
-      .eq('user_id', req.params.userId); // Se tivermos o userId
+      .eq('usuario_id', req.params.usuarioId); // Se tivermos o usuarioId
 
     // Log de auditoria
     await supabase
       .from('audit_logs')
       .insert({
-        user_id: req.user.id,
+        usuario_id: req.user.id,
         action: 'SESSION_REVOKE',
         resource: 'user_session',
         resource_id: sessionId,
         details: { reason: 'Revogada pelo administrador' },
-        ip_address: req.ip
+        ip_address: req.ip,
       });
 
     logger.info('Sessão revogada pelo administrador', { 
       adminUserId: req.user.id,
-      sessionId 
+      sessionId, 
     });
 
     res.json({
       success: true,
-      message: 'Sessão revogada com sucesso'
+      message: 'Sessão revogada com sucesso',
     });
 
   } catch (error) {
     logger.error('Erro ao revogar sessão', { 
       error: error.message,
       adminUserId: req.user?.id,
-      sessionId: req.params.sessionId 
+      sessionId: req.params.sessionId, 
     });
     
     res.status(500).json({
       success: false,
-      error: { message: 'Erro interno do servidor', code: 'INTERNAL_ERROR' }
+      error: { message: 'Erro interno do servidor', code: 'INTERNAL_ERROR' },
     });
   }
 });
@@ -403,7 +399,7 @@ router.post('/blocks', requireAdmin, async (req, res) => {
     if (!type || !target || !reason) {
       return res.status(400).json({
         success: false,
-        error: { message: 'Tipo, alvo e motivo são obrigatórios', code: 'MISSING_FIELDS' }
+        error: { message: 'Tipo, alvo e motivo são obrigatórios', code: 'MISSING_FIELDS' },
       });
     }
 
@@ -414,8 +410,8 @@ router.post('/blocks', requireAdmin, async (req, res) => {
       block_type: type,
       reason,
       blocked_until: blockedUntil.toISOString(),
-      created_by: req.user!.id,
-      active: true
+      created_by: req.user?.id || '',
+      active: true,
     };
 
     if (type === 'ip') {
@@ -438,36 +434,36 @@ router.post('/blocks', requireAdmin, async (req, res) => {
     await supabase
       .from('audit_logs')
       .insert({
-        user_id: req.user.id,
+        usuario_id: req.user.id,
         action: 'SECURITY_BLOCK_CREATE',
         resource: 'security_block',
         resource_id: data.id,
         details: { type, target, reason, duration },
-        ip_address: req.ip
+        ip_address: req.ip,
       });
 
     logger.info('Bloqueio criado manualmente', { 
       adminUserId: req.user.id,
       blockId: data.id,
       type,
-      target 
+      target, 
     });
 
     res.json({
       success: true,
       data,
-      message: 'Bloqueio criado com sucesso'
+      message: 'Bloqueio criado com sucesso',
     });
 
   } catch (error) {
     logger.error('Erro ao criar bloqueio', { 
       error: error.message,
-      adminUserId: req.user?.id 
+      adminUserId: req.user?.id, 
     });
     
     res.status(500).json({
       success: false,
-      error: { message: 'Erro interno do servidor', code: 'INTERNAL_ERROR' }
+      error: { message: 'Erro interno do servidor', code: 'INTERNAL_ERROR' },
     });
   }
 });
@@ -484,14 +480,14 @@ router.get('/analytics', requireAdmin, async (req, res) => {
     const now = new Date();
     
     switch (timeframe) {
-      case 'month':
-        startDate = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
-        break;
-      case 'week':
-        startDate = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
-        break;
-      default:
-        startDate = new Date(now.getTime() - (24 * 60 * 60 * 1000));
+    case 'month':
+      startDate = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
+      break;
+    case 'week':
+      startDate = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
+      break;
+    default:
+      startDate = new Date(now.getTime() - (24 * 60 * 60 * 1000));
     }
 
     // Análise de tentativas por hora
@@ -523,7 +519,7 @@ router.get('/analytics', requireAdmin, async (req, res) => {
     const hourlyStats = Array.from({ length: 24 }, (_, hour) => ({
       hour,
       attempts: 0,
-      failures: 0
+      failures: 0,
     }));
 
     attempts?.forEach(attempt => {
@@ -538,23 +534,23 @@ router.get('/analytics', requireAdmin, async (req, res) => {
       suspiciousIPs,
       hourlyStats,
       totalAnalyzed: attempts?.length || 0,
-      timeframe
+      timeframe,
     };
 
     res.json({
       success: true,
-      data: analytics
+      data: analytics,
     });
 
   } catch (error) {
     logger.error('Erro ao gerar análises de segurança', { 
       error: error.message,
-      adminUserId: req.user?.id 
+      adminUserId: req.user?.id, 
     });
     
     res.status(500).json({
       success: false,
-      error: { message: 'Erro interno do servidor', code: 'INTERNAL_ERROR' }
+      error: { message: 'Erro interno do servidor', code: 'INTERNAL_ERROR' },
     });
   }
 });

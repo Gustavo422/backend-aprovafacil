@@ -26,7 +26,7 @@ export class CachedRepository<T, TFilter extends FiltroBase = FiltroBase> implem
     repository: IBaseRepository<T, TFilter>,
     cacheService: ICacheService,
     entityName: string,
-    options: CachedRepositoryOptions = {}
+    options: CachedRepositoryOptions = {},
   ) {
     this.repository = repository;
     this.cacheService = cacheService;
@@ -34,7 +34,7 @@ export class CachedRepository<T, TFilter extends FiltroBase = FiltroBase> implem
     this.options = {
       ttl: options.ttl || 30, // 30 minutes default
       keyPrefix: options.keyPrefix || `${entityName.toLowerCase()}_`,
-      dependencyType: options.dependencyType || CacheDependencyType.GLOBAL
+      dependencyType: options.dependencyType || CacheDependencyType.GLOBAL,
     };
   }
   
@@ -171,7 +171,7 @@ export function createCachedRepository<T, TFilter extends FiltroBase = FiltroBas
   repository: IBaseRepository<T, TFilter>,
   cacheService: ICacheService,
   entityName: string,
-  options: CachedRepositoryOptions = {}
+  options: CachedRepositoryOptions = {},
 ): IBaseRepository<T, TFilter> {
   return new CachedRepository<T, TFilter>(repository, cacheService, entityName, options);
 }

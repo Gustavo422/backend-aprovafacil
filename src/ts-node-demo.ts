@@ -1,32 +1,26 @@
-// This is a simple TypeScript file to demonstrate ts-node usage
-console.log('Hello from ts-node!');
+import { getLogger } from './lib/logging/logging-service.js';
 
-// Example of TypeScript features
-interface User {
-  id: number;
-  name: string;
-  email: string;
-}
+const logger = getLogger('ts-node-demo');
 
-// Create a user object
-const user: User = {
-  id: 1,
-  name: 'John Doe',
-  email: 'john@example.com'
-};
+logger.info('🚀 Iniciando demonstração do ts-node');
 
-console.log('User:', user);
+// Simular algumas operações
+const operations = [
+  'Carregando configurações',
+  'Conectando ao banco de dados',
+  'Inicializando middlewares',
+  'Configurando rotas',
+];
 
-// Example of using async/await
-async function fetchData(): Promise<string> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve('Data fetched successfully!');
-    }, 1000);
-  });
-}
-
-// Call the async function
-fetchData().then((data) => {
-  console.log(data);
+operations.forEach((operation, index) => {
+  setTimeout(() => {
+    logger.info(`✅ ${operation} - ${index + 1}/${operations.length}`);
+  }, index * 1000);
 });
+
+// Simular erro após 5 segundos
+setTimeout(() => {
+  logger.error('❌ Erro simulado para teste de logging');
+}, 5000);
+
+logger.info('🎯 Demonstração concluída');

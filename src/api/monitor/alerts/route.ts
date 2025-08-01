@@ -1,19 +1,16 @@
-import { NextResponse } from 'next/server';
+import { Request, Response } from 'express';
 import { alertNotifier } from '../../../core/monitoring/alert-notifier.js';
 import { performanceMetrics } from '../../../core/monitoring/performance-metrics.js';
+import { logger } from '../../../lib/logger.js';
 
 /**
  * GET /api/monitor/alerts
  * Returns all active alerts
  */
-export async function GET(request: globalThis.Request) {
+export const GET = async (req: Request, res: Response) => {
   try {
-    // Get URL parameters
-    const url = new globalThis.URL(request.url);
-    const status = url.searchParams.get('status') || 'active';
-    
+    const status = req.query.status as string || 'active';
     let alerts;
-    
     if (status === 'all') {
       alerts = performanceMetrics.getAllAlerts();
     } else if (status === 'active') {
@@ -21,98 +18,65 @@ export async function GET(request: globalThis.Request) {
     } else {
       alerts = performanceMetrics.getAllAlerts().filter(a => a.status === status);
     }
-    
-    // Get in-app notifications
     const inAppAlerts = alertNotifier.getInAppAlerts();
-    
-    return NextResponse.json({
+    return res.json({
       alerts,
       inAppAlerts,
-      notificationChannels: alertNotifier.getAllChannelConfigs()
+      notificationChannels: alertNotifier.getAllChannelConfigs(),
     });
   } catch (error) {
-    console.error('Error getting alerts:', error);
-    return NextResponse.json(
-      { error: 'Failed to retrieve alerts' },
-      { status: 500 }
-    );
+    logger.error('Erro ao buscar alertas:', error);
+    return res.status(500).json({ error: 'Failed to retrieve alerts' });
   }
-}
+};
 
 /**
  * POST /api/monitor/alerts/config
  * Configure alert notification channels
  */
-export async function POST(request: globalThis.Request) {
+export const POST = async (req: Request, res: Response) => {
   try {
-    const url = new globalThis.URL(request.url);
-    const path = url.pathname;
-    
+    const path = req.path;
     // Handle alert notification configuration
     if (path.endsWith('/config')) {
-      const body = await request.json();
-      const { channel, config } = body;
-      
+      const { channel, config } = req.body;
       if (!channel || !config) {
-        return NextResponse.json(
-          { error: 'Missing channel or configuration' },
-          { status: 400 }
-        );
+        return res.status(400).json({ error: 'Missing channel or configuration' });
       }
-      
       alertNotifier.configureChannel(channel, config);
-      
-      return NextResponse.json({
+      return res.json({
         success: true,
-        config: alertNotifier.getChannelConfig(channel)
+        config: alertNotifier.getChannelConfig(channel),
       });
     }
-    
     // Handle alert acknowledgement
     if (path.includes('/acknowledge/')) {
       const alertId = path.split('/acknowledge/')[1];
       const success = performanceMetrics.acknowledgeAlert(alertId);
-      
       if (success) {
-        return NextResponse.json({ success: true });
+        return res.json({ success: true });
       } else {
-        return NextResponse.json(
-          { error: 'Alert not found' },
-          { status: 404 }
-        );
+        return res.status(404).json({ error: 'Alert not found' });
       }
     }
-    
     // Handle alert resolution
     if (path.includes('/resolve/')) {
       const alertId = path.split('/resolve/')[1];
       const success = performanceMetrics.resolveAlert(alertId);
-      
       if (success) {
-        return NextResponse.json({ success: true });
+        return res.json({ success: true });
       } else {
-        return NextResponse.json(
-          { error: 'Alert not found' },
-          { status: 404 }
-        );
+        return res.status(404).json({ error: 'Alert not found' });
       }
     }
-    
     // Handle clearing in-app notifications
     if (path.endsWith('/clear-in-app')) {
       alertNotifier.clearInAppAlerts();
-      return NextResponse.json({ success: true });
+      return res.json({ success: true });
     }
-    
-    return NextResponse.json(
-      { error: 'Invalid endpoint' },
-      { status: 400 }
-    );
+    return res.status(400).json({ error: 'Invalid endpoint' });
   } catch (error) {
-    console.error('Error processing alert request:', error);
-    return NextResponse.json(
-      { error: 'Failed to process request' },
-      { status: 500 }
-    );
+    logger.error('Erro ao processar requisição POST /api/monitor/alerts:', error);
+    return res.status(500).json({ error: 'Failed to process request' });
   }
-}
+};

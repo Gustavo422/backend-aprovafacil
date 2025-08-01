@@ -1,18 +1,19 @@
-import { NextResponse } from 'next/server';
+import { Request, Response } from 'express';
 import { getSystemMetrics } from '../../core/monitoring/system-metrics.js';
 import { getDatabaseStatus } from '../../core/monitoring/database-status.js';
 import { getTestStatus } from '../../core/monitoring/test-status.js';
 import { getLogStatus } from '../../core/monitoring/log-status.js';
 import { metricsStore, addMetricsToStore } from '../../core/monitoring/metrics-store.js';
+import { logger } from '../../lib/logger.js';
 
-export async function GET() {
+export const GET = async (req: Request, res: Response) => {
   try {
     // Coletar métricas em paralelo para performance
     const [systemMetrics, dbStatus, testStatus, logStatus] = await Promise.all([
       getSystemMetrics(),
       getDatabaseStatus(),
       getTestStatus(),
-      getLogStatus()
+      getLogStatus(),
     ]);
 
     // Adicionar métricas ao store para histórico
@@ -30,52 +31,44 @@ export async function GET() {
       system: {
         ...systemMetrics,
         history: systemHistory,
-        stats: stats.system
+        stats: stats.system,
       },
       database: {
         ...dbStatus,
         history: databaseHistory,
-        stats: stats.database
+        stats: stats.database,
       },
       tests: testStatus,
       logs: {
         ...logStatus,
         history: logsHistory,
-        stats: stats.logs
+        stats: stats.logs,
       },
       alerts,
       overall: {
         status: getOverallStatus(systemMetrics, dbStatus, testStatus, logStatus, alerts),
         uptime: process.uptime(),
-        version: process.env.npm_package_version || '1.0.0'
-      }
+        version: process.env.npm_package_version || '1.0.0',
+      },
     };
 
-    return NextResponse.json(dashboardData, {
-      headers: {
-        'Content-Type': 'application/json; charset=utf-8',
-        'Cache-Control': 'no-cache, no-store, must-revalidate'
-      }
-    });
+    return res.json(dashboardData);
   } catch (error) {
-    console.error('Erro ao gerar dashboard de monitoramento:', error);
-    return NextResponse.json(
-      { 
-        error: 'Erro interno do servidor',
-        timestamp: new Date().toISOString(),
-        status: 'error'
-      },
-      { status: 500 }
-    );
+    logger.error('Erro ao gerar dashboard de monitoramento:', error);
+    return res.status(500).json({
+      error: 'Erro interno do servidor',
+      timestamp: new Date().toISOString(),
+      status: 'error',
+    });
   }
-}
+};
 
 function getOverallStatus(
   system: { status: string }, 
   db: { status: string }, 
   tests: { status: string }, 
   logs: { status: string },
-  alerts: Array<{type: 'warning' | 'error', message: string, timestamp: number}>
+  alerts: Array<{type: 'warning' | 'error', message: string, timestamp: number}>,
 ): string {
   const statuses = [system.status, db.status, tests.status, logs.status];
   

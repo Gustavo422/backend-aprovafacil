@@ -1,17 +1,45 @@
-import express, { Request, Response } from 'express';
-import { supabase } from '../../../config/supabase.js';
-import { requireAuth } from '../../../middleware/auth.js';
+import { Request, Response } from 'express';
+import { z } from 'zod';
+import { supabase } from '../../../config/supabase-unified.js';
+import { logger } from '../../../lib/logger.js';
 
-const router = express.Router();
+// Interface para request com usuário autenticado
+interface AuthenticatedRequest extends Request {
+  user?: {
+    id: string;
+    email: string;
+    role: string;
+    [key: string]: unknown;
+  };
+}
 
-// GET - Buscar estatísticas básicas do dashboard
-router.get('/', requireAuth, async (req: Request, res: Response) => {
+const querySchema = z.object({
+  concurso_id: z.string().uuid().optional(),
+});
+
+/**
+ * GET /api/dashboard/stats - Buscar estatísticas básicas do dashboard
+ */
+export const getDashboardStatsHandler = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const userId = req.user?.id;
-    const { concurso_id } = req.query;
+    // Validate query parameters
+    const validationResult = querySchema.safeParse(req.query);
+    if (!validationResult.success) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid query parameters',
+        details: validationResult.error.format(),
+      });
+    }
 
-    if (!userId) {
-      return res.status(401).json({ error: 'Usuário não autenticado' });
+    const { concurso_id } = validationResult.data;
+    const usuarioId = req.user?.id;
+
+    if (!usuarioId) {
+      return res.status(401).json({ 
+        success: false,
+        error: 'Usuário não autenticado', 
+      });
     }
 
     // Inicializar estatísticas básicas
@@ -19,28 +47,28 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
       simulados: {
         total: 0,
         concluidos: 0,
-        media_pontuacao: 0
+        media_pontuacao: 0,
       },
       questoes_semanais: {
         total: 0,
         respondidas: 0,
-        acertos: 0
+        acertos: 0,
       },
       flashcards: {
         total: 0,
         dominados: 0,
-        em_revisao: 0
+        em_revisao: 0,
       },
       apostilas: {
         total: 0,
         modulos_concluidos: 0,
-        progresso_medio: 0
+        progresso_medio: 0,
       },
       tempo_estudo: {
         total_minutos: 0,
         media_diaria: 0,
-        dias_ativos: 0
-      }
+        dias_ativos: 0,
+      },
     };
 
     // Query base para filtrar por concurso se especificado
@@ -50,7 +78,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
     let simuladosQuery = supabase
       .from('progresso_usuario_simulado')
       .select('*')
-      .eq('usuario_id', userId);
+      .eq('usuario_id', usuarioId);
 
     if (concurso_id) {
       // Join com simulados para filtrar por concurso
@@ -60,7 +88,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
           *,
           simulados!inner(concurso_id)
         `)
-        .eq('usuario_id', userId)
+        .eq('usuario_id', usuarioId)
         .eq('simulados.concurso_id', concurso_id);
     }
 
@@ -79,7 +107,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
     let questoesQuery = supabase
       .from('progresso_usuario_questoes_semanais')
       .select('*')
-      .eq('usuario_id', userId);
+      .eq('usuario_id', usuarioId);
 
     if (concurso_id) {
       questoesQuery = supabase
@@ -88,7 +116,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
           *,
           questoes_semanais!inner(concurso_id)
         `)
-        .eq('usuario_id', userId)
+        .eq('usuario_id', usuarioId)
         .eq('questoes_semanais.concurso_id', concurso_id);
     }
 
@@ -113,7 +141,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
         *,
         cartoes_memorizacao!inner(concurso_id)
       `)
-      .eq('usuario_id', userId);
+      .eq('usuario_id', usuarioId);
 
     if (concurso_id) {
       flashcardsQuery = flashcardsQuery.eq('cartoes_memorizacao.concurso_id', concurso_id);
@@ -134,7 +162,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
         *,
         conteudo_apostila!inner(concurso_id)
       `)
-      .eq('usuario_id', userId);
+      .eq('usuario_id', usuarioId);
 
     if (concurso_id) {
       apostilasQuery = apostilasQuery.eq('conteudo_apostila.concurso_id', concurso_id);
@@ -155,7 +183,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
     const { data: usuarioData } = await supabase
       .from('usuarios')
       .select('tempo_estudo_minutos, criado_em')
-      .eq('id', userId)
+      .eq('id', usuarioId)
       .single();
 
     if (usuarioData) {
@@ -163,7 +191,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
       
       // Calcular dias desde criação da conta
       const diasCriacao = Math.ceil(
-        (new Date().getTime() - new Date(usuarioData.criado_em).getTime()) / (1000 * 60 * 60 * 24)
+        (new Date().getTime() - new Date(usuarioData.criado_em).getTime()) / (1000 * 60 * 60 * 24),
       );
       
       stats.tempo_estudo.media_diaria = diasCriacao > 0
@@ -175,27 +203,31 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
       stats.tempo_estudo.dias_ativos = Math.min(totalAtividades, diasCriacao);
     }
 
-    res.json({
+    return res.json({
       success: true,
       data: stats,
       meta: {
-        usuario_id: userId,
+        usuario_id: usuarioId,
         concurso_id: concurso_id || null,
-        timestamp: new Date().toISOString()
-      }
+        timestamp: new Date().toISOString(),
+      },
     });
 
   } catch (error) {
-    console.error('Erro ao buscar estatísticas do dashboard:', {
-      error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined
-    });
-    
-    res.status(500).json({
+    logger.error('Erro ao buscar estatísticas do dashboard:', error);
+    return res.status(500).json({
       success: false,
-      error: 'Erro interno do servidor'
+      error: 'Erro interno do servidor',
     });
   }
-});
+}; 
 
-export default router; 
+// Criar router Express
+import { Router } from 'express';
+
+const router = Router();
+
+// Registrar rotas
+router.get('/', getDashboardStatsHandler);
+
+export { router };

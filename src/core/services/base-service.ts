@@ -82,7 +82,7 @@ export abstract class BaseService<T, TFilter extends FiltroBase = FiltroBase> im
    */
   constructor(
     repository: IBaseRepository<T, TFilter>,
-    options: BaseServiceOptions
+    options: BaseServiceOptions,
   ) {
     this.repository = repository;
     this.serviceName = options.serviceName;
@@ -112,7 +112,7 @@ export abstract class BaseService<T, TFilter extends FiltroBase = FiltroBase> im
           this.logger.debug(`Cache hit para ${this.serviceName}:${id}`, { operationId });
           return {
             success: true,
-            data: cached as T
+            data: cached as T,
           };
         }
       }
@@ -127,13 +127,13 @@ export abstract class BaseService<T, TFilter extends FiltroBase = FiltroBase> im
         const executionTime = performance.now() - startTime;
         this.logger.warn(`${this.serviceName} com ID ${id} não encontrado`, {
           operationId,
-          executionTimeMs: executionTime.toFixed(2)
+          executionTimeMs: executionTime.toFixed(2),
         });
         
         return {
           success: false,
           message: `${this.serviceName} não encontrado`,
-          error: 'NOT_FOUND'
+          error: 'NOT_FOUND',
         };
       }
       
@@ -148,12 +148,12 @@ export abstract class BaseService<T, TFilter extends FiltroBase = FiltroBase> im
       const executionTime = performance.now() - startTime;
       this.logger.debug(`${this.serviceName} encontrado com sucesso`, {
         operationId,
-        executionTimeMs: executionTime.toFixed(2)
+        executionTimeMs: executionTime.toFixed(2),
       });
       
       return {
         success: true,
-        data: processedData
+        data: processedData,
       };
     } catch (error) {
       const executionTime = performance.now() - startTime;
@@ -173,7 +173,7 @@ export abstract class BaseService<T, TFilter extends FiltroBase = FiltroBase> im
     try {
       this.logger.debug(`Buscando todos ${this.serviceName}`, { 
         operationId, 
-        filtro 
+        filtro, 
       });
       
       // Verificar cache
@@ -181,7 +181,7 @@ export abstract class BaseService<T, TFilter extends FiltroBase = FiltroBase> im
         const cacheKey = `buscarTodos:${JSON.stringify(filtro || {})}`;
         const cached = this.getFromCache(cacheKey);
         if (cached && typeof cached === 'object' && 'pagination' in cached) {
-          this.logger.debug(`Cache hit para buscarTodos`, { operationId });
+          this.logger.debug('Cache hit para buscarTodos', { operationId });
           return cached as PaginatedResponse<T>;
         }
       }
@@ -194,13 +194,13 @@ export abstract class BaseService<T, TFilter extends FiltroBase = FiltroBase> im
       
       // Processar dados após busca
       const processedData = await Promise.all(
-        result.data.map(item => this.processAfterFind(item))
+        result.data.map(item => this.processAfterFind(item)),
       );
       
       const response: PaginatedResponse<T> = {
         success: true,
         data: processedData,
-        pagination: result.pagination
+        pagination: result.pagination,
       };
       
       // Salvar no cache
@@ -213,7 +213,7 @@ export abstract class BaseService<T, TFilter extends FiltroBase = FiltroBase> im
       this.logger.debug(`${processedData.length} ${this.serviceName} encontrados`, {
         operationId,
         executionTimeMs: executionTime.toFixed(2),
-        total: result.pagination.total
+        total: result.pagination.total,
       });
       
       return response;
@@ -228,10 +228,10 @@ export abstract class BaseService<T, TFilter extends FiltroBase = FiltroBase> im
           page: 1,
           limit: 10,
           total: 0,
-          totalPages: 0
+          totalPages: 0,
         },
         error: errorResponse.error,
-        message: errorResponse.message
+        message: errorResponse.message,
       };
     }
   }
@@ -248,7 +248,7 @@ export abstract class BaseService<T, TFilter extends FiltroBase = FiltroBase> im
     try {
       this.logger.debug(`Criando novo ${this.serviceName}`, { 
         operationId,
-        dados: this.sanitizeLogData(dados)
+        dados: this.sanitizeLogData(dados),
       });
       
       // Validar entrada
@@ -275,13 +275,13 @@ export abstract class BaseService<T, TFilter extends FiltroBase = FiltroBase> im
       this.logger.info(`${this.serviceName} criado com sucesso`, {
         operationId,
         executionTimeMs: executionTime.toFixed(2),
-        id: typeof finalData === 'object' && finalData !== null && 'id' in finalData ? (finalData as { id?: unknown }).id : undefined
+        id: typeof finalData === 'object' && finalData !== null && 'id' in finalData ? (finalData as { id?: unknown }).id : undefined,
       });
       
       return {
         success: true,
         data: finalData,
-        message: `${this.serviceName} criado com sucesso`
+        message: `${this.serviceName} criado com sucesso`,
       };
     } catch (error) {
       const executionTime = performance.now() - startTime;
@@ -302,7 +302,7 @@ export abstract class BaseService<T, TFilter extends FiltroBase = FiltroBase> im
     try {
       this.logger.debug(`Atualizando ${this.serviceName} com ID ${id}`, {
         operationId,
-        dados: this.sanitizeLogData(dados)
+        dados: this.sanitizeLogData(dados),
       });
       
       // Validar entrada
@@ -329,13 +329,13 @@ export abstract class BaseService<T, TFilter extends FiltroBase = FiltroBase> im
       this.logger.info(`${this.serviceName} atualizado com sucesso`, {
         operationId,
         executionTimeMs: executionTime.toFixed(2),
-        id
+        id,
       });
       
       return {
         success: true,
         data: finalData,
-        message: `${this.serviceName} atualizado com sucesso`
+        message: `${this.serviceName} atualizado com sucesso`,
       };
     } catch (error) {
       const executionTime = performance.now() - startTime;
@@ -379,13 +379,13 @@ export abstract class BaseService<T, TFilter extends FiltroBase = FiltroBase> im
       this.logger.info(`${this.serviceName} excluído com sucesso`, {
         operationId,
         executionTimeMs: executionTime.toFixed(2),
-        id
+        id,
       });
       
       return {
         success: true,
         data: deleted,
-        message: `${this.serviceName} excluído com sucesso`
+        message: `${this.serviceName} excluído com sucesso`,
       };
     } catch (error) {
       const executionTime = performance.now() - startTime;
@@ -393,7 +393,7 @@ export abstract class BaseService<T, TFilter extends FiltroBase = FiltroBase> im
       const errorResponse = this.handleError(error, `excluir:${id}`, operationId, executionTime);
       return {
         ...errorResponse,
-        data: false
+        data: false,
       };
     }
   }
@@ -566,7 +566,7 @@ export abstract class BaseService<T, TFilter extends FiltroBase = FiltroBase> im
     error: unknown, 
     operation: string, 
     operationId: string, 
-    executionTime: number
+    executionTime: number,
   ): ApiResponse<T> {
     // Log detalhado do erro
     const err = error as Error & { message?: string; stack?: string; errors?: string[] };
@@ -576,9 +576,9 @@ export abstract class BaseService<T, TFilter extends FiltroBase = FiltroBase> im
         operationId,
         executionTimeMs: executionTime.toFixed(2),
         error: err.message,
-        stack: err.stack
+        stack: err.stack,
       },
-      err
+      err,
     );
     
     // Retornar resposta apropriada baseada no tipo de erro
@@ -587,7 +587,7 @@ export abstract class BaseService<T, TFilter extends FiltroBase = FiltroBase> im
         success: false,
         error: 'VALIDATION_ERROR',
         message: error.message,
-        erros: error.errors
+        erros: error.errors,
       } as ApiResponse<T>;
     }
     
@@ -595,7 +595,7 @@ export abstract class BaseService<T, TFilter extends FiltroBase = FiltroBase> im
       return {
         success: false,
         error: 'NOT_FOUND',
-        message: error.message
+        message: error.message,
       } as ApiResponse<T>;
     }
     
@@ -603,7 +603,7 @@ export abstract class BaseService<T, TFilter extends FiltroBase = FiltroBase> im
       return {
         success: false,
         error: 'DATABASE_ERROR',
-        message: 'Erro interno do servidor'
+        message: 'Erro interno do servidor',
       } as ApiResponse<T>;
     }
     
@@ -611,7 +611,7 @@ export abstract class BaseService<T, TFilter extends FiltroBase = FiltroBase> im
     return {
       success: false,
       error: 'INTERNAL_ERROR',
-      message: 'Erro interno do servidor'
+      message: 'Erro interno do servidor',
     } as ApiResponse<T>;
   }
 }

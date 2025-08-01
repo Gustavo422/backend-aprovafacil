@@ -31,31 +31,36 @@ export class CacheService implements ICacheService {
       }
 
       // Se não encontrou em memória, verificar cache persistente
-      const { data, error } = await this.supabase
-        .from('cache_performance_usuario_usuario_usuario_usuario')
-        .select('dados_cache, expira_em')
-        .eq('chave_cache', chave)
-        .gt('expira_em', new Date().toISOString())
-        .single();
+      try {
+        const { data, error } = await this.supabase
+          .from('cache_performance_usuario_usuario_usuario_usuario')
+          .select('dados_cache, expira_em')
+          .eq('chave_cache', chave)
+          .gt('expira_em', new Date().toISOString())
+          .single();
 
-      if (error && error.code !== 'PGRST116') { // PGRST116 = não encontrado
-        await this.logService.logarOperacaoCache('GET_PERSISTENT', chave, false);
-        throw new Error('Cache not found'); // Assuming CacheError is removed, use a generic error
-      }
+        if (error && error.code !== 'PGRST116') { // PGRST116 = não encontrado
+          await this.logService.logarOperacaoCache('GET_PERSISTENT', chave, false);
+          return null; // Retornar null em vez de lançar erro
+        }
 
-      if (data) {
-        // Adicionar ao cache em memória para próximas consultas
-        this.memoryCache.set(chave, {
-          valor: data.dados_cache,
-          expira: new Date(data.expira_em)
-        });
-        
-        await this.logService.logarOperacaoCache('GET_PERSISTENT', chave, true);
-        return data.dados_cache as T;
-      }
+        if (data) {
+          // Adicionar ao cache em memória para próximas consultas
+          this.memoryCache.set(chave, {
+            valor: data.dados_cache,
+            expira: new Date(data.expira_em),
+          });
+          
+          await this.logService.logarOperacaoCache('GET_PERSISTENT', chave, true);
+          return data.dados_cache as T;
+        }
+             } catch (dbError) {
+         // Se há erro de banco (tabela não existe, etc.), apenas logar e continuar
+         await this.logService.logarOperacaoCache('GET_PERSISTENT', chave, false);
+       }
 
-      await this.logService.logarOperacaoCache('GET', chave, false);
-      return null;
+       await this.logService.logarOperacaoCache('GET', chave, false);
+       return null;
     } catch (error) {
       await this.logService.erro('Erro ao obter cache', error as Error, { chave });
       return null;
@@ -71,25 +76,30 @@ export class CacheService implements ICacheService {
       // Salvar em cache de memória
       this.memoryCache.set(chave, {
         valor,
-        expira: expiraEm
+        expira: expiraEm,
       });
 
       // Salvar em cache persistente
-      const { error } = await this.supabase
-        .from('cache_performance_usuario_usuario_usuario_usuario')
-        .upsert({
-          chave_cache: chave,
-          dados_cache: valor,
-          expira_em: expiraEm.toISOString(),
-          atualizado_em: new Date().toISOString()
-        });
+      try {
+        const { error } = await this.supabase
+          .from('cache_performance_usuario_usuario_usuario_usuario')
+          .upsert({
+            chave_cache: chave,
+            dados_cache: valor,
+            expira_em: expiraEm.toISOString(),
+            atualizado_em: new Date().toISOString(),
+          });
 
-      if (error) {
+        if (error) {
+          await this.logService.logarOperacaoCache('SET', chave, false);
+          // Não lançar erro, apenas logar
+        } else {
+          await this.logService.logarOperacaoCache('SET', chave, true);
+        }
+      } catch (dbError) {
+        // Se há erro de banco (tabela não existe, etc.), apenas logar e continuar
         await this.logService.logarOperacaoCache('SET', chave, false);
-        throw new Error('Failed to set cache'); // Assuming CacheError is removed, use a generic error
       }
-
-      await this.logService.logarOperacaoCache('SET', chave, true);
     } catch (error) {
       await this.logService.erro('Erro ao definir cache', error as Error, { chave, ttl: ttlMinutos });
       throw error;
@@ -102,17 +112,22 @@ export class CacheService implements ICacheService {
       this.memoryCache.delete(chave);
 
       // Remover do cache persistente
-      const { error } = await this.supabase
-        .from('cache_performance_usuario_usuario_usuario_usuario')
-        .delete()
-        .eq('chave_cache', chave);
+      try {
+        const { error } = await this.supabase
+          .from('cache_performance_usuario_usuario_usuario_usuario')
+          .delete()
+          .eq('chave_cache', chave);
 
-      if (error) {
+        if (error) {
+          await this.logService.logarOperacaoCache('DELETE', chave, false);
+          // Não lançar erro, apenas logar
+        } else {
+          await this.logService.logarOperacaoCache('DELETE', chave, true);
+        }
+      } catch (dbError) {
+        // Se há erro de banco (tabela não existe, etc.), apenas logar e continuar
         await this.logService.logarOperacaoCache('DELETE', chave, false);
-        throw new Error('Failed to remove cache'); // Assuming CacheError is removed, use a generic error
       }
-
-      await this.logService.logarOperacaoCache('DELETE', chave, true);
     } catch (error) {
       await this.logService.erro('Erro ao remover cache', error as Error, { chave });
       throw error;
@@ -122,30 +137,23 @@ export class CacheService implements ICacheService {
   async limpar(padrao?: string): Promise<void> {
     try {
       if (padrao) {
-        // Limpar chaves que correspondem ao padrão
-        const chavesParaRemover: string[] = [];
-        
-        // Limpar cache em memória
-        for (const chave of this.memoryCache.keys()) {
+        // Limpar cache em memória por padrão
+        for (const [chave] of this.memoryCache) {
           if (chave.includes(padrao)) {
             this.memoryCache.delete(chave);
-            chavesParaRemover.push(chave);
           }
         }
 
-        // Limpar cache persistente
+        // Limpar cache persistente por padrão
         const { error } = await this.supabase
           .from('cache_performance_usuario_usuario_usuario_usuario')
           .delete()
-          .like('chave_cache', `%${padrao}%`);
+          .ilike('chave_cache', `%${padrao}%`);
 
         if (error) {
-          throw new Error('Failed to clear cache with pattern'); // Assuming CacheError is removed, use a generic error
+          await this.logService.erro('Erro ao limpar cache por padrão', error as Error, { padrao });
+          throw new Error('Failed to clear cache by pattern');
         }
-
-        await this.logService.info(`Cache limpo com padrão: ${padrao}`, { 
-          chaves_removidas: chavesParaRemover.length 
-        });
       } else {
         // Limpar todo o cache
         this.memoryCache.clear();
@@ -153,16 +161,44 @@ export class CacheService implements ICacheService {
         const { error } = await this.supabase
           .from('cache_performance_usuario_usuario_usuario_usuario')
           .delete()
-          .neq('id', '00000000-0000-0000-0000-000000000000'); // Deletar todos
+          .neq('chave_cache', '');
 
         if (error) {
-          throw new Error('Failed to clear all cache'); // Assuming CacheError is removed, use a generic error
+          await this.logService.erro('Erro ao limpar todo o cache', error as Error);
+          throw new Error('Failed to clear all cache');
         }
-
-        await this.logService.info('Todo o cache foi limpo');
       }
+
+      await this.logService.logarOperacaoCache('CLEAR', padrao || 'ALL', true);
     } catch (error) {
       await this.logService.erro('Erro ao limpar cache', error as Error, { padrao });
+      throw error;
+    }
+  }
+
+  async limparPorPrefixo(prefixo: string): Promise<void> {
+    try {
+      // Limpar cache em memória por prefixo
+      for (const [chave] of this.memoryCache) {
+        if (chave.startsWith(prefixo)) {
+          this.memoryCache.delete(chave);
+        }
+      }
+
+      // Limpar cache persistente por prefixo
+      const { error } = await this.supabase
+        .from('cache_performance_usuario_usuario_usuario_usuario')
+        .delete()
+        .ilike('chave_cache', `${prefixo}%`);
+
+      if (error) {
+        await this.logService.erro('Erro ao limpar cache por prefixo', error as Error, { prefixo });
+        throw new Error('Failed to clear cache by prefix');
+      }
+
+      await this.logService.logarOperacaoCache('CLEAR_PREFIX', prefixo, true);
+    } catch (error) {
+      await this.logService.erro('Erro ao limpar cache por prefixo', error as Error, { prefixo });
       throw error;
     }
   }
@@ -251,7 +287,7 @@ export class CacheService implements ICacheService {
         data.forEach(config => {
           this.configuracoes.set(config.chave_cache, {
             ttl: config.ttl_minutos,
-            descricao: config.descricao || ''
+            descricao: config.descricao || '',
           });
         });
       }
@@ -343,14 +379,14 @@ export class CacheService implements ICacheService {
         cache_memoria: {
           total_chaves: this.memoryCache.size,
           chaves_expiradas: chavesExpiradas,
-          uso_memoria_mb: Math.round(usoMemoria * 100) / 100
+          uso_memoria_mb: Math.round(usoMemoria * 100) / 100,
         },
         cache_persistente: {
           total_registros: totalCount || 0,
           registros_expirados: expiradosCount || 0,
           ultimo_acesso: ultimoAcessoData?.[0]?.atualizado_em ? 
-            new Date(ultimoAcessoData[0].atualizado_em) : null
-        }
+            new Date(ultimoAcessoData[0].atualizado_em) : null,
+        },
       };
     } catch (error) {
       await this.logService.erro('Erro ao obter estatísticas do cache', error as Error);
@@ -358,13 +394,13 @@ export class CacheService implements ICacheService {
         cache_memoria: {
           total_chaves: 0,
           chaves_expiradas: 0,
-          uso_memoria_mb: 0
+          uso_memoria_mb: 0,
         },
         cache_persistente: {
           total_registros: 0,
           registros_expirados: 0,
-          ultimo_acesso: null
-        }
+          ultimo_acesso: null,
+        },
       };
     }
   }

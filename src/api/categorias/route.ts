@@ -1,11 +1,8 @@
 import { z } from 'zod';
 import { CrudRouteHandler } from '../../core/api/crud-route-handler';
 import { ResponseFormatter } from '../../core/api/response-formatter';
-import { SupabaseConfig } from '../../core/database/supabase.js';
+import { supabase } from '../../config/supabase-unified.js'; // Importação unificada
 import { requestLoggingMiddleware, corsMiddleware } from '../../core/api';
-
-// Create Supabase client
-const supabaseClient = SupabaseConfig.getInstance();
 
 // Define categoria interface
 interface Categoria {
@@ -102,7 +99,7 @@ export class CategoriaRouteHandler extends CrudRouteHandler<Record<string, unkno
       search?: string;
       hierarchy?: boolean;
     },
-    context: { requestId: string }
+    context: { requestId: string },
   ): Promise<unknown> {
     try {
       const {
@@ -121,7 +118,7 @@ export class CategoriaRouteHandler extends CrudRouteHandler<Record<string, unkno
       }
 
       // Start building the query
-      let categoriasQuery = supabaseClient
+      let categoriasQuery = supabase
         .from('categorias')
         .select('*');
 
@@ -137,7 +134,7 @@ export class CategoriaRouteHandler extends CrudRouteHandler<Record<string, unkno
       }
 
       // Get total count for pagination
-      const { count, error: countError } = await supabaseClient
+      const { count, error: countError } = await supabase
         .from('categorias')
         .select('*', { count: 'exact', head: true });
 
@@ -197,11 +194,11 @@ export class CategoriaRouteHandler extends CrudRouteHandler<Record<string, unkno
    */
   protected async handleGetOne(
     id: string,
-    context: { requestId: string }
+    context: { requestId: string },
   ): Promise<unknown> {
     try {
       // Get categoria data
-      const { data, error }: { data: unknown; error: unknown } = await supabaseClient
+      const { data, error }: { data: unknown; error: unknown } = await supabase
         .from('categorias')
         .select('*')
         .eq('id', id)
@@ -225,7 +222,7 @@ export class CategoriaRouteHandler extends CrudRouteHandler<Record<string, unkno
       }
 
       // Get child categorias
-      const { data: children } = await supabaseClient
+      const { data: children } = await supabase
         .from('categorias')
         .select('id, nome, ordem')
         .eq('parent_id', id)
@@ -254,7 +251,7 @@ export class CategoriaRouteHandler extends CrudRouteHandler<Record<string, unkno
    */
   protected async handleCreate(
     data: Record<string, unknown>,
-    context: { requestId: string }
+    context: { requestId: string },
   ): Promise<unknown> {
     try {
       // TODO: Adapte para buscar o usuário autenticado do contexto, se necessário
@@ -268,7 +265,7 @@ export class CategoriaRouteHandler extends CrudRouteHandler<Record<string, unkno
 
       // If parent_id is provided, check if it exists
       if (categoriaData.parent_id) {
-        const { data: parentCategoria, error: parentError } = await supabaseClient
+        const { data: parentCategoria, error: parentError } = await supabase
           .from('categorias')
           .select('id')
           .eq('id', categoriaData.parent_id)
@@ -283,7 +280,7 @@ export class CategoriaRouteHandler extends CrudRouteHandler<Record<string, unkno
       }
 
       // Create categoria in database
-      const { data: newCategoria, error } = await supabaseClient
+      const { data: newCategoria, error } = await supabase
         .from('categorias')
         .insert({
           nome: categoriaData.nome,
@@ -314,7 +311,7 @@ export class CategoriaRouteHandler extends CrudRouteHandler<Record<string, unkno
           status: 201,
           requestId: context.requestId,
           message: 'Categoria created successfully',
-        }
+        },
       );
     } catch (error) {
       this.logger.error('Error handling create categoria request', {
@@ -335,7 +332,7 @@ export class CategoriaRouteHandler extends CrudRouteHandler<Record<string, unkno
   protected async handleUpdate(
     id: string,
     data: Record<string, unknown>,
-    context: { requestId: string }
+    context: { requestId: string },
   ): Promise<unknown> {
     try {
       // TODO: Adapte para buscar o usuário autenticado do contexto, se necessário
@@ -348,7 +345,7 @@ export class CategoriaRouteHandler extends CrudRouteHandler<Record<string, unkno
       const categoriaData = data as Partial<Categoria>;
 
       // Check if categoria exists
-      const { data: existingCategoria, error: checkError } = await supabaseClient
+      const { data: existingCategoria, error: checkError } = await supabase
         .from('categorias')
         .select('id')
         .eq('id', id)
@@ -361,7 +358,7 @@ export class CategoriaRouteHandler extends CrudRouteHandler<Record<string, unkno
       // If parent_id is provided, check if it exists and prevent circular references
       if (categoriaData.parent_id) {
         // Check if parent exists
-        const { data: parentCategoria, error: parentError } = await supabaseClient
+        const { data: parentCategoria, error: parentError } = await supabase
           .from('categorias')
           .select('id')
           .eq('id', categoriaData.parent_id)
@@ -393,7 +390,7 @@ export class CategoriaRouteHandler extends CrudRouteHandler<Record<string, unkno
       }
 
       // Update categoria in database
-      const { data: updatedCategoria, error } = await supabaseClient
+      const { data: updatedCategoria, error } = await supabase
         .from('categorias')
         .update({
           nome: categoriaData.nome,
@@ -424,7 +421,7 @@ export class CategoriaRouteHandler extends CrudRouteHandler<Record<string, unkno
         {
           requestId: context.requestId,
           message: 'Categoria updated successfully',
-        }
+        },
       );
     } catch (error) {
       this.logger.error('Error handling update categoria request', {
@@ -446,7 +443,7 @@ export class CategoriaRouteHandler extends CrudRouteHandler<Record<string, unkno
   protected async handlePartialUpdate(
     id: string,
     data: Record<string, unknown>,
-    context: { requestId: string }
+    context: { requestId: string },
   ): Promise<unknown> {
     try {
       // TODO: Adapte para buscar o usuário autenticado do contexto, se necessário
@@ -459,7 +456,7 @@ export class CategoriaRouteHandler extends CrudRouteHandler<Record<string, unkno
       const categoriaData = data as Partial<Categoria>;
 
       // Check if categoria exists
-      const { data: existingCategoria, error: checkError } = await supabaseClient
+      const { data: existingCategoria, error: checkError } = await supabase
         .from('categorias')
         .select('id')
         .eq('id', id)
@@ -472,7 +469,7 @@ export class CategoriaRouteHandler extends CrudRouteHandler<Record<string, unkno
       // If parent_id is provided, check if it exists and prevent circular references
       if (categoriaData.parent_id) {
         // Check if parent exists
-        const { data: parentCategoria, error: parentError } = await supabaseClient
+        const { data: parentCategoria, error: parentError } = await supabase
           .from('categorias')
           .select('id')
           .eq('id', categoriaData.parent_id)
@@ -515,7 +512,7 @@ export class CategoriaRouteHandler extends CrudRouteHandler<Record<string, unkno
       if (categoriaData.ordem !== undefined) updateData.ordem = categoriaData.ordem;
 
       // Update categoria in database
-      const { data: updatedCategoria, error } = await supabaseClient
+      const { data: updatedCategoria, error } = await supabase
         .from('categorias')
         .update(updateData)
         .eq('id', id)
@@ -540,7 +537,7 @@ export class CategoriaRouteHandler extends CrudRouteHandler<Record<string, unkno
         {
           requestId: context.requestId,
           message: 'Categoria updated successfully',
-        }
+        },
       );
     } catch (error) {
       this.logger.error('Error handling partial update categoria request', {
@@ -561,7 +558,7 @@ export class CategoriaRouteHandler extends CrudRouteHandler<Record<string, unkno
    */
   protected async handleRemove(
     id: string,
-    context: { requestId: string }
+    context: { requestId: string },
   ): Promise<unknown> {
     try {
       // TODO: Adapte para buscar o usuário autenticado do contexto, se necessário
@@ -571,7 +568,7 @@ export class CategoriaRouteHandler extends CrudRouteHandler<Record<string, unkno
       }
 
       // Check if categoria exists
-      const { data: existingCategoria, error: checkError } = await supabaseClient
+      const { data: existingCategoria, error: checkError } = await supabase
         .from('categorias')
         .select('id')
         .eq('id', id)
@@ -582,7 +579,7 @@ export class CategoriaRouteHandler extends CrudRouteHandler<Record<string, unkno
       }
 
       // Check if categoria has children
-      const { count: childrenCount, error: childrenError } = await supabaseClient
+      const { count: childrenCount, error: childrenError } = await supabase
         .from('categorias')
         .select('*', { count: 'exact', head: true })
         .eq('parent_id', id);
@@ -608,7 +605,7 @@ export class CategoriaRouteHandler extends CrudRouteHandler<Record<string, unkno
       }
 
       // Delete categoria from database
-      const { error } = await supabaseClient
+      const { error } = await supabase
         .from('categorias')
         .delete()
         .eq('id', id);
@@ -631,7 +628,7 @@ export class CategoriaRouteHandler extends CrudRouteHandler<Record<string, unkno
         {
           requestId: context.requestId,
           message: 'Categoria deleted successfully',
-        }
+        },
       );
     } catch (error) {
       this.logger.error('Error handling delete categoria request', {
@@ -653,7 +650,7 @@ export class CategoriaRouteHandler extends CrudRouteHandler<Record<string, unkno
   private async getHierarchicalCategorias(requestId: string): Promise<unknown> {
     try {
       // Get all categorias
-      const { data, error }: { data: unknown[]; error: unknown } = await supabaseClient
+      const { data, error }: { data: unknown[]; error: unknown } = await supabase
         .from('categorias')
         .select('*')
         .order('ordem', { ascending: true });
@@ -717,7 +714,7 @@ export class CategoriaRouteHandler extends CrudRouteHandler<Record<string, unkno
    */
   private async isDescendant(potentialDescendantId: string, ancestorId: string): Promise<boolean> {
     // Get the potential descendant
-    const { data } = await supabaseClient
+    const { data } = await supabase
       .from('categorias')
       .select('parent_id')
       .eq('id', potentialDescendantId)
@@ -737,12 +734,12 @@ export class CategoriaRouteHandler extends CrudRouteHandler<Record<string, unkno
 }
 
 // Create route handler
-const categoriaRouteHandler = new CategoriaRouteHandler();
-const routeHandlers = categoriaRouteHandler.createRouteHandlers();
+// const categoriaRouteHandler = new CategoriaRouteHandler();
 
 // Export route handlers for Next.js App Router
-export const GET = routeHandlers.GET;
-export const POST = routeHandlers.POST;
-export const PUT = routeHandlers.PUT;
-export const PATCH = routeHandlers.PATCH;
-export const DELETE = routeHandlers.DELETE;
+// TODO: Implement proper route handlers
+// export const GET = categoriaRouteHandler.handleGetList;
+// export const POST = categoriaRouteHandler.handleCreate;
+// export const PUT = categoriaRouteHandler.handleUpdate;
+// export const PATCH = categoriaRouteHandler.handlePartialUpdate;
+// export const DELETE = categoriaRouteHandler.handleRemove;

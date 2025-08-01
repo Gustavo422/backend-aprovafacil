@@ -8,9 +8,9 @@ vi.mock('next/server', () => ({
     json: vi.fn((data, options) => ({
       json: () => Promise.resolve(data),
       status: options?.status || 200,
-      headers: options?.headers || {}
-    }))
-  }
+      headers: options?.headers || {},
+    })),
+  },
 }));
 
 describe('Docs Route', () => {

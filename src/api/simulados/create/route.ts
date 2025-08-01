@@ -127,7 +127,7 @@ export async function POST(request: Request) {
 
     // Log de auditoria
     await supabase.from('logs_auditoria').insert({
-      user_id: user.id,
+      usuario_id: user.id,
       action: 'SIMULADO_CREATED',
       table_nome: 'simulados-personalizados',
       record_id: simulado.id,

@@ -1,15 +1,16 @@
 import express, { Request, Response } from 'express';
-import { supabase } from '../../../config/supabase.js';
+import { supabase } from '../../../config/supabase-unified.js';
 import { requireAuth } from '../../../middleware/auth.js';
+import { logger } from '../../../lib/logger.js';
 
 const router = express.Router();
 
 // GET - Buscar estatísticas aprimoradas do dashboard
 router.get('/', requireAuth, async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.id;
+    const usuarioId = req.user?.id;
 
-    if (!userId) {
+    if (!usuarioId) {
       return res.status(401).json({ error: 'Usuário não autenticado' });
     }
 
@@ -17,10 +18,10 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
     const { data: simuladosStats, error: simuladosError } = await supabase
       .from('progresso_usuario_simulado')
       .select('*')
-      .eq('user_id', userId);
+      .eq('usuario_id', usuarioId);
 
     if (simuladosError) {
-      console.error('Erro ao buscar estatísticas de simulados:', simuladosError);
+      logger.error('Erro ao buscar estatísticas de simulados', { error: simuladosError.message });
       return res.status(500).json({ error: 'Erro interno do servidor' });
     }
 
@@ -28,10 +29,10 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
     const { data: questoesStats, error: questoesError } = await supabase
       .from('questao_semanal_respostas')
       .select('*')
-      .eq('user_id', userId);
+      .eq('usuario_id', usuarioId);
 
     if (questoesError) {
-      console.error('Erro ao buscar estatísticas de questões semanais:', questoesError);
+      logger.error('Erro ao buscar estatísticas de questões semanais', { error: questoesError.message });
       return res.status(500).json({ error: 'Erro interno do servidor' });
     }
 
@@ -39,10 +40,10 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
     const { data: flashcardsStats, error: flashcardsError } = await supabase
       .from('progresso_usuario_flashcard')
       .select('*')
-      .eq('user_id', userId);
+      .eq('usuario_id', usuarioId);
 
     if (flashcardsError) {
-      console.error('Erro ao buscar estatísticas de flashcards:', flashcardsError);
+      logger.error('Erro ao buscar estatísticas de flashcards', { error: flashcardsError.message });
       return res.status(500).json({ error: 'Erro interno do servidor' });
     }
 
@@ -50,10 +51,10 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
     const { data: assuntosStats, error: assuntosError } = await supabase
       .from('mapa_assuntos')
       .select('*')
-      .eq('user_id', userId);
+      .eq('usuario_id', usuarioId);
 
     if (assuntosError) {
-      console.error('Erro ao buscar estatísticas de assuntos:', assuntosError);
+      logger.error('Erro ao buscar estatísticas de assuntos', { error: assuntosError.message });
       return res.status(500).json({ error: 'Erro interno do servidor' });
     }
 
@@ -91,19 +92,19 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
     const quatorzeDiasAtras = new Date(agora.getTime() - 14 * 24 * 60 * 60 * 1000);
 
     const simuladosUltimaSemana = simuladosStats?.filter(s => 
-      new Date(s.criado_em) >= seteDiasAtras
+      new Date(s.criado_em) >= seteDiasAtras,
     )?.length || 0;
 
     const simuladosSemanaAnterior = simuladosStats?.filter(s => 
-      new Date(s.criado_em) >= quatorzeDiasAtras && new Date(s.criado_em) < seteDiasAtras
+      new Date(s.criado_em) >= quatorzeDiasAtras && new Date(s.criado_em) < seteDiasAtras,
     )?.length || 0;
 
     const questoesUltimaSemana = questoesStats?.filter(q => 
-      new Date(q.criado_em) >= seteDiasAtras
+      new Date(q.criado_em) >= seteDiasAtras,
     )?.length || 0;
 
     const questoesSemanaAnterior = questoesStats?.filter(q => 
-      new Date(q.criado_em) >= quatorzeDiasAtras && new Date(q.criado_em) < seteDiasAtras
+      new Date(q.criado_em) >= quatorzeDiasAtras && new Date(q.criado_em) < seteDiasAtras,
     )?.length || 0;
 
     const stats = {
@@ -114,7 +115,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
         media_pontuacao: Math.round(mediaPontuacao * 100) / 100,
         ultima_semana: simuladosUltimaSemana,
         semana_anterior: simuladosSemanaAnterior,
-        tendencia: simuladosUltimaSemana > simuladosSemanaAnterior ? 'crescimento' : 'queda'
+        tendencia: simuladosUltimaSemana > simuladosSemanaAnterior ? 'crescimento' : 'queda',
       },
       questoes_semanais: {
         total: totalQuestoes,
@@ -123,40 +124,38 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
         total_pontos: totalPontos,
         ultima_semana: questoesUltimaSemana,
         semana_anterior: questoesSemanaAnterior,
-        tendencia: questoesUltimaSemana > questoesSemanaAnterior ? 'crescimento' : 'queda'
+        tendencia: questoesUltimaSemana > questoesSemanaAnterior ? 'crescimento' : 'queda',
       },
       flashcards: {
         total: totalFlashcards,
         acertos: flashcardsAcertos,
         erros: flashcardsErros,
-        taxa_acerto: Math.round(taxaAcertoFlashcards * 100) / 100
+        taxa_acerto: Math.round(taxaAcertoFlashcards * 100) / 100,
       },
       assuntos: {
         total: totalAssuntos,
         concluidos: assuntosConcluidos,
         em_andamento: assuntosStats?.filter(a => a.status === 'em_andamento')?.length || 0,
         pendentes: assuntosStats?.filter(a => a.status === 'pendente')?.length || 0,
-        progresso_medio: Math.round(progressoMedio * 100) / 100
+        progresso_medio: Math.round(progressoMedio * 100) / 100,
       },
       geral: {
         total_atividades: totalSimulados + totalQuestoes + totalFlashcards,
         dias_ativos: calcularDiasAtivos(simuladosStats, questoesStats, flashcardsStats),
-        nivel_consistencia: calcularNivelConsistencia(simuladosStats, questoesStats, flashcardsStats)
-      }
+        nivel_consistencia: calcularNivelConsistencia(simuladosStats, questoesStats, flashcardsStats),
+      },
     };
 
     res.json({
       success: true,
-      data: stats
+      data: stats,
     });
 
   } catch (error) {
-    console.error('Erro ao buscar estatísticas aprimoradas:', {
-      error: error instanceof Error ? error.message : String(error),
-    });
+    logger.error('Erro ao processar requisição GET /api/dashboard/enhanced-stats:', error);
     res.status(500).json({
       success: false,
-      error: 'Erro interno do servidor'
+      error: 'Erro interno do servidor',
     });
   }
 });
@@ -208,4 +207,4 @@ function calcularNivelConsistencia(simulados: unknown[], questoes: unknown[], fl
   }
 }
 
-export default router; 
+export { router };

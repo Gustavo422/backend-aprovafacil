@@ -217,7 +217,7 @@ export interface PlanoEstudoCronograma {
 
 export interface PlanoEstudoPersonalizado {
   id: string;
-  user_id: string;
+  usuario_id: string;
   concurso_id: string;
   categoria_id: string;
   data_inicio: string;
@@ -307,7 +307,7 @@ export interface SistemaConfig {
 // ========================================
 
 export interface ConcursoSelectionEvent {
-  user_id: string;
+  usuario_id: string;
   concurso_id: string;
   categoria_id: string;
   selecionado_em: string;
@@ -315,7 +315,7 @@ export interface ConcursoSelectionEvent {
 }
 
 export interface ConteudoAccessEvent {
-  user_id: string;
+  usuario_id: string;
   concurso_id: string;
   categoria_id: string;
   tipo_conteudo: 'simulado' | 'flashcard' | 'apostila' | 'mapa_assunto';
@@ -338,7 +338,7 @@ export interface UserProgressCache {
   key: string;
   data: UserProgress;
   expires_at: string;
-  user_id: string;
+  usuario_id: string;
   concurso_id: string;
 }
 
@@ -377,7 +377,7 @@ export interface ConcursoStats {
 // ========================================
 
 export interface StudyReminder {
-  user_id: string;
+  usuario_id: string;
   concurso_id: string;
   tipo: 'simulado' | 'flashcard' | 'revisao' | 'meta_diaria';
   mensagem: string;
@@ -386,7 +386,7 @@ export interface StudyReminder {
 }
 
 export interface Achievement {
-  user_id: string;
+  usuario_id: string;
   concurso_id: string;
   tipo: 'simulados_completados' | 'questoes_corretas' | 'tempo_estudo' | 'disciplina_mastery';
   titulo: string;
@@ -402,7 +402,7 @@ export interface Achievement {
 // ========================================
 
 export interface StudyReport {
-  user_id: string;
+  usuario_id: string;
   concurso_id: string;
   periodo_inicio: string;
   periodo_fim: string;
@@ -465,7 +465,7 @@ export interface ApiError {
 // ========================================
 
 export interface ContentAccess {
-  user_id: string;
+  usuario_id: string;
   concurso_id: string;
   tipo_conteudo: 'simulado' | 'flashcard' | 'apostila' | 'mapa_assunto';
   conteudo_id: string;
@@ -474,7 +474,7 @@ export interface ContentAccess {
 }
 
 export interface UserPermissions {
-  user_id: string;
+  usuario_id: string;
   concurso_id: string;
   can_access_content: boolean;
   can_modify_preferences: boolean;

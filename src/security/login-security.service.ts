@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { SupabaseClient } from '@supabase/supabase-js';
 import { EnhancedLogger, getEnhancedLogger } from '../lib/logging/enhanced-logging-service.js';
 
 interface LoginAttempt {
@@ -32,13 +32,13 @@ interface SecurityCheck {
 }
 
 export class LoginSecurityService {
-  private supabase: ReturnType<typeof createClient>;
+  private supabase: SupabaseClient;
   private logger: EnhancedLogger;
   private config: SecurityConfig;
 
   constructor(
-    supabaseClient: ReturnType<typeof createClient>,
-    config: Partial<SecurityConfig> = {}
+    supabaseClient: SupabaseClient,
+    config: Partial<SecurityConfig> = {},
   ) {
     this.supabase = supabaseClient;
     this.logger = getEnhancedLogger('login-security');
@@ -50,7 +50,7 @@ export class LoginSecurityService {
       maxAttemptsPerDay: 50,
       suspiciousActivityThreshold: 3,
       whitelistedIPs: ['127.0.0.1', '::1'],
-      ...config
+      ...config,
     };
   }
 
@@ -60,14 +60,14 @@ export class LoginSecurityService {
   async checkLoginSecurity(
     email: string,
     ipAddress: string,
-    _userAgent?: string
+    _userAgent?: string,
   ): Promise<SecurityCheck> {
     try {
       // Verificar IP na whitelist
       if (this.config.whitelistedIPs.includes(ipAddress)) {
         return {
           allowed: true,
-          riskLevel: 'low'
+          riskLevel: 'low',
         };
       }
 
@@ -75,28 +75,28 @@ export class LoginSecurityService {
       const ipBlock = await this.checkIPBlock(ipAddress);
       if (ipBlock.blocked) {
         this.logger.warn('Tentativa de login de IP bloqueado', {
-          email, ipAddress, blockedUntil: ipBlock.blockedUntil
+          email, ipAddress, blockedUntil: ipBlock.blockedUntil,
         });
         
         return {
           allowed: false,
           reason: 'IP temporariamente bloqueado',
           blockedUntil: ipBlock.blockedUntil,
-          riskLevel: 'critical'
+          riskLevel: 'critical',
         };
       }
 
       const emailBlock = await this.checkEmailBlock(email);
       if (emailBlock.blocked) {
         this.logger.warn('Tentativa de login de email bloqueado', {
-          email, ipAddress, blockedUntil: emailBlock.blockedUntil
+          email, ipAddress, blockedUntil: emailBlock.blockedUntil,
         });
         
         return {
           allowed: false,
           reason: 'Muitas tentativas falharam. Tente novamente mais tarde',
           blockedUntil: emailBlock.blockedUntil,
-          riskLevel: 'high'
+          riskLevel: 'high',
         };
       }
 
@@ -112,7 +112,7 @@ export class LoginSecurityService {
       return {
         allowed: true,
         riskLevel: suspiciousCheck.riskLevel,
-        remainingAttempts: this.config.maxFailedAttempts - rateLimitCheck.recentFailures
+        remainingAttempts: this.config.maxFailedAttempts - rateLimitCheck.recentFailures,
       };
 
     } catch (error) {
@@ -122,7 +122,7 @@ export class LoginSecurityService {
       return {
         allowed: false,
         reason: 'Erro interno de segurança',
-        riskLevel: 'critical'
+        riskLevel: 'critical',
       };
     }
   }
@@ -136,7 +136,7 @@ export class LoginSecurityService {
     success: boolean,
     failureReason?: string,
     userAgent?: string,
-    deviceFingerprint?: string
+    deviceFingerprint?: string,
   ): Promise<void> {
     try {
       const attempt: LoginAttempt = {
@@ -146,7 +146,7 @@ export class LoginSecurityService {
         success,
         failure_reason: failureReason,
         device_fingerprint: deviceFingerprint,
-        attempted_at: new Date()
+        attempted_at: new Date(),
       };
 
       // Salvar no banco
@@ -170,14 +170,14 @@ export class LoginSecurityService {
         email,
         ipAddress,
         success,
-        failureReason
+        failureReason,
       });
 
     } catch (error) {
       this.logger.error('Erro ao registrar tentativa de login', {
         error: error.message,
         email,
-        ipAddress
+        ipAddress,
       });
     }
   }
@@ -200,7 +200,7 @@ export class LoginSecurityService {
 
     return {
       blocked: !!data,
-      blockedUntil: data ? new Date(data.blocked_until) : undefined
+      blockedUntil: data ? new Date(data.blocked_until) : undefined,
     };
   }
 
@@ -222,7 +222,7 @@ export class LoginSecurityService {
 
     return {
       blocked: !!data,
-      blockedUntil: data ? new Date(data.blocked_until) : undefined
+      blockedUntil: data ? new Date(data.blocked_until) : undefined,
     };
   }
 
@@ -274,7 +274,7 @@ export class LoginSecurityService {
         allowed: false,
         reason: 'Muitas tentativas por hora. Tente novamente mais tarde',
         riskLevel: 'high',
-        recentFailures: recentFailureCount
+        recentFailures: recentFailureCount,
       };
     }
 
@@ -284,14 +284,14 @@ export class LoginSecurityService {
         allowed: false,
         reason: 'Limite diário de tentativas excedido',
         riskLevel: 'high',
-        recentFailures: recentFailureCount
+        recentFailures: recentFailureCount,
       };
     }
 
     return {
       allowed: true,
       riskLevel: recentFailureCount > 2 ? 'medium' : 'low',
-      recentFailures: recentFailureCount
+      recentFailures: recentFailureCount,
     };
   }
 
@@ -319,7 +319,7 @@ export class LoginSecurityService {
       this.logger.warn('Atividade suspeita detectada', {
         email,
         uniqueIPCount,
-        currentIP: ipAddress
+        currentIP: ipAddress,
       });
       return { riskLevel: 'high' };
     }
@@ -374,7 +374,7 @@ export class LoginSecurityService {
         block_type: 'email',
         blocked_until: blockedUntil.toISOString(),
         reason: 'Múltiplas tentativas de login falharam',
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
       });
 
     if (error) {
@@ -397,7 +397,7 @@ export class LoginSecurityService {
         block_type: 'ip',
         blocked_until: blockedUntil.toISOString(),
         reason: 'Múltiplas tentativas de login falharam',
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
       });
 
     if (error) {
@@ -442,7 +442,7 @@ export class LoginSecurityService {
     const timeframeMs = {
       hour: 60 * 60 * 1000,
       day: 24 * 60 * 60 * 1000,
-      week: 7 * 24 * 60 * 60 * 1000
+      week: 7 * 24 * 60 * 60 * 1000,
     };
 
     const since = new Date(Date.now() - timeframeMs[timeframe]);
@@ -461,14 +461,14 @@ export class LoginSecurityService {
       this.supabase
         .from('login_attempts')
         .select('ip_address')
-        .gte('attempted_at', since.toISOString())
+        .gte('attempted_at', since.toISOString()),
     ]);
 
     return {
       totalAttempts: attempts.count || 0,
       totalBlocks: blocks.count || 0,
       uniqueIPs: new Set(uniqueIPs.data?.map(a => a.ip_address)).size,
-      timeframe
+      timeframe,
     };
   }
 } 

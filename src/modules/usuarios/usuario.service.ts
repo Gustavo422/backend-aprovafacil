@@ -65,13 +65,13 @@ export class UsuarioService extends BaseService<Usuario, FiltroUsuario> implemen
   constructor(
     usuarioRepository: IUsuarioRepository,
     authService: IAuthService,
-    options?: Partial<BaseServiceOptions>
+    options?: Partial<BaseServiceOptions>,
   ) {
     super(usuarioRepository, {
       serviceName: 'Usuario',
       enableCache: true,
       cacheTime: 300, // 5 minutos
-      ...options
+      ...options,
     });
     
     this.authService = authService;
@@ -90,7 +90,7 @@ export class UsuarioService extends BaseService<Usuario, FiltroUsuario> implemen
     try {
       this.logger.debug('Buscando usuário por email', { 
         operationId, 
-        email: this.sanitizeEmail(email) 
+        email: this.sanitizeEmail(email), 
       });
       
       // Validar entrada
@@ -109,7 +109,7 @@ export class UsuarioService extends BaseService<Usuario, FiltroUsuario> implemen
           this.logger.debug('Cache hit para buscarPorEmail', { operationId });
           return {
             success: true,
-            data: cached
+            data: cached,
           };
         }
       }
@@ -122,13 +122,13 @@ export class UsuarioService extends BaseService<Usuario, FiltroUsuario> implemen
         this.logger.warn('Usuário não encontrado por email', {
           operationId,
           email: this.sanitizeEmail(email),
-          executionTimeMs: executionTime.toFixed(2)
+          executionTimeMs: executionTime.toFixed(2),
         });
         
         return {
           success: false,
           message: 'Usuário não encontrado',
-          error: 'NOT_FOUND'
+          error: 'NOT_FOUND',
         };
       }
       
@@ -143,13 +143,13 @@ export class UsuarioService extends BaseService<Usuario, FiltroUsuario> implemen
       const executionTime = performance.now() - startTime;
       this.logger.debug('Usuário encontrado por email', {
         operationId,
-        userId: usuario.id,
-        executionTimeMs: executionTime.toFixed(2)
+        usuarioId: usuario.id,
+        executionTimeMs: executionTime.toFixed(2),
       });
       
       return {
         success: true,
-        data: processedUser
+        data: processedUser,
       };
     } catch (error) {
       const executionTime = performance.now() - startTime;
@@ -169,7 +169,7 @@ export class UsuarioService extends BaseService<Usuario, FiltroUsuario> implemen
     try {
       this.logger.debug('Criando novo usuário', { 
         operationId,
-        email: this.sanitizeEmail(dados.email)
+        email: this.sanitizeEmail(dados.email),
       });
       
       // Validar entrada
@@ -182,7 +182,7 @@ export class UsuarioService extends BaseService<Usuario, FiltroUsuario> implemen
         return {
           success: false,
           error: 'EMAIL_ALREADY_EXISTS',
-          message: 'Email já está em uso'
+          message: 'Email já está em uso',
         };
       }
       
@@ -200,7 +200,7 @@ export class UsuarioService extends BaseService<Usuario, FiltroUsuario> implemen
         total_questoes_respondidas: 0,
         total_acertos: 0,
         tempo_estudo_minutos: 0,
-        pontuacao_media: 0
+        pontuacao_media: 0,
       };
       
       // Criar usuário
@@ -217,14 +217,14 @@ export class UsuarioService extends BaseService<Usuario, FiltroUsuario> implemen
       const executionTime = performance.now() - startTime;
       this.logger.info('Usuário criado com sucesso', {
         operationId,
-        userId: usuario.id,
-        executionTimeMs: executionTime.toFixed(2)
+        usuarioId: usuario.id,
+        executionTimeMs: executionTime.toFixed(2),
       });
       
       return {
         success: true,
         data: processedUser,
-        message: 'Usuário criado com sucesso'
+        message: 'Usuário criado com sucesso',
       };
     } catch (error) {
       const executionTime = performance.now() - startTime;
@@ -245,8 +245,8 @@ export class UsuarioService extends BaseService<Usuario, FiltroUsuario> implemen
     try {
       this.logger.debug('Atualizando perfil do usuário', { 
         operationId,
-        userId: id,
-        dados: this.sanitizeLogData(dados)
+        usuarioId: id,
+        dados: this.sanitizeLogData(dados),
       });
       
       // Validar entrada
@@ -267,7 +267,7 @@ export class UsuarioService extends BaseService<Usuario, FiltroUsuario> implemen
           return {
             success: false,
             error: 'EMAIL_ALREADY_EXISTS',
-            message: 'Email já está em uso'
+            message: 'Email já está em uso',
           };
         }
       }
@@ -298,14 +298,14 @@ export class UsuarioService extends BaseService<Usuario, FiltroUsuario> implemen
       const executionTime = performance.now() - startTime;
       this.logger.info('Perfil do usuário atualizado com sucesso', {
         operationId,
-        userId: id,
-        executionTimeMs: executionTime.toFixed(2)
+        usuarioId: id,
+        executionTimeMs: executionTime.toFixed(2),
       });
       
       return {
         success: true,
         data: processedUser,
-        message: 'Perfil atualizado com sucesso'
+        message: 'Perfil atualizado com sucesso',
       };
     } catch (error) {
       const executionTime = performance.now() - startTime;
@@ -323,7 +323,7 @@ export class UsuarioService extends BaseService<Usuario, FiltroUsuario> implemen
     const operationId = `usuario-obterEstatisticas-${Date.now()}`;
     
     try {
-      this.logger.debug('Obtendo estatísticas do usuário', { operationId, userId: id });
+      this.logger.debug('Obtendo estatísticas do usuário', { operationId, usuarioId: id });
       
       // Validar entrada
       if (!id) {
@@ -337,7 +337,7 @@ export class UsuarioService extends BaseService<Usuario, FiltroUsuario> implemen
           this.logger.debug('Cache hit para estatísticas', { operationId });
           return {
             success: true,
-            data: cached
+            data: cached,
           };
         }
       }
@@ -353,13 +353,13 @@ export class UsuarioService extends BaseService<Usuario, FiltroUsuario> implemen
       const executionTime = performance.now() - startTime;
       this.logger.debug('Estatísticas obtidas com sucesso', {
         operationId,
-        userId: id,
-        executionTimeMs: executionTime.toFixed(2)
+        usuarioId: id,
+        executionTimeMs: executionTime.toFixed(2),
       });
       
       return {
         success: true,
-        data: estatisticas
+        data: estatisticas,
       };
     } catch (error) {
       const executionTime = performance.now() - startTime;
@@ -381,7 +381,7 @@ export class UsuarioService extends BaseService<Usuario, FiltroUsuario> implemen
     usuarioId: string, 
     concursoId: string, 
     horasEstudo: number, 
-    tempoProva: number
+    tempoProva: number,
   ): Promise<ApiResponse<boolean>> {
     const startTime = performance.now();
     const operationId = `usuario-configuracaoInicial-${Date.now()}`;
@@ -392,7 +392,7 @@ export class UsuarioService extends BaseService<Usuario, FiltroUsuario> implemen
         usuarioId,
         concursoId,
         horasEstudo,
-        tempoProva
+        tempoProva,
       });
       
       // Validar entrada
@@ -430,13 +430,13 @@ export class UsuarioService extends BaseService<Usuario, FiltroUsuario> implemen
       this.logger.info('Configuração inicial concluída', {
         operationId,
         usuarioId,
-        executionTimeMs: executionTime.toFixed(2)
+        executionTimeMs: executionTime.toFixed(2),
       });
       
       return {
         success: true,
         data: true,
-        message: 'Configuração inicial concluída com sucesso'
+        message: 'Configuração inicial concluída com sucesso',
       };
     } catch (error) {
       const executionTime = performance.now() - startTime;

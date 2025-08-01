@@ -9,7 +9,7 @@ describe('Validation System', () => {
       const validUser = {
         email: 'test@example.com',
         nome: 'Test User',
-        senha: 'password123'
+        senha: 'password123',
       };
 
       const result = Validator.validate(usuarioschema, validUser);
@@ -23,7 +23,7 @@ describe('Validation System', () => {
       const invalidUser = {
         email: 'invalid-email',
         nome: '',
-        senha: '123' // muito curto
+        senha: '123', // muito curto
       };
 
       const result = Validator.validate(usuarioschema, invalidUser);
@@ -38,14 +38,14 @@ describe('Validation System', () => {
       const validEmails = [
         'test@example.com',
         'user.nome@domain.co.uk',
-        'user+tag@example.org'
+        'user+tag@example.org',
       ];
 
       const invalidEmails = [
         'invalid-email',
         '@example.com',
         'user@',
-        'user@.com'
+        'user@.com',
       ];
 
       validEmails.forEach(email => {
@@ -63,20 +63,20 @@ describe('Validation System', () => {
       const validPasswords = [
         'password123',
         'MySecurePass123!',
-        '1234567890abcdef'
+        '1234567890abcdef',
       ];
 
       const invalidPasswords = [
         '123', // muito curto (menos de 8 caracteres)
         'pass', // muito curto (menos de 8 caracteres)
-        '1234567' // muito curto (menos de 8 caracteres)
+        '1234567', // muito curto (menos de 8 caracteres)
       ];
 
       validPasswords.forEach(senha => {
         const result = Validator.validate(usuarioschema, { 
           email: 'test@example.com', 
           nome: 'Test', 
-          senha 
+          senha, 
         });
         expect(result.success).toBe(true);
       });
@@ -85,7 +85,7 @@ describe('Validation System', () => {
         const result = Validator.validate(usuarioschema, { 
           email: 'test@example.com', 
           nome: 'Test', 
-          senha 
+          senha, 
         });
         expect(result.success).toBe(false);
       });
@@ -95,9 +95,9 @@ describe('Validation System', () => {
       const schema = z.object({
         user: z.object({
           profile: z.object({
-            preferences: z.record(z.unknown())
-          })
-        })
+            preferences: z.record(z.unknown()),
+          }),
+        }),
       });
 
       const data = {
@@ -105,10 +105,10 @@ describe('Validation System', () => {
           profile: {
             preferences: {
               theme: 'dark',
-              language: 'pt-BR'
-            }
-          }
-        }
+              language: 'pt-BR',
+            },
+          },
+        },
       };
 
       const result = Validator.validate(schema, data);
@@ -122,7 +122,7 @@ describe('Validation System', () => {
       const dirtyValidData = {
         email: 'test@example.com',
         nome: 'Test User',
-        senha: 'password123'
+        senha: 'password123',
       };
 
       const result = Validator.validateAndSanitize(usuarioschema, dirtyValidData);
@@ -137,7 +137,7 @@ describe('Validation System', () => {
       const dirtyInvalidData = {
         email: 'invalid-email',
         nome: 'Test User',
-        senha: '123' // muito curto
+        senha: '123', // muito curto
       };
 
       const result = Validator.validateAndSanitize(usuarioschema, dirtyInvalidData);
@@ -153,7 +153,7 @@ describe('Validation System', () => {
         const validUser = {
           email: 'test@example.com',
           nome: 'Test User',
-          senha: 'password123'
+          senha: 'password123',
         };
 
         const result = Validator.validate(usuarioschema, validUser);
@@ -168,7 +168,7 @@ describe('Validation System', () => {
           email: 'test@example.com',
           nome: 'Test User',
           senha: 'password123',
-          token: 'jwt-token'
+          token: 'jwt-token',
         };
 
         const result = Validator.validate(usuarioschema, userWithOptionals);
@@ -180,7 +180,7 @@ describe('Validation System', () => {
       it('deve rejeitar usuário sem email', () => {
         const userWithoutEmail = {
           nome: 'Test User',
-          senha: 'password123'
+          senha: 'password123',
         };
 
         const result = Validator.validate(usuarioschema, userWithoutEmail);
@@ -193,7 +193,7 @@ describe('Validation System', () => {
         const userWithInvalidEmail = {
           email: 'invalid-email',
           nome: 'Test User',
-          senha: 'password123'
+          senha: 'password123',
         };
 
         const result = Validator.validate(usuarioschema, userWithInvalidEmail);
@@ -206,7 +206,7 @@ describe('Validation System', () => {
         const userWithShortPassword = {
           email: 'test@example.com',
           nome: 'Test User',
-          senha: '123'
+          senha: '123',
         };
 
         const result = Validator.validate(usuarioschema, userWithShortPassword);
@@ -221,7 +221,7 @@ describe('Validation System', () => {
         const validRegisterData = {
           email: 'test@example.com',
           nome: 'Test User',
-          senha: 'password123'
+          senha: 'password123',
         };
 
         const result = Validator.validate(RegisterSchema, validRegisterData);
@@ -234,7 +234,7 @@ describe('Validation System', () => {
         const invalidRegisterData = {
           email: 'invalid-email',
           nome: 'T', // muito curto
-          senha: '123' // muito curto
+          senha: '123', // muito curto
         };
 
         const result = Validator.validate(RegisterSchema, invalidRegisterData);
@@ -248,7 +248,7 @@ describe('Validation System', () => {
       it('deve validar dados de login válidos', () => {
         const validLoginData = {
           email: 'test@example.com',
-          senha: 'password123'
+          senha: 'password123',
         };
 
         const result = Validator.validate(LoginSchema, validLoginData);
@@ -260,7 +260,7 @@ describe('Validation System', () => {
       it('deve rejeitar dados de login inválidos', () => {
         const invalidLoginData = {
           email: 'invalid-email',
-          senha: '' // vazio
+          senha: '', // vazio
         };
 
         const result = Validator.validate(LoginSchema, invalidLoginData);
@@ -274,7 +274,7 @@ describe('Validation System', () => {
       it('deve validar dados de reset de senha válidos', () => {
         const validResetData = {
           token: 'valid-token',
-          novaSenha: 'newpassword123'
+          novaSenha: 'newpassword123',
         };
 
         const result = Validator.validate(ResetPasswordSchema, validResetData);
@@ -286,7 +286,7 @@ describe('Validation System', () => {
       it('deve rejeitar dados de reset de senha inválidos', () => {
         const invalidResetData = {
           token: '', // vazio
-          novaSenha: '123' // muito curto
+          novaSenha: '123', // muito curto
         };
 
         const result = Validator.validate(ResetPasswordSchema, invalidResetData);

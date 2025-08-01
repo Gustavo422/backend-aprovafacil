@@ -1,7 +1,7 @@
 // DTO de Simulados Personalizados - Baseado no schema real
 export interface SimuladoPersonalizadoDTO {
   id: string;
-  user_id: string;
+  usuario_id: string;
   titulo: string;
   descricao?: string;
   configuracoes?: Record<string, unknown>;
@@ -20,7 +20,7 @@ export interface SimuladoPersonalizadoDTO {
 }
 
 export interface CreateSimuladoPersonalizadoDTO {
-  user_id: string;
+  usuario_id: string;
   titulo: string;
   descricao?: string;
   configuracoes?: Record<string, unknown>;

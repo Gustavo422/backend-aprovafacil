@@ -1,2 +1,0 @@
-{"version":3,"file":"categoria-disciplinas.service.d.ts","sourceRoot":"","sources":["categoria-disciplinas.service.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,uBAAuB,EAAE,MAAM,uCAAuC,CAAC;AAEhF,qBAAa,2BAA2B;IAChC,MAAM,IAAI,OAAO,CAAC,uBAAuB,EAAE,CAAC;IAK5C,OAAO,IAAI,OAAO,CAAC,uBAAuB,GAAG,IAAI,CAAC;IAKlD,MAAM,IAAI,OAAO,CAAC,uBAAuB,CAAC;IAK1C,MAAM,IAAI,OAAO,CAAC,uBAAuB,GAAG,IAAI,CAAC;IAKjD,MAAM,IAAI,OAAO,CAAC,OAAO,CAAC;CAIjC"}
-

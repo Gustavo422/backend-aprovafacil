@@ -1,5 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
-import { LogEntry, LogLevel, LogTransport } from './logging-service';
+import { supabase } from '../../config/supabase-unified.js';
+import { LogEntry, LogLevel, LogTransport } from './logging-service.js';
 // import type { Writable } from 'stream';
 
 /**
@@ -56,7 +56,7 @@ export class SupabaseLogTransport implements LogTransport {
        * Flush interval in milliseconds
        */
       flushIntervalMs?: number;
-    }
+    },
   ) {
     // Set default options
     this.options = {
@@ -64,11 +64,11 @@ export class SupabaseLogTransport implements LogTransport {
       minLevel: LogLevel.INFO,
       maxBufferSize: 100,
       flushIntervalMs: 10000,
-      ...options
+      ...options,
     };
     
-    // Create Supabase client
-    this.supabase = createClient(options.supabaseUrl, options.supabaseKey);
+    // Use unified Supabase client
+    this.supabase = supabase;
     
     // Start flush interval
     this.startFlushInterval();
@@ -88,8 +88,10 @@ export class SupabaseLogTransport implements LogTransport {
     this.buffer.push(entry);
     
     // Flush if buffer is full
-    if (this.buffer.length >= this.options.maxBufferSize!) {
+    const maxBufferSize = this.options.maxBufferSize || 100;
+    if (this.buffer.length >= maxBufferSize) {
       this.flush().catch(error => {
+        // eslint-disable-next-line no-console
         console.error('Error flushing logs to Supabase:', error);
       });
     }
@@ -108,6 +110,7 @@ export class SupabaseLogTransport implements LogTransport {
     this.flushInterval = setInterval(() => {
       if (this.buffer.length > 0) {
         this.flush().catch(error => {
+          // eslint-disable-next-line no-console
           console.error('Error flushing logs to Supabase:', error);
         });
       }
@@ -134,34 +137,39 @@ export class SupabaseLogTransport implements LogTransport {
         message: entry.message,
         logger_name: entry.name,
         timestamp: entry.timestamp.toISOString(),
-        metadata: entry.meta || {}
+        metadata: entry.meta || {},
       }));
       
       // Insert logs into Supabase
+      const tableName = this.options.tableName || 'logs';
       const { error } = await this.supabase
-        .from(this.options.tableName!)
+        .from(tableName)
         .insert(logs);
       
       if (error) {
+        // eslint-disable-next-line no-console
         console.error('Error inserting logs into Supabase:', error);
         
         // Put logs back in buffer
         this.buffer = [...entries, ...this.buffer];
         
         // Limit buffer size
-        if (this.buffer.length > this.options.maxBufferSize! * 2) {
-          this.buffer = this.buffer.slice(-this.options.maxBufferSize!);
+        const maxBufferSize = this.options.maxBufferSize || 100;
+        if (this.buffer.length > maxBufferSize * 2) {
+          this.buffer = this.buffer.slice(-maxBufferSize);
         }
       }
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Error flushing logs to Supabase:', error);
       
       // Put logs back in buffer
       this.buffer = [...entries, ...this.buffer];
       
       // Limit buffer size
-      if (this.buffer.length > this.options.maxBufferSize! * 2) {
-        this.buffer = this.buffer.slice(-this.options.maxBufferSize!);
+      const maxBufferSize = this.options.maxBufferSize || 100;
+      if (this.buffer.length > maxBufferSize * 2) {
+        this.buffer = this.buffer.slice(-maxBufferSize);
       }
     }
   }
@@ -187,7 +195,8 @@ export class SupabaseLogTransport implements LogTransport {
    */
   private isLevelEnabled(level: LogLevel): boolean {
     const levels = [LogLevel.DEBUG, LogLevel.INFO, LogLevel.WARN, LogLevel.ERROR, LogLevel.SILENT];
-    const minLevelIndex = levels.indexOf(this.options.minLevel!);
+    const minLevel = this.options.minLevel || LogLevel.DEBUG;
+    const minLevelIndex = levels.indexOf(minLevel);
     const levelIndex = levels.indexOf(level);
     
     return levelIndex >= minLevelIndex;

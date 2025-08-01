@@ -29,9 +29,11 @@ class EmailAlertChannel implements AlertNotificationChannel {
     
     try {
       // In a real implementation, this would send an email
+      // eslint-disable-next-line no-console
       console.log(`[Email Alert] Would send email to ${this.recipients.join(', ')} about: ${alert.message}`);
       return true;
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Error sending email alert:', error);
       return false;
     }
@@ -44,7 +46,7 @@ class EmailAlertChannel implements AlertNotificationChannel {
   getConfig(): Record<string, unknown> {
     return {
       enabled: this.enabled,
-      recipients: this.recipients
+      recipients: this.recipients,
     };
   }
 }
@@ -70,9 +72,11 @@ class SlackAlertChannel implements AlertNotificationChannel {
     
     try {
       // In a real implementation, this would send a Slack message
+      // eslint-disable-next-line no-console
       console.log(`[Slack Alert] Would send message to ${this.channel} about: ${alert.message}`);
       return true;
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Error sending Slack alert:', error);
       return false;
     }
@@ -86,7 +90,7 @@ class SlackAlertChannel implements AlertNotificationChannel {
     return {
       enabled: this.enabled,
       webhookUrl: this.webhookUrl ? '***' : '',
-      channel: this.channel
+      channel: this.channel,
     };
   }
 }
@@ -118,6 +122,7 @@ class InAppAlertChannel implements AlertNotificationChannel {
       
       return true;
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Error storing in-app alert:', error);
       return false;
     }
@@ -129,7 +134,7 @@ class InAppAlertChannel implements AlertNotificationChannel {
   
   getConfig(): Record<string, unknown> {
     return {
-      enabled: this.enabled
+      enabled: this.enabled,
     };
   }
   
@@ -153,17 +158,17 @@ class AlertNotifier {
     // Initialize default channels
     this.channels.set('email', new EmailAlertChannel({
       enabled: false,
-      recipients: []
+      recipients: [],
     }));
     
     this.channels.set('slack', new SlackAlertChannel({
       enabled: false,
       webhookUrl: '',
-      channel: ''
+      channel: '',
     }));
     
     this.channels.set('in-app', new InAppAlertChannel({
-      enabled: true
+      enabled: true,
     }));
   }
   
@@ -178,29 +183,29 @@ class AlertNotifier {
     }
     
     switch (_name) {
-      case 'email':
-        this.channels.set('email', new EmailAlertChannel({
-          enabled: config.enabled as boolean ?? false,
-          recipients: config.recipients as string[] ?? []
-        }));
-        break;
+    case 'email':
+      this.channels.set('email', new EmailAlertChannel({
+        enabled: config.enabled as boolean ?? false,
+        recipients: config.recipients as string[] ?? [],
+      }));
+      break;
         
-      case 'slack':
-        this.channels.set('slack', new SlackAlertChannel({
-          enabled: config.enabled as boolean ?? false,
-          webhookUrl: config.webhookUrl as string ?? '',
-          channel: config.channel as string ?? ''
-        }));
-        break;
+    case 'slack':
+      this.channels.set('slack', new SlackAlertChannel({
+        enabled: config.enabled as boolean ?? false,
+        webhookUrl: config.webhookUrl as string ?? '',
+        channel: config.channel as string ?? '',
+      }));
+      break;
         
-      case 'in-app':
-        this.channels.set('in-app', new InAppAlertChannel({
-          enabled: config.enabled as boolean ?? true
-        }));
-        break;
+    case 'in-app':
+      this.channels.set('in-app', new InAppAlertChannel({
+        enabled: config.enabled as boolean ?? true,
+      }));
+      break;
         
-      default:
-        throw new Error(`Unknown notification channel: ${_name}`);
+    default:
+      throw new Error(`Unknown notification channel: ${_name}`);
     }
   }
   
@@ -247,7 +252,7 @@ class AlertNotifier {
     // Record the notification in history
     this.alertHistory.push({
       alert,
-      notifiedChannels
+      notifiedChannels,
     });
     
     // Keep only the last 1000 notifications

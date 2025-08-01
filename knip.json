@@ -1,0 +1,39 @@
+{
+  "$schema": "https://unpkg.com/knip@latest/schema.json",
+  "entry": [
+    "src/app.ts",
+    "scripts/**/*.ts",
+    "scripts/**/*.js"
+  ],
+  "project": [
+    "src/**/*.ts",
+    "scripts/**/*.ts",
+    "scripts/**/*.js"
+  ],
+  "ignoreDependencies": [
+    "@types/*",
+    "typescript",
+    "tsx",
+    "vitest",
+    "@vitest/*",
+    "eslint",
+    "@typescript-eslint/*",
+    "rimraf",
+    "node-fetch"
+  ],
+  "ignoreBinaries": [
+    "tsx",
+    "vitest",
+    "eslint",
+    "rimraf"
+  ],
+  "rules": {
+    "dependencies": "warn",
+    "devDependencies": "warn",
+    "exports": "warn",
+    "files": "warn",
+    "nsExports": "warn",
+    "types": "warn",
+    "unlisted": "warn"
+  }
+}

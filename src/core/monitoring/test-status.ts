@@ -22,7 +22,7 @@ export interface TestStatus {
 export async function getTestStatus(): Promise<TestStatus> {
   const errors: string[] = [];
   let testFiles: string[] = [];
-  let recentResults: TestStatus['recentResults'] = [];
+  const recentResults: TestStatus['recentResults'] = [];
   
   try {
     // Encontrar arquivos de teste
@@ -31,7 +31,7 @@ export async function getTestStatus(): Promise<TestStatus> {
     
     const testFilesPromises = [
       scanForTestFiles(testsDir),
-      scanForTestFiles(srcDir)
+      scanForTestFiles(srcDir),
     ];
     
     const [testsDirFiles, srcDirFiles] = await Promise.all(testFilesPromises);
@@ -63,7 +63,7 @@ export async function getTestStatus(): Promise<TestStatus> {
     coverage: 0,
     testFiles,
     recentResults,
-    errors
+    errors,
   };
 }
 

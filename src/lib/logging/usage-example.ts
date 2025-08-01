@@ -34,7 +34,7 @@ export function setupExpressLogging(app: express.Application) {
     logBody: true,
     logHeaders: true,
     logResponseTime: true,
-    skip: createRequestLoggerSkipFunction()
+    skip: createRequestLoggerSkipFunction(),
   });
   
   // Add middleware to Express
@@ -59,7 +59,7 @@ export class ExampleService {
     // Create a child logger with context
     const logger = this.logger.child({
       itemId: id,
-      operation: 'processItem'
+      operation: 'processItem',
     });
     
     logger.info('Processing item', { dataSize: JSON.stringify(data).length });
@@ -114,10 +114,10 @@ export function loggingExamples() {
   logger.error('This is an error message');
   
   // Logging with metadata
-  logger.info('User logged in', { userId: '123', role: 'admin' });
+  logger.info('User logged in', { usuarioId: '123', role: 'admin' });
   
   // Logging with context
-  const userLogger = logger.child({ userId: '123', sessionId: 'abc123' });
+  const userLogger = logger.child({ usuarioId: '123', sessionId: 'abc123' });
   userLogger.info('User performed an action');
   
   // Logging errors
@@ -145,8 +145,8 @@ export function exampleRequestHandler(req: express.Request, res: express.Respons
   // Get a logger with request context
   const logger = getEnhancedLogger('api:example').child({
     requestId: req.headers['x-request-id'] as string,
-    userId: (req.user as { id: string } | undefined)?.id,
-    path: req.path
+    usuarioId: (req.user as { id: string } | undefined)?.id,
+    path: req.path,
   });
   
   logger.info('Processing request');

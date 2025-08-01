@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import { EnhancedLogger, getEnhancedLogger } from './enhanced-logging-service';
+import { EnhancedLogger, getEnhancedLogger } from './enhanced-logging-service.js';
 
 /**
  * Request logger options
@@ -57,7 +57,7 @@ export function createRequestLoggerMiddleware(options: RequestLoggerOptions = {}
     logResponseTime: true,
     excludeHeaders: ['authorization', 'cookie', 'set-cookie'],
     skip: (_req) => false,
-    ...options
+    ...options,
   };
   
   return (_req: Request, res: Response, next: NextFunction) => {
@@ -110,7 +110,7 @@ export function createRequestLoggerMiddleware(options: RequestLoggerOptions = {}
     
     if (opts.logResponseBody) {
       // Override write method to capture response body
-      res.write = function(chunk: Buffer | string, ...args: unknown[]): boolean {
+      res.write = function (chunk: Buffer | string, ...args: unknown[]): boolean {
         if (chunk) {
           chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
         }
@@ -119,7 +119,7 @@ export function createRequestLoggerMiddleware(options: RequestLoggerOptions = {}
     }
     
     // Override end method to log response
-    res.end = function(chunk?: Buffer | string, ...args: unknown[]): unknown {
+    res.end = function (chunk?: Buffer | string, ...args: unknown[]): unknown {
       // Restore original methods
       res.write = originalWrite;
       res.end = originalEnd;

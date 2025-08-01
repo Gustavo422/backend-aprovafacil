@@ -4,7 +4,7 @@ import { FiltroBase, PaginatedResponse } from '../../shared/types/index.js';
 import { EnhancedLogger, getEnhancedLogger } from '../../lib/logging/enhanced-logging-service.js';
 import { RetryOptions, RetryableError, executeWithRetry } from '../utils/retry.js';
 import { DatabaseError, NotFoundError, ValidationError } from '../errors/index.js';
-import { SupabaseConfig } from './supabase.js';
+import { supabase } from '../../config/supabase-unified.js'; // Importação unificada
 import { performance } from 'perf_hooks';
 
 /**
@@ -103,14 +103,14 @@ export abstract class BaseRepository<T, TFilter extends FiltroBase = FiltroBase>
   constructor(options: BaseRepositoryOptions) {
     this.tableName = options.tableName;
     this.idColumn = options.idColumn || 'id';
-    this.supabase = options.supabaseClient || SupabaseConfig.getInstance();
+    this.supabase = options.supabaseClient || supabase;
     this.logger = options.logger || getEnhancedLogger(`repository:${this.tableName}`);
     this.retryOptions = options.retryOptions || {
       maxRetries: 3,
       initialDelayMs: 100,
       maxDelayMs: 3000,
       backoffFactor: 2,
-      retryableErrors: ['connection_error', 'timeout', 'server_error']
+      retryableErrors: ['connection_error', 'timeout', 'server_error'],
     };
     this.cacheTime = options.cacheTime;
     this.softDelete = options.softDelete || false;
@@ -169,7 +169,7 @@ export abstract class BaseRepository<T, TFilter extends FiltroBase = FiltroBase>
         page: 1,
         limit: 10,
         sort_by: this.idColumn,
-        sort_order: 'desc'
+        sort_order: 'desc',
       };
       
       // Mesclar filtros
@@ -223,8 +223,8 @@ export abstract class BaseRepository<T, TFilter extends FiltroBase = FiltroBase>
           page,
           limit,
           total,
-          totalPages
-        }
+          totalPages,
+        },
       };
     } catch (error) {
       this.handleError('buscarTodos', error);
@@ -235,9 +235,9 @@ export abstract class BaseRepository<T, TFilter extends FiltroBase = FiltroBase>
           page: 1,
           limit: 10,
           total: 0,
-          totalPages: 0
+          totalPages: 0,
         },
-        error: error instanceof Error ? error.message : 'Erro desconhecido'
+        error: error instanceof Error ? error.message : 'Erro desconhecido',
       };
     }
   }
@@ -274,7 +274,7 @@ export abstract class BaseRepository<T, TFilter extends FiltroBase = FiltroBase>
       }
       
       this.logger.info(`${this.tableName} criado com sucesso`, { 
-        id: (result.data as Record<string, unknown>)[this.idColumn] 
+        id: (result.data as Record<string, unknown>)[this.idColumn], 
       });
       
       return result.data as T;
@@ -310,7 +310,7 @@ export abstract class BaseRepository<T, TFilter extends FiltroBase = FiltroBase>
       const preparedData = this.prepareDataForUpdate(dados);
       
       // Criar query
-      let queryBuilder = this.supabase
+      const queryBuilder = this.supabase
         .from(this.tableName)
         .update(preparedData)
         .eq(this.idColumn, id)
@@ -432,16 +432,16 @@ export abstract class BaseRepository<T, TFilter extends FiltroBase = FiltroBase>
    * @returns Resultado da query
    */
   protected async executeWithRetry<TResult>(
-    queryFn: () => Promise<{ data: TResult | null; error: unknown; count?: number }>
+    queryFn: () => Promise<{ data: TResult | null; error: unknown; count?: number }>,
   ): Promise<{ data: TResult | null; error: unknown; count?: number }> {
     // Iniciar timer para métricas de performance
     const startTime = performance.now();
     const operationId = `${this.tableName}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
     
     try {
-      this.logger.debug(`Iniciando operação de banco de dados`, {
+      this.logger.debug('Iniciando operação de banco de dados', {
         operationId,
-        table: this.tableName
+        table: this.tableName,
       });
       
       const result = await executeWithRetry(
@@ -453,15 +453,15 @@ export abstract class BaseRepository<T, TFilter extends FiltroBase = FiltroBase>
             const errorCode = this.getErrorCode(result.error);
             
             if (this.isRetryableError(errorCode)) {
-              this.logger.warn(`Erro retryable detectado, tentando novamente`, {
+              this.logger.warn('Erro retryable detectado, tentando novamente', {
                 operationId,
                 errorCode,
-                errorMessage: typeof result.error === 'object' && result.error !== null && 'message' in result.error ? String((result.error as { message?: unknown }).message) : undefined
+                errorMessage: typeof result.error === 'object' && result.error !== null && 'message' in result.error ? String((result.error as { message?: unknown }).message) : undefined,
               });
               
               throw new RetryableError(
                 `Erro retryable na operação: ${errorCode}`,
-                result.error
+                result.error,
               );
             }
             
@@ -471,20 +471,20 @@ export abstract class BaseRepository<T, TFilter extends FiltroBase = FiltroBase>
           
           return result;
         },
-        this.retryOptions
+        this.retryOptions,
       );
       
       // Calcular tempo de execução
       const executionTime = performance.now() - startTime;
       
       // Registrar métricas de performance
-      this.logger.debug(`Operação de banco de dados concluída com sucesso`, {
+      this.logger.debug('Operação de banco de dados concluída com sucesso', {
         operationId,
         table: this.tableName,
         executionTimeMs: executionTime.toFixed(2),
         resultSize: result.data ? 
           (Array.isArray(result.data) ? result.data.length : 1) : 0,
-        totalCount: result.count
+        totalCount: result.count,
       });
       
       return result;
@@ -493,12 +493,12 @@ export abstract class BaseRepository<T, TFilter extends FiltroBase = FiltroBase>
       const executionTime = performance.now() - startTime;
       
       // Registrar erro
-      this.logger.error(`Erro na operação de banco de dados`, {
+      this.logger.error('Erro na operação de banco de dados', {
         operationId,
         table: this.tableName,
         executionTimeMs: executionTime.toFixed(2),
         errorType: error instanceof RetryableError ? 'retryable' : 'non-retryable',
-        errorCode: this.getErrorCode(error)
+        errorCode: this.getErrorCode(error),
       });
       
       // Converter para DatabaseError
@@ -672,9 +672,9 @@ export abstract class BaseRepository<T, TFilter extends FiltroBase = FiltroBase>
       {
         error: err.message,
         code: this.getErrorCode(error),
-        details: err.details || err.hint || undefined
+        details: err.details || err.hint || undefined,
       },
-      errorObj
+      errorObj,
     );
     
     // Relançar erro apropriado
@@ -687,7 +687,7 @@ export abstract class BaseRepository<T, TFilter extends FiltroBase = FiltroBase>
     // Converter para DatabaseError
     throw new DatabaseError(
       `Erro em ${this.tableName}.${operation}: ${err.message || 'Erro desconhecido'}`,
-      { cause: error }
+      { cause: error },
     );
   }
 }
