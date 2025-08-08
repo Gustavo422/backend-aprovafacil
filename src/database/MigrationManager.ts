@@ -1,25 +1,19 @@
-import { SupabaseClient } from '@supabase/supabase-js';
 import fs from 'fs';
 import path from 'path';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from 'uuid';
-import { 
-  Migration, 
-  MigrationOptions, 
-  MigrationRecord, 
-  MigrationResult, 
-  MigrationStatus, 
-} from './types';
-import { Console } from 'console';
+import type { Migration, MigrationRecord, MigrationResult, MigrationOptions } from './types.js';
+import { MigrationStatus } from './types.js';
 
 /**
  * Migration Manager class
  * Handles database migrations with version tracking and rollback functionality
  */
 export class MigrationManager {
-  private client: SupabaseClient;
-  private migrationsDir: string;
-  private migrationTableName = 'migrations';
-  private logger: Console;
+  private readonly client: SupabaseClient;
+  private readonly migrationsDir: string;
+  private readonly migrationTableName = 'migrations';
+  private readonly logger: typeof console;
 
   /**
    * Constructor
@@ -38,27 +32,37 @@ export class MigrationManager {
    */
   async initialize(): Promise<void> {
     try {
-      // Check if migrations table exists
-      const { data: existingTable, error: checkError } = await this.client
-        .from('information_schema.tables')
-        .select('table_name')
-        .eq('table_name', this.migrationTableName)
-        .eq('table_schema', 'public');
+      // Check if migrations table exists by trying to select from it
+      const { error: checkError } = await this.client
+        .from(this.migrationTableName)
+        .select('id')
+        .limit(1);
 
-      if (checkError) {
-        throw new Error(`Failed to check migrations table: ${checkError.message}`);
-      }
-
-      // Create migrations table if it doesn't exist
-      if (!existingTable || existingTable.length === 0) {
-        const { error: createError } = await this.client.rpc('create_migrations_table', {});
+      // If the table doesn't exist, we'll get an error
+      if (checkError?.message.includes('does not exist')) {
+        // Create migrations table using SQL
+        const createTableSQL = `
+          CREATE TABLE IF NOT EXISTS ${this.migrationTableName} (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            name TEXT NOT NULL,
+            version INTEGER NOT NULL UNIQUE,
+            status TEXT NOT NULL,
+            applied_at TIMESTAMP WITH TIME ZONE,
+            rolled_back_at TIMESTAMP WITH TIME ZONE,
+            error_message TEXT,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+          );
+        `;
+        
+        const { error: createError } = await this.client.rpc('exec_sql', { sql: createTableSQL });
         
         if (createError) {
-          // Não é possível executar SQL arbitrário diretamente pelo SupabaseClient. Recomenda-se criar a tabela manualmente ou via migration SQL separada.
-          throw new Error('Não é possível criar a tabela de migrations via SupabaseClient. Crie a tabela manualmente no banco.');
+          throw new Error(`Failed to create migrations table: ${createError.message}`);
         }
         
         this.logger.info('Migrations table created successfully');
+      } else if (checkError) {
+        throw new Error(`Failed to check migrations table: ${checkError.message}`);
       } else {
         this.logger.info('Migrations table already exists');
       }
@@ -90,32 +94,24 @@ export class MigrationManager {
           continue;
         }
         
-        const version = parseInt(match[1], 10);
-        const name = match[2].replace(/_/g, ' ');
-        
-        // Split content into up and down migrations
-        const sections = content.split(/^-- DOWN$/m);
-        if (sections.length !== 2) {
-          this.logger.warn(`Invalid migration file format: ${file}. Expected format: SQL commands followed by "-- DOWN" and rollback commands`);
-          continue;
-        }
-        
-        const up = sections[0].replace(/^-- UP$/m, '').trim();
-        const down = sections[1].trim();
+        const version = parseInt(match?.[1] ?? '0', 10);
+        const name = match?.[2] ?? '';
         
         migrations.push({
-          name,
           version,
-          up,
-          down,
+          name,
+          up: content,
+          down: '', // Migrations down not implemented yet
         });
       }
       
       // Sort migrations by version
-      return migrations.sort((a, b) => a.version - b.version);
+      migrations.sort((a, b) => a.version - b.version);
+      
+      return Promise.resolve(migrations);
     } catch (error) {
       this.logger.error('Failed to load migrations:', error);
-      throw error;
+      return Promise.reject(error);
     }
   }
 
@@ -381,7 +377,7 @@ export class MigrationManager {
       .filter(file => file.match(/^V\d+__/))
       .map(file => {
         const match = file.match(/^V(\d+)__/);
-        return match ? parseInt(match[1], 10) : 0;
+        return match ? parseInt(match[1] ?? '0', 10) : 0;
       });
     
     const nextVersion = versions.length > 0 ? Math.max(...versions) + 1 : 1;

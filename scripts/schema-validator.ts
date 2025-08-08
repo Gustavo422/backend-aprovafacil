@@ -33,9 +33,9 @@ interface SchemaValidationResult {
 }
 
 class SchemaValidator {
-  private supabase: any;
-  private essentialTables: string[];
-  private tableColumns: Map<string, TableInfo[]> = new Map();
+  private readonly supabase: any;
+  private readonly essentialTables: string[];
+  private readonly tableColumns: Map<string, TableInfo[]> = new Map();
 
   constructor() {
     const supabaseUrl = process.env.SUPABASE_URL!;
@@ -156,14 +156,14 @@ class SchemaValidator {
         message: `Avisos: ${warnings.join(', ')}`,
         details: { warnings }
       };
-    } else {
+    } 
       return {
         table: tableName,
         status: 'success',
         message: 'Estrutura válida',
         details: { columnCount: columns.length }
       };
-    }
+    
   }
 
   private getEssentialColumnsForTable(tableName: string): Array<{name: string, type: string}> {

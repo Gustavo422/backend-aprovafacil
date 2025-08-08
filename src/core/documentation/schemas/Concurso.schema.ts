@@ -1,4 +1,4 @@
-import { OpenAPIV3 } from 'openapi-types';
+import type { OpenAPIV3 } from 'openapi-types';
 
 export const ConcursoSchema: OpenAPIV3.SchemaObject = {
   type: 'object',

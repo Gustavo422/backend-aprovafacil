@@ -1,11 +1,11 @@
 // Cache Manager - Centralized cache management
-import { ICacheService, ILogService } from '../interfaces/index.js';
+import type { ICacheService, ILogService } from '../interfaces/index.js';
 import { CacheFactory, CacheProvider } from './cache-factory.js';
 import { 
-  CacheInvalidationStrategy, 
-  CacheDependency,
+  CacheInvalidationStrategy,
+  type CacheDependency
 } from './cache-invalidation.strategy.js';
-import { SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 /**
  * Cache configuration options
@@ -19,9 +19,9 @@ export interface CacheOptions {
  * Cache manager for centralized cache operations
  */
 export class CacheManager {
-  private cacheService: ICacheService;
-  private logService: ILogService;
-  private invalidationStrategy: CacheInvalidationStrategy;
+  private readonly cacheService: ICacheService;
+  private readonly logService: ILogService;
+  private readonly invalidationStrategy: CacheInvalidationStrategy;
   private static instance: CacheManager;
   
   private constructor(
@@ -39,7 +39,9 @@ export class CacheManager {
     });
     
     // Set up cache cleanup interval
-    setInterval(() => { this.cleanupCache(); }, 30 * 60 * 1000); // Run every 30 minutes
+    setInterval(() => { 
+      void this.cleanupCache(); 
+    }, 30 * 60 * 1000); // Run every 30 minutes
   }
   
   /**

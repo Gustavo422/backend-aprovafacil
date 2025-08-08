@@ -125,7 +125,7 @@ if (fs.existsSync(packageJsonPath)) {
 }
 
 // Resumo final
-console.log('\n' + '=' .repeat(60));
+console.log(`\n${ '=' .repeat(60)}`);
 console.log('📊 RESUMO DA LIMPEZA:');
 console.log(`✅ Middlewares removidos: ${removedCount}`);
 console.log(`❌ Erros encontrados: ${errorCount}`);

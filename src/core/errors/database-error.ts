@@ -15,7 +15,7 @@ export class DatabaseError extends Error {
   /**
    * Causa do erro
    */
-  cause?: unknown;
+  override cause?: unknown;
   
   /**
    * Construtor

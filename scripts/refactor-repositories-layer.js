@@ -42,7 +42,7 @@ function refactorRepositoryFile(filePath) {
   
   try {
     let content = fs.readFileSync(fullPath, 'utf8');
-    let originalContent = content;
+    const originalContent = content;
     let changes = 0;
     const errors = [];
     
@@ -61,7 +61,7 @@ function refactorRepositoryFile(filePath) {
     // Verificar se houve mudanças
     if (content !== originalContent) {
       // Fazer backup
-      const backupPath = fullPath + '.backup';
+      const backupPath = `${fullPath }.backup`;
       fs.writeFileSync(backupPath, originalContent, 'utf8');
       
       // Salvar arquivo refatorado
@@ -69,10 +69,10 @@ function refactorRepositoryFile(filePath) {
       
       console.log(`  ✅ ${filePath}: ${changes} mudanças aplicadas`);
       return { success: true, changes, errors, backupPath };
-    } else {
+    } 
       console.log(`  ℹ️  ${filePath}: Nenhuma mudança necessária`);
       return { success: true, changes: 0, errors: [] };
-    }
+    
     
   } catch (error) {
     console.error(`  ❌ Erro ao refatorar ${filePath}:`, error.message);

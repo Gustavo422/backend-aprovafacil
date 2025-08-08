@@ -86,10 +86,10 @@ function refactorFile(filePath) {
         fs.writeFileSync(filePath, newContent, 'utf8');
         console.log(`  ✅ Total de mudanças: ${changes}`);
         return changes;
-    } else {
+    } 
         console.log(`  ⏭️  Nenhuma mudança necessária`);
         return 0;
-    }
+    
 }
 
 // Função para validar arquivo

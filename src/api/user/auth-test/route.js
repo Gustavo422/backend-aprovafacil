@@ -5,7 +5,7 @@ const router = express.Router();
 const logger = getLogger('auth-test');
 
 // Rota de teste de autenticação
-router.get('/test', async (req, res) => {
+router.get('/test', (req, res) => {
   try {
     // Simular teste de autenticação
     const testResult = {

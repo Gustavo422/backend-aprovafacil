@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { Request } from 'express';
+import type { Request } from 'express';
 
 const supabaseUrl = process.env['SUPABASE_URL'] || '';
 const supabaseServiceKey = process.env['SUPABASE_SERVICE_ROLE_KEY'] || '';
@@ -8,8 +8,8 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 export async function GET(req: Request) {
   // Autenticação manual admin
-  const authHeader = req.headers['authorization'] as string | undefined;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  const authHeader = req.headers['authorization'];
+  if (!authHeader?.startsWith('Bearer ')) {
     return NextResponse.json({ success: false, error: 'Token de autenticação necessário' }, { status: 401 });
   }
   const token = authHeader.substring(7);

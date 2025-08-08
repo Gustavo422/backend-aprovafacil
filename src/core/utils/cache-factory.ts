@@ -1,8 +1,8 @@
 // Cache Factory - Implements Factory Pattern for cache providers
-import { ICacheService, ILogService } from '../interfaces/index.js';
+import type { ICacheService, ILogService } from '../interfaces/index.js';
 import { CacheService } from './cache.service.js';
 import { RedisCacheService } from './redis-cache.service.js';
-import { SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 export enum CacheProvider {
   MEMORY = 'memory',
@@ -24,8 +24,8 @@ export class CacheFactory {
     supabase?: SupabaseClient,
   ): ICacheService {
     // Get provider from environment variable if not specified
-    const cacheProvider = provider || 
-      (process.env.CACHE_PROVIDER as CacheProvider) || 
+    const cacheProvider = provider ?? 
+      (process.env.CACHE_PROVIDER as CacheProvider) ?? 
       CacheProvider.MEMORY;
     
     switch (cacheProvider) {

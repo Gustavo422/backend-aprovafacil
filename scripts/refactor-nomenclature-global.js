@@ -49,9 +49,9 @@ const PATTERNS = [
 // Exceções - não alterar
 const EXCEPTIONS = [
   'auth_user_id', // Específico do Supabase Auth
-  'authUserId',   // Específico do Supabase Auth
+  'authUserId', // Específico do Supabase Auth
   'auth_usuario_id', // Já corrigido
-  'authUsuarioId'    // Já corrigido
+  'authUsuarioId' // Já corrigido
 ];
 
 // Extensões de arquivo para processar
@@ -272,7 +272,7 @@ async function runRefactoring() {
     console.log('⚠️  Diretório frontend não encontrado');
   }
   
-  console.log('\n' + '=' .repeat(60));
+  console.log(`\n${ '=' .repeat(60)}`);
   console.log('📊 RESUMO DA REFATORAÇÃO:');
   console.log(`📁 Arquivos processados: ${totalFiles}`);
   console.log(`✅ Arquivos modificados: ${modifiedFiles}`);

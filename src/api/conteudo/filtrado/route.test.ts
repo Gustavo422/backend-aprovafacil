@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 // import { handler } from './route.js';
 
 describe('Conteudo Filtrado API', () => {
-  it('deve retornar conteúdo filtrado', async () => {
+  it('deve retornar conteúdo filtrado', () => {
     // TODO: Implementar teste real
     expect(true).toBe(true);
   });

@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import { supabase } from '../config/supabase-unified.js';
 import { getLogger } from '../lib/logging/logging-service.js';
 
@@ -24,7 +24,7 @@ export const unifiedAuthMiddleware = async (
 ): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (!authHeader?.startsWith('Bearer ')) {
       res.status(401).json({
         success: false,
         error: 'Token de autenticação não fornecido',
@@ -45,9 +45,9 @@ export const unifiedAuthMiddleware = async (
 
     req.user = {
       id: user.id,
-      email: user.email || '',
-      role: user.user_metadata?.role || 'user',
-      nome: user.user_metadata?.nome || user.email || '',
+      email: user.email ?? '',
+      role: user.user_metadata?.role ?? 'user',
+      nome: user.user_metadata?.nome ?? user.email ?? '',
     };
 
     next();
@@ -60,4 +60,4 @@ export const unifiedAuthMiddleware = async (
   }
 };
 
-export { AuthenticatedRequest }; 
+export type { AuthenticatedRequest }; 

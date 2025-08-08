@@ -17,7 +17,7 @@ const PROJECT_ROOT = join(__dirname, '..');
 const FRONTEND_ROOT = join(PROJECT_ROOT, '..', 'frontend');
 
 class DevStarter {
-  private processes: any[] = [];
+  private readonly processes: any[] = [];
 
   constructor() {
     // Capturar sinais de interrupção para limpar processos
@@ -46,7 +46,7 @@ class DevStarter {
     }
   }
 
-  private startBackend(): Promise<void> {
+  private async startBackend(): Promise<void> {
     return new Promise((resolve, reject) => {
       this.log('Iniciando backend...');
       
@@ -83,7 +83,7 @@ class DevStarter {
     });
   }
 
-  private startFrontend(): Promise<void> {
+  private async startFrontend(): Promise<void> {
     return new Promise((resolve, reject) => {
       this.log('Iniciando frontend...');
       

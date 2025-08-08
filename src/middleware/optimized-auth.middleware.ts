@@ -1,10 +1,10 @@
-import { Request, Response, NextFunction } from 'express';
-import { supabase } from '../config/supabase-unified.js';
+import type { Request, Response, NextFunction } from 'express';
+import jwt from 'jsonwebtoken';
 import { getLogger } from '../lib/logging/logging-service.js';
 
 const logger = getLogger('optimized-auth');
 
-interface AuthenticatedRequest extends Request {
+export interface AuthenticatedRequest extends Request {
   user?: {
     id: string;
     email: string;
@@ -14,17 +14,31 @@ interface AuthenticatedRequest extends Request {
 }
 
 /**
- * Middleware de autenticação otimizado
- * Substitui todos os middlewares de autenticação existentes
+ * Middleware de autenticação otimizado usando JWT
  */
-export const optimizedAuthMiddleware = async (
+export const optimizedAuthMiddleware = (
   req: AuthenticatedRequest,
   res: Response,
   next: NextFunction,
-): Promise<void> => {
+): void => {
   try {
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    // Log seguro do header Authorization em modo debug do serviço de logging
+    if (process.env.DEBUG_AUTH) {
+      if (authHeader) {
+        if (authHeader.startsWith('Bearer ')) {
+          const tmp = authHeader.substring(7);
+          const masked = tmp.length > 8 ? `${tmp.substring(0, 4)}...${tmp.substring(tmp.length - 4)}` : '[REDACTED]';
+          logger.debug?.('Authorization header', { authorization: `Bearer ${masked}` });
+        } else {
+          const masked = authHeader.length > 8 ? `${authHeader.substring(0, 4)}...${authHeader.substring(authHeader.length - 4)}` : '[REDACTED]';
+          logger.debug?.('Authorization header', { authorization: masked });
+        }
+      } else {
+        logger.debug?.('Authorization header', { authorization: 'null' });
+      }
+    }
+    if (!authHeader?.startsWith('Bearer ')) {
       const error = {
         message: 'Token de autenticação não fornecido',
         status: 401,
@@ -33,40 +47,58 @@ export const optimizedAuthMiddleware = async (
     }
 
     const token = authHeader.substring(7);
-    const { data: { user }, error } = await supabase.auth.getUser(token);
-
-    if (error || !user) {
-      const authError = {
-        message: 'Token inválido ou expirado',
+    const maskedToken = token.length > 8 ? `${token.substring(0, 4)}...${token.substring(token.length - 4)}` : '[REDACTED]';
+    process.env.DEBUG_AUTH && logger.debug?.('Token extraído', { token: maskedToken });
+    
+    if (!token || token === 'null') {
+      const error = {
+        message: 'Token inválido',
         status: 401,
       };
-      throw authError;
+      throw error;
     }
 
-    req.user = {
-      id: user.id,
-      email: user.email || '',
-      role: user.user_metadata?.role || 'user',
-      nome: user.user_metadata?.nome || user.email || '',
-    };
-
-    next();
-  } catch (error) {
-    const authError = error as { message: string; status: number };
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET ?? 'fallback-secret') as { usuarioId: string; email: string; role?: string; nome?: string };
+      
+      req.user = {
+        id: decoded.usuarioId, // CORRIGIDO: usar usuarioId em vez de id
+        email: decoded.email,
+        role: decoded.role ?? 'user',
+        nome: decoded.nome ?? decoded.email,
+      };
+      
+      logger.info('Autenticação bem-sucedida', { 
+        userId: req.user.id, 
+        email: req.user.email,
+        path: req.path, 
+      });
+      
+      next();
+    } catch {
+      logger.warn('Falha na autenticação', {
+        ip: req.ip,
+        userAgent: req.get('User-Agent'),
+        error: 'Token inválido',
+        path: req.path,
+      });
+      
+      res.status(401).json({
+        success: false,
+        error: 'Token inválido',
+      });
+    }
+  } catch (error: unknown) {
     logger.warn('Falha na autenticação', {
       ip: req.ip,
       userAgent: req.get('User-Agent'),
-      error: authError.message,
+      error: error instanceof Error ? error.message : String(error),
+      path: req.path,
     });
-
-    res.status(authError.status || 401).json({
+    
+    res.status((error as { status?: number }).status ?? 401).json({
       success: false,
-      error: authError.message || 'Erro de autenticação',
+      error: error instanceof Error ? error.message : String(error),
     });
   }
-};
-
-export { AuthenticatedRequest };
-
-// Re-export para compatibilidade com imports existentes
-export const adminAuthMiddleware = optimizedAuthMiddleware; 
+}; 

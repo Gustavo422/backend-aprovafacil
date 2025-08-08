@@ -1,22 +1,22 @@
 // Serviço do Guru da Aprovação para o AprovaFácil
-import { 
+import type { 
   IGuruAprovacaoService, 
   IUsuarioRepository, 
   ILogService, 
   ICacheService, 
 } from '../../core/interfaces/index.js';
-import { 
+import type { 
   MetricasGuruAprovacao, 
   ApiResponse, 
 } from '../../shared/types/index.js';
 import { UsuarioNaoEncontradoError } from '../../core/errors/usuario-errors.js';
-import { SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 export class GuruAprovacaoService implements IGuruAprovacaoService {
-  private usuarioRepository: IUsuarioRepository;
-  private logService: ILogService;
-  private cacheService: ICacheService;
-  private supabase: SupabaseClient;
+  private readonly usuarioRepository: IUsuarioRepository;
+  private readonly logService: ILogService;
+  private readonly cacheService: ICacheService;
+  private readonly supabase: SupabaseClient;
 
   constructor(
     usuarioRepository: IUsuarioRepository,
@@ -61,7 +61,7 @@ export class GuruAprovacaoService implements IGuruAprovacaoService {
 
       // Calcular métricas
       const questoesRespondidas = await this.calcularQuestoesRespondidas(usuarioId);
-      const metaQuestoes = await this.calcularMetaQuestoes(concursoUsuario.multiplicador_questoes);
+      const metaQuestoes = this.calcularMetaQuestoes(concursoUsuario.multiplicador_questoes);
       const percentualQuestoes = Math.min((questoesRespondidas / metaQuestoes) * 100, 100);
 
       const proficienciaFlashcards = await this.calcularProficienciaFlashcards(usuarioId);
@@ -205,10 +205,10 @@ export class GuruAprovacaoService implements IGuruAprovacaoService {
       }
 
       return {
-        id: concurso.id,
-        nome: concurso.nome,
-        nivel_dificuldade: concurso.nivel_dificuldade,
-        multiplicador_questoes: concurso.multiplicador_questoes,
+        id: String(concurso.id),
+        nome: String(concurso.nome),
+        nivel_dificuldade: String(concurso.nivel_dificuldade),
+        multiplicador_questoes: Number(concurso.multiplicador_questoes),
       };
     } catch (error) {
       await this.logService.erro('Erro ao obter concurso do usuário', error as Error, { usuarioId });
@@ -227,7 +227,7 @@ export class GuruAprovacaoService implements IGuruAprovacaoService {
       let questoesSimulados = 0;
       if (simuladosData) {
         questoesSimulados = simuladosData.reduce((total, progresso) => {
-          const respostas = progresso.respostas || {};
+          const respostas = progresso.respostas ?? {};
           return total + Object.keys(respostas).length;
         }, 0);
       }
@@ -238,7 +238,7 @@ export class GuruAprovacaoService implements IGuruAprovacaoService {
         .select('id')
         .eq('usuario_id', usuarioId);
 
-      const questoesSemanais = semanaisData?.length || 0;
+      const questoesSemanais = semanaisData?.length ?? 0;
 
       return questoesSimulados + questoesSemanais;
     } catch (error) {
@@ -290,7 +290,7 @@ export class GuruAprovacaoService implements IGuruAprovacaoService {
       }
 
       const progressoTotal = data.reduce((total, progresso) => {
-        return total + (progresso.percentual_progresso || 0);
+        return total + (progresso.percentual_progresso ?? 0);
       }, 0);
 
       return Math.min(progressoTotal / data.length, 100);
@@ -353,10 +353,10 @@ export class GuruAprovacaoService implements IGuruAprovacaoService {
   }): number {
     // Pesos para cada métrica
     const pesos = {
-      questoes: 0.4,      // 40% - Questões são o mais importante
-      flashcards: 0.25,   // 25% - Memorização é crucial
-      apostilas: 0.2,     // 20% - Conhecimento teórico
-      consistencia: 0.15,  // 15% - Regularidade nos estudos
+      questoes: 0.4, // 40% - Questões são o mais importante
+      flashcards: 0.25, // 25% - Memorização é crucial
+      apostilas: 0.2, // 20% - Conhecimento teórico
+      consistencia: 0.15, // 15% - Regularidade nos estudos
     };
 
     const pontuacao = 
@@ -380,7 +380,7 @@ export class GuruAprovacaoService implements IGuruAprovacaoService {
       'dificil': 1.3,
     };
 
-    const fatorDificuldade = fatoresDificuldade[nivelDificuldade as keyof typeof fatoresDificuldade] || 1.0;
+          const fatorDificuldade = fatoresDificuldade[nivelDificuldade as keyof typeof fatoresDificuldade] ?? 1.0;
 
     // Calcular tempo base em semanas
     let tempoBaseSemanas: number;
@@ -409,10 +409,10 @@ export class GuruAprovacaoService implements IGuruAprovacaoService {
     } else if (tempoFinalSemanas <= 52) {
       const meses = Math.round(tempoFinalSemanas / 4);
       return `${meses} ${meses === 1 ? 'mês' : 'meses'}`;
-    } else {
+    } 
       const anos = Math.round(tempoFinalSemanas / 52);
       return `${anos} ${anos === 1 ? 'ano' : 'anos'}`;
-    }
+    
   }
 
   private gerarRecomendacoes(metricas: MetricasGuruAprovacao): string[] {
@@ -511,7 +511,7 @@ export class GuruAprovacaoService implements IGuruAprovacaoService {
         .select('*')
         .eq('usuario_id', usuarioId);
 
-      return data || [];
+      return data ?? [];
     } catch (error) {
       await this.logService.erro('Erro ao analisar desempenho por disciplina', error as Error, { usuarioId });
       return [];
@@ -531,7 +531,7 @@ export class GuruAprovacaoService implements IGuruAprovacaoService {
         .gte('concluido_em', dataLimite.toISOString())
         .order('concluido_em', { ascending: true });
 
-      return data || [];
+      return data ?? [];
     } catch (error) {
       await this.logService.erro('Erro ao obter evolução temporal', error as Error, { usuarioId });
       return [];

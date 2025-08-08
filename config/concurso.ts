@@ -1,11 +1,14 @@
+// Ajuste de imports para usar os tipos disponíveis no projeto
 import type {
   Simulado,
-  SimuladoQuestion,
-  Flashcard,
+  QuestaoSimulado as SimuladoQuestion,
+  CartaoMemorizacao as Flashcard,
   Apostila,
-  MapaAssunto,
-  UserdisciplinaStats
-} from '@/src/core/database/types';
+} from '@/shared/types';
+
+// Tipos auxiliares mínimos para compilar sem dependências externas
+interface MapaAssunto { id: string }
+interface UserdisciplinaStats { disciplina: string; total_questoes: number; total_acertos: number }
 
 export interface Concurso {
   id: string;
@@ -24,7 +27,8 @@ export interface Concurso {
   ativo?: boolean;
 }
 
-type Tables = Database['public']['Tables'];
+// Mapeamento genérico para evitar dependência do tipo Database gerado automaticamente
+type Tables = { [table: string]: { Row: Record<string, unknown>; Insert: Record<string, unknown>; Update: Record<string, unknown> } };
 
 // Tipo auxiliar para Concurso com Categoria
 export interface ConcursoComCategoria extends Concurso {

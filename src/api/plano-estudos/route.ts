@@ -1,7 +1,8 @@
-import { Request, Response } from 'express';
+import express, { type Request, type Response } from 'express';
 import { z } from 'zod';
 import { supabase } from '../../config/supabase-unified.js';
 import { logger } from '../../lib/logger.js';
+import { requireAuth } from '../../middleware/auth.js';
 
 // Interface para request com usuário autenticado
 interface AuthenticatedRequest extends Request {
@@ -11,6 +12,57 @@ interface AuthenticatedRequest extends Request {
     role: string;
     [key: string]: unknown;
   };
+}
+
+// Tipos para o retorno do Supabase
+interface PlanoEstudo {
+  id: string;
+  usuario_id: string;
+  titulo: string;
+  descricao?: string;
+  concurso_id?: string;
+  categoria_id?: string;
+  data_inicio: string;
+  data_fim: string;
+  ativo: boolean;
+  meta_horas_diarias: number;
+  dias_semana: number[];
+  observacoes?: string;
+  criado_em: string;
+  atualizado_em: string;
+  concursos?: {
+    id: string;
+    nome: string;
+    descricao?: string;
+    ano?: number;
+    banca?: string;
+  };
+  disciplinas_categoria?: {
+    id: string;
+    nome: string;
+    descricao?: string;
+    cor_primaria?: string;
+    cor_secundaria?: string;
+  };
+  plano_estudo_itens?: PlanoEstudoItem[];
+}
+
+interface PlanoEstudoItem {
+  id: string;
+  plano_estudo_id: string;
+  titulo: string;
+  descricao?: string;
+  tipo: 'assunto' | 'questao' | 'simulado' | 'revisao';
+  disciplina: string;
+  assunto?: string;
+  ordem: number;
+  tempo_estimado_minutos: number;
+  prioridade: 'baixa' | 'media' | 'alta';
+  status: 'pendente' | 'em_andamento' | 'concluido';
+  data_prevista?: string;
+  observacoes?: string;
+  criado_em: string;
+  atualizado_em: string;
 }
 
 // Schemas de validação
@@ -93,7 +145,13 @@ export const listPlanosEstudoHandler = async (req: AuthenticatedRequest, res: Re
       });
     }
 
-    const { page = 1, limit = 10, ativo, concurso_id, categoria_id } = validationResult.data;
+    const { page = 1, limit = 10, ativo, concurso_id, categoria_id } = validationResult.data as {
+      page: number;
+      limit: number;
+      ativo?: boolean;
+      concurso_id?: string;
+      categoria_id?: string;
+    };
 
     const usuarioId = req.user?.id;
 
@@ -155,7 +213,7 @@ export const listPlanosEstudoHandler = async (req: AuthenticatedRequest, res: Re
 
     const { data: planos, error, count } = await query
       .order('criado_em', { ascending: false })
-      .range(offset, offset + Number(limit) - 1);
+      .range(offset, offset + Number(limit) - 1) as { data: PlanoEstudo[] | null; error: Error | null; count: number | null };
 
     if (error) {
       logger.error('Erro ao buscar planos de estudo', { error: error.message });
@@ -165,7 +223,7 @@ export const listPlanosEstudoHandler = async (req: AuthenticatedRequest, res: Re
       });
     }
 
-    const totalPages = Math.ceil((count || 0) / Number(limit));
+    const totalPages = Math.ceil((count ?? 0) / Number(limit));
 
     return res.json({
       success: true,
@@ -173,7 +231,7 @@ export const listPlanosEstudoHandler = async (req: AuthenticatedRequest, res: Re
       pagination: {
         page: Number(page),
         limit: Number(limit),
-        total: count || 0,
+        total: count ?? 0,
         totalPages,
       },
     });
@@ -238,10 +296,10 @@ export const getPlanoEstudoByIdHandler = async (req: AuthenticatedRequest, res: 
       `)
       .eq('id', id)
       .eq('usuario_id', usuarioId)
-      .single();
+      .single() as { data: PlanoEstudo | null; error: Error | null };
 
     if (error) {
-      if (error.code === 'PGRST116') {
+      if ((error as unknown as { code?: string }).code === 'PGRST116') {
         return res.status(404).json({ 
           success: false,
           error: 'Plano de estudo não encontrado', 
@@ -293,7 +351,7 @@ export const createPlanoEstudoHandler = async (req: AuthenticatedRequest, res: R
       .from('plano_estudos')
       .insert([planoData])
       .select()
-      .single();
+      .single() as { data: PlanoEstudo | null; error: Error | null };
 
     if (error) {
       logger.error('Erro ao criar plano de estudo', { error: error.message });
@@ -346,10 +404,10 @@ export const updatePlanoEstudoHandler = async (req: AuthenticatedRequest, res: R
       .eq('id', id)
       .eq('usuario_id', usuarioId)
       .select()
-      .single();
+      .single() as { data: PlanoEstudo | null; error: Error | null };
 
     if (error) {
-      if (error.code === 'PGRST116') {
+      if ((error as unknown as { code?: string }).code === 'PGRST116') {
         return res.status(404).json({ 
           success: false,
           error: 'Plano de estudo não encontrado', 
@@ -439,14 +497,14 @@ export const createItemPlanoHandler = async (req: AuthenticatedRequest, res: Res
     }
 
     // Verificar se o plano pertence ao usuário
-    const { data: plano, error: planoError } = await supabase
+    const { data: _plano, error: planoError } = await supabase
       .from('plano_estudos')
       .select('id')
       .eq('id', planoId)
       .eq('usuario_id', usuarioId)
-      .single();
+      .single() as { data: { id: string } | null; error: Error | null };
 
-    if (planoError || !plano) {
+    if (planoError) {
       return res.status(404).json({ 
         success: false,
         error: 'Plano de estudo não encontrado', 
@@ -457,7 +515,7 @@ export const createItemPlanoHandler = async (req: AuthenticatedRequest, res: Res
       .from('plano_estudo_itens')
       .insert([itemData])
       .select()
-      .single();
+      .single() as { data: PlanoEstudoItem | null; error: Error | null };
 
     if (error) {
       logger.error('Erro ao adicionar item ao plano', { error: error.message });
@@ -505,14 +563,14 @@ export const updateItemPlanoHandler = async (req: AuthenticatedRequest, res: Res
     }
 
     // Verificar se o plano pertence ao usuário
-    const { data: plano, error: planoError } = await supabase
+    const { data: _plano, error: planoError } = await supabase
       .from('plano_estudos')
       .select('id')
       .eq('id', planoId)
       .eq('usuario_id', usuarioId)
-      .single();
+      .single() as { data: { id: string } | null; error: Error | null };
 
-    if (planoError || !plano) {
+    if (planoError) {
       return res.status(404).json({ 
         success: false,
         error: 'Plano de estudo não encontrado', 
@@ -525,10 +583,10 @@ export const updateItemPlanoHandler = async (req: AuthenticatedRequest, res: Res
       .eq('id', itemId)
       .eq('plano_estudo_id', planoId)
       .select()
-      .single();
+      .single() as { data: PlanoEstudoItem | null; error: Error | null };
 
     if (error) {
-      if (error.code === 'PGRST116') {
+      if ((error as unknown as { code?: string }).code === 'PGRST116') {
         return res.status(404).json({ 
           success: false,
           error: 'Item não encontrado', 
@@ -567,14 +625,14 @@ export const deleteItemPlanoHandler = async (req: AuthenticatedRequest, res: Res
     }
 
     // Verificar se o plano pertence ao usuário
-    const { data: plano, error: planoError } = await supabase
+    const { data: _plano, error: planoError } = await supabase
       .from('plano_estudos')
       .select('id')
       .eq('id', planoId)
       .eq('usuario_id', usuarioId)
-      .single();
+      .single() as { data: { id: string } | null; error: Error | null };
 
-    if (planoError || !plano) {
+    if (planoError) {
       return res.status(404).json({ 
         success: false,
         error: 'Plano de estudo não encontrado', 
@@ -624,7 +682,7 @@ export const getPlanoEstudoProgressoHandler = async (req: AuthenticatedRequest, 
     const { data: itens, error } = await supabase
       .from('plano_estudo_itens')
       .select('status, tempo_estimado_minutos')
-      .eq('plano_estudo_id', planoId);
+      .eq('plano_estudo_id', planoId) as { data: Pick<PlanoEstudoItem, 'status' | 'tempo_estimado_minutos'>[] | null; error: Error | null };
 
     if (error) {
       logger.error('Erro ao buscar progresso do plano', { error: error.message });
@@ -635,13 +693,13 @@ export const getPlanoEstudoProgressoHandler = async (req: AuthenticatedRequest, 
     }
 
     // Calcular estatísticas
-    const total = itens?.length || 0;
-    const concluidos = itens?.filter(item => item.status === 'concluido').length || 0;
-    const emAndamento = itens?.filter(item => item.status === 'em_andamento').length || 0;
-    const pendentes = itens?.filter(item => item.status === 'pendente').length || 0;
+    const total = itens ? itens.length : 0;
+    const concluidos = itens ? itens.filter(item => item.status === 'concluido').length : 0;
+    const emAndamento = itens ? itens.filter(item => item.status === 'em_andamento').length : 0;
+    const pendentes = itens ? itens.filter(item => item.status === 'pendente').length : 0;
 
     const progressoPercentual = total > 0 ? (concluidos / total) * 100 : 0;
-    const tempoTotalEstimado = itens?.reduce((acc, item) => acc + (item.tempo_estimado_minutos || 0), 0) || 0;
+    const tempoTotalEstimado = itens ? itens.reduce((acc, item) => acc + (item.tempo_estimado_minutos || 0), 0) : 0;
 
     return res.json({
       success: true,
@@ -664,23 +722,138 @@ export const getPlanoEstudoProgressoHandler = async (req: AuthenticatedRequest, 
 }; 
 
 // Criar router Express
-import { Router } from 'express';
+const router = express.Router();  
 
-const router = Router();
+// Aplicar middleware de autenticação em todas as rotas
+router.use(requireAuth);
 
 // Registrar rotas principais
-router.get('/', listPlanosEstudoHandler);
-router.get('/:id', getPlanoEstudoByIdHandler);
-router.post('/', createPlanoEstudoHandler);
-router.put('/:id', updatePlanoEstudoHandler);
-router.delete('/:id', deletePlanoEstudoHandler);
+router.get('/', (req, res) => {
+  (async () => {
+    try {
+      await listPlanosEstudoHandler(req as AuthenticatedRequest, res);
+    } catch (error) {
+      logger.error('Erro não tratado na rota GET /plano-estudos', { error });
+      res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+    }
+  })().catch((error) => {
+    logger.error('Erro não tratado na rota GET /plano-estudos', { error });
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  });
+});
+
+router.get('/:id', (req, res) => {
+  (async () => {
+    try {
+      await getPlanoEstudoByIdHandler(req as AuthenticatedRequest, res);
+    } catch (error) {
+      logger.error('Erro não tratado na rota GET /plano-estudos/:id', { error });
+      res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+    }
+  })().catch((error) => {
+    logger.error('Erro não tratado na rota GET /plano-estudos/:id', { error });
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  });
+});
+
+router.post('/', (req, res) => {
+  (async () => {
+    try {
+      await createPlanoEstudoHandler(req as AuthenticatedRequest, res);
+    } catch (error) {
+      logger.error('Erro não tratado na rota POST /plano-estudos', { error });
+      res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+    }
+  })().catch((error) => {
+    logger.error('Erro não tratado na rota POST /plano-estudos', { error });
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  });
+});
+
+router.put('/:id', (req, res) => {
+  (async () => {
+    try {
+      await updatePlanoEstudoHandler(req as AuthenticatedRequest, res);
+    } catch (error) {
+      logger.error('Erro não tratado na rota PUT /plano-estudos/:id', { error });
+      res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+    }
+  })().catch((error) => {
+    logger.error('Erro não tratado na rota PUT /plano-estudos/:id', { error });
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  });
+});
+
+router.delete('/:id', (req, res) => {
+  (async () => {
+    try {
+      await deletePlanoEstudoHandler(req as AuthenticatedRequest, res);
+    } catch (error) {
+      logger.error('Erro não tratado na rota DELETE /plano-estudos/:id', { error });
+      res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+    }
+  })().catch((error) => {
+    logger.error('Erro não tratado na rota DELETE /plano-estudos/:id', { error });
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  });
+});
 
 // Rotas de itens do plano
-router.post('/:planoId/itens', createItemPlanoHandler);
-router.put('/:planoId/itens/:itemId', updateItemPlanoHandler);
-router.delete('/:planoId/itens/:itemId', deleteItemPlanoHandler);
+router.post('/:planoId/itens', (req, res) => {
+  (async () => {
+    try {
+      await createItemPlanoHandler(req as AuthenticatedRequest, res);
+    } catch (error) {
+      logger.error('Erro não tratado na rota POST /plano-estudos/:planoId/itens', { error });
+      res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+    }
+  })().catch((error) => {
+    logger.error('Erro não tratado na rota POST /plano-estudos/:planoId/itens', { error });
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  });
+});
+
+router.put('/:planoId/itens/:itemId', (req, res) => {
+  (async () => {
+    try {
+      await updateItemPlanoHandler(req as AuthenticatedRequest, res);
+    } catch (error) {
+      logger.error('Erro não tratado na rota PUT /plano-estudos/:planoId/itens/:itemId', { error });
+      res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+    }
+  })().catch((error) => {
+    logger.error('Erro não tratado na rota PUT /plano-estudos/:planoId/itens/:itemId', { error });
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  });
+});
+
+router.delete('/:planoId/itens/:itemId', (req, res) => {
+  (async () => {
+    try {
+      await deleteItemPlanoHandler(req as AuthenticatedRequest, res);
+    } catch (error) {
+      logger.error('Erro não tratado na rota DELETE /plano-estudos/:planoId/itens/:itemId', { error });
+      res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+    }
+  })().catch((error) => {
+    logger.error('Erro não tratado na rota DELETE /plano-estudos/:planoId/itens/:itemId', { error });
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  });
+});
 
 // Rotas de progresso
-router.get('/:id/progresso', getPlanoEstudoProgressoHandler);
+router.get('/:id/progresso', (req, res) => {
+  (async () => {
+    try {
+      await getPlanoEstudoProgressoHandler(req as AuthenticatedRequest, res);
+    } catch (error) {
+      logger.error('Erro não tratado na rota GET /plano-estudos/:id/progresso', { error });
+      res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+    }
+  })().catch((error) => {
+    logger.error('Erro não tratado na rota GET /plano-estudos/:id/progresso', { error });
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  });
+});
 
 export { router };

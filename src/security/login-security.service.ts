@@ -1,5 +1,5 @@
-import { SupabaseClient } from '@supabase/supabase-js';
-import { EnhancedLogger, getEnhancedLogger } from '../lib/logging/enhanced-logging-service.js';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { getEnhancedLogger, type EnhancedLogger} from '../lib/logging/enhanced-logging-service.js';
 
 interface LoginAttempt {
   id?: string;
@@ -32,9 +32,9 @@ interface SecurityCheck {
 }
 
 export class LoginSecurityService {
-  private supabase: SupabaseClient;
-  private logger: EnhancedLogger;
-  private config: SecurityConfig;
+  private readonly supabase: SupabaseClient;
+  private readonly logger: EnhancedLogger;
+  private readonly config: SecurityConfig;
 
   constructor(
     supabaseClient: SupabaseClient,
@@ -116,7 +116,7 @@ export class LoginSecurityService {
       };
 
     } catch (error) {
-      this.logger.error('Erro na verificação de segurança', { error: error.message, email, ipAddress });
+      this.logger.error('Erro na verificação de segurança', { error: error instanceof Error ? error.message : String(error), email, ipAddress });
       
       // Em caso de erro, ser conservador e bloquear
       return {
@@ -175,7 +175,7 @@ export class LoginSecurityService {
 
     } catch (error) {
       this.logger.error('Erro ao registrar tentativa de login', {
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         email,
         ipAddress,
       });
@@ -186,44 +186,72 @@ export class LoginSecurityService {
    * Verificar bloqueio por IP
    */
   private async checkIPBlock(ipAddress: string): Promise<{ blocked: boolean; blockedUntil?: Date }> {
-    const { data, error } = await this.supabase
-      .from('security_blocks')
-      .select('blocked_until')
-      .eq('ip_address', ipAddress)
-      .eq('block_type', 'ip')
-      .gt('blocked_until', new Date().toISOString())
-      .single();
+    try {
+      const { data, error } = await this.supabase
+        .from('login_attempts')
+        .select('blocked_until')
+        .eq('ip_address', ipAddress)
+        .not('blocked_until', 'is', null)
+        .order('attempted_at', { ascending: false })
+        .limit(1);
 
-    if (error && error.code !== 'PGRST116') {
-      this.logger.error('Erro ao verificar bloqueio de IP', { error: error.message, ipAddress });
+      if (error) {
+        this.logger.error('Erro ao verificar bloqueio de IP', { error: error.message, ipAddress });
+        return { blocked: false };
+      }
+
+      if (!data || data.length === 0) {
+        return { blocked: false };
+      }
+
+      const blockedUntil = new Date((data?.[0] as { blocked_until?: string })?.blocked_until ?? new Date(0).toISOString());
+      const now = new Date();
+
+      if (blockedUntil > now) {
+        return { blocked: true, blockedUntil };
+      }
+
+      return { blocked: false };
+    } catch (error) {
+      this.logger.error('Erro inesperado ao verificar bloqueio de IP', { error: error instanceof Error ? error.message : String(error), ipAddress });
+      return { blocked: false };
     }
-
-    return {
-      blocked: !!data,
-      blockedUntil: data ? new Date(data.blocked_until) : undefined,
-    };
   }
 
   /**
    * Verificar bloqueio por email
    */
   private async checkEmailBlock(email: string): Promise<{ blocked: boolean; blockedUntil?: Date }> {
-    const { data, error } = await this.supabase
-      .from('security_blocks')
-      .select('blocked_until')
-      .eq('email', email)
-      .eq('block_type', 'email')
-      .gt('blocked_until', new Date().toISOString())
-      .single();
+    try {
+      const { data, error } = await this.supabase
+        .from('login_attempts')
+        .select('blocked_until')
+        .eq('email', email)
+        .not('blocked_until', 'is', null)
+        .order('attempted_at', { ascending: false })
+        .limit(1);
 
-    if (error && error.code !== 'PGRST116') {
-      this.logger.error('Erro ao verificar bloqueio de email', { error: error.message, email });
+      if (error) {
+        this.logger.error('Erro ao verificar bloqueio de email', { error: error.message, email });
+        return { blocked: false };
+      }
+
+      if (!data || data.length === 0) {
+        return { blocked: false };
+      }
+
+      const blockedUntil = new Date((data?.[0] as { blocked_until?: string })?.blocked_until ?? new Date(0).toISOString());
+      const now = new Date();
+
+      if (blockedUntil > now) {
+        return { blocked: true, blockedUntil };
+      }
+
+      return { blocked: false };
+    } catch (error) {
+      this.logger.error('Erro inesperado ao verificar bloqueio de email', { error: error instanceof Error ? error.message : String(error), email });
+      return { blocked: false };
     }
-
-    return {
-      blocked: !!data,
-      blockedUntil: data ? new Date(data.blocked_until) : undefined,
-    };
   }
 
   /**
@@ -464,9 +492,9 @@ export class LoginSecurityService {
         .gte('attempted_at', since.toISOString()),
     ]);
 
-    return {
-      totalAttempts: attempts.count || 0,
-      totalBlocks: blocks.count || 0,
+          return {
+        totalAttempts: attempts.count ?? 0,
+        totalBlocks: blocks.count ?? 0,
       uniqueIPs: new Set(uniqueIPs.data?.map(a => a.ip_address)).size,
       timeframe,
     };

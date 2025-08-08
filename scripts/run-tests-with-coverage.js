@@ -25,13 +25,13 @@ function log(message, color = 'reset') {
 }
 
 function logHeader(message) {
-  log('\n' + '='.repeat(60), 'cyan')
+  log(`\n${ '='.repeat(60)}`, 'cyan')
   log(` ${message}`, 'bright')
   log('='.repeat(60), 'cyan')
 }
 
 function logSection(message) {
-  log('\n' + '-'.repeat(40), 'yellow')
+  log(`\n${ '-'.repeat(40)}`, 'yellow')
   log(` ${message}`, 'yellow')
   log('-'.repeat(40), 'yellow')
 }

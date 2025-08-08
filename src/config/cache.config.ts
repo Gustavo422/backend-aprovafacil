@@ -27,14 +27,14 @@ export interface CacheConfig {
  * Cache configuration
  */
 const cacheConfig: CacheConfig = {
-  provider: (process.env.CACHE_PROVIDER as CacheProvider) || CacheProvider.MEMORY,
-  defaultTTL: parseInt(process.env.CACHE_DEFAULT_TTL || '30', 10),
-  maxKeys: parseInt(process.env.CACHE_MAX_KEYS || '1000', 10),
+  provider: (process.env.CACHE_PROVIDER as CacheProvider) ?? CacheProvider.MEMORY,
+  defaultTTL: parseInt(process.env.CACHE_DEFAULT_TTL ?? '30', 10),
+  maxKeys: parseInt(process.env.CACHE_MAX_KEYS ?? '1000', 10),
   redis: {
-    url: process.env.REDIS_URL || 'redis://localhost:6379',
+    url: process.env.REDIS_URL ?? 'redis://localhost:6379',
     password: process.env.REDIS_PASSWORD,
     username: process.env.REDIS_USERNAME,
-    keyPrefix: process.env.REDIS_KEY_PREFIX || 'aprovafacil:',
+    keyPrefix: process.env.REDIS_KEY_PREFIX ?? 'aprovafacil:',
   },
   invalidation: {
     cleanupInterval: 30 * 60 * 1000, // 30 minutes

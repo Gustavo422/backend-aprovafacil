@@ -1,4 +1,5 @@
-import { z, ZodSchema } from 'zod';
+import type { ZodSchema } from 'zod';
+import { z } from 'zod';
 
 // Interface para resposta de validação
 export interface ValidationResult<T> {
@@ -98,7 +99,7 @@ export class Validator {
   }
 
   /**
-   * Sanitiza strings em objetos aninhados
+   * Sanitiza strings aninhadas em objetos
    */
   private static sanitizeNestedStrings(obj: unknown): unknown {
     if (typeof obj === 'string') {
@@ -121,20 +122,14 @@ export class Validator {
   }
 
   /**
-   * Valida ID (UUID ou string simples)
+   * Valida se um ID é válido
    */
   static validateId(id: string): boolean {
-    if (typeof id !== 'string' || id.length === 0 || id.length > 50) {
-      return false;
-    }
-    
-    // Permite apenas letras, números, hífens e underscores
-    const validIdRegex = /^[a-zA-Z0-9_-]+$/;
-    return validIdRegex.test(id);
+    return typeof id === 'string' && id.length > 0 && id.length <= 50 && /^[a-zA-Z0-9-_]+$/.test(id);
   }
 
   /**
-   * Valida email
+   * Valida se um email é válido
    */
   static validateEmail(email: string): boolean {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -142,51 +137,40 @@ export class Validator {
   }
 
   /**
-   * Valida senha (mínimo 8 caracteres, pelo menos 1 número e 1 letra)
+   * Valida se uma senha é válida
    */
   static validatePassword(password: string): boolean {
-    return password.length >= 8 && 
-           /\d/.test(password) && 
-           /[a-zA-Z]/.test(password);
+    return password.length >= 8 && /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password);
   }
 }
 
-// Middleware para Express/Next.js
+/**
+ * Middleware factory para validação
+ */
 export const createValidationMiddleware = <T>(schema: ZodSchema<T>) => {
-  return (req: unknown, res: unknown, next: () => void) => {
-    const validation = Validator.validate(schema, (req as { body: unknown }).body);
-    
-    if (!validation.success) {
-      return (res as { status: (code: number) => { json: (data: unknown) => void } }).status(400).json({
-        success: false,
-        message: 'Dados inválidos',
-        errors: validation.errors,
-      });
-    }
-    
-    (req as { validatedData: unknown }).validatedData = validation.data;
-    next();
+  return (data: unknown): ValidationResult<T> => {
+    return Validator.validate(schema, data);
   };
 };
 
-// Decorator para validação (se usar decorators)
+/**
+ * Decorator para validação
+ */
 export const Validate = <T>(schema: ZodSchema<T>) => {
-  return (target: unknown, propertyKey: string, descriptor: PropertyDescriptor) => {
+  return (target: unknown, propertyKey: string, descriptor: PropertyDescriptor): PropertyDescriptor => {
     const originalMethod = descriptor.value;
     
-    descriptor.value = function (...args: unknown[]) {
+    descriptor.value = function(...args: unknown[]) {
       const validation = Validator.validate(schema, args[0]);
-      
       if (!validation.success) {
-        throw new Error(`Validação falhou: ${validation.errors?.join(', ')}`);
+        throw new Error(`Validation failed: ${validation.errors?.join(', ')}`);
       }
-      
-      return originalMethod.apply(this, [validation.data, ...args.slice(1)]);
+      return originalMethod.apply(this, args);
     };
     
     return descriptor;
   };
-}; 
+};
 
 
 

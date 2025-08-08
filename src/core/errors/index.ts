@@ -21,7 +21,7 @@ export class AppError extends Error {
    * @param statusCode Código HTTP
    * @param options Opções do erro
    */
-  constructor(message: string, statusCode: number = 500, options?: { code?: string; details?: unknown }) {
+  constructor(message: string, statusCode = 500, options?: { code?: string; details?: unknown }) {
     super(message);
     this.name = 'AppError';
     this.statusCode = statusCode;

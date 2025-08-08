@@ -1,6 +1,7 @@
-import { NextFunction, Request, Response } from 'express';
+import type { NextFunction, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import { EnhancedLogger, getEnhancedLogger } from './enhanced-logging-service.js';
+import type { EnhancedLogger} from './enhanced-logging-service.js';
+import { getEnhancedLogger } from './enhanced-logging-service.js';
 
 /**
  * Request logger options
@@ -56,18 +57,18 @@ export function createRequestLoggerMiddleware(options: RequestLoggerOptions = {}
     logResponseBody: false,
     logResponseTime: true,
     excludeHeaders: ['authorization', 'cookie', 'set-cookie'],
-    skip: (_req) => false,
+    skip: () => false,
     ...options,
   };
   
-  return (_req: Request, res: Response, next: NextFunction) => {
+  return (req: Request, res: Response, next: NextFunction) => {
     // Skip logging if needed
-    if (opts.skip(_req)) {
+    if (opts.skip(req)) {
       return next();
     }
     
     // Generate request ID if not present
-    const requestId = (_req.headers['x-request-id'] as string) || uuidv4();
+    const requestId = (req.headers['x-request-id'] as string) ?? uuidv4();
     
     // Add request ID to response headers
     res.setHeader('x-request-id', requestId);
@@ -78,14 +79,14 @@ export function createRequestLoggerMiddleware(options: RequestLoggerOptions = {}
     // Create request context
     const context = {
       requestId,
-      method: _req.method,
-      url: _req.originalUrl || _req.url,
-      ip: _req.ip || _req.socket.remoteAddress,
+      method: req.method,
+      url: req.originalUrl ?? req.url,
+      ip: req.ip ?? req.socket.remoteAddress,
     };
     
     // Add headers if enabled
     if (opts.logHeaders) {
-      const headers = { ..._req.headers };
+      const headers = { ...req.headers };
       
       // Remove excluded headers
       for (const header of opts.excludeHeaders) {
@@ -96,81 +97,48 @@ export function createRequestLoggerMiddleware(options: RequestLoggerOptions = {}
     }
     
     // Add body if enabled
-    if (opts.logBody && _req.body) {
-      Object.assign(context, { body: _req.body });
+    if (opts.logBody && req.body) {
+      Object.assign(context, { body: req.body });
     }
     
     // Log request
-    opts.logger.info(`${_req.method} ${_req.originalUrl || _req.url}`, context);
+    opts.logger.info(`${req.method} ${req.originalUrl ?? req.url}`, context);
     
-    // Capture response
+    // Override res.end to log response
     const originalEnd = res.end;
-    const originalWrite = res.write;
-    const chunks: Buffer[] = [];
-    
-    if (opts.logResponseBody) {
-      // Override write method to capture response body
-      res.write = function (chunk: Buffer | string, ...args: unknown[]): boolean {
-        if (chunk) {
-          chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-        }
-        return originalWrite.apply(res, [chunk, ...args]);
-      } as typeof res.write;
-    }
-    
-    // Override end method to log response
-    res.end = function (chunk?: Buffer | string, ...args: unknown[]): unknown {
-      // Restore original methods
-      res.write = originalWrite;
-      res.end = originalEnd;
-      
-      // Capture final chunk if any
-      if (chunk && opts.logResponseBody) {
-        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-      }
-      
-      // Calculate response time
+    res.end = function(chunk?: unknown, encoding?: BufferEncoding | (() => void)) {
       const responseTime = Date.now() - startTime;
       
       // Create response context
       const responseContext = {
-        requestId,
-        method: _req.method,
-        url: _req.originalUrl || _req.url,
+        ...context,
         statusCode: res.statusCode,
-        statusMessage: res.statusMessage,
         responseTime,
       };
       
       // Add response body if enabled
-      if (opts.logResponseBody && chunks.length > 0) {
+      if (opts.logResponseBody && chunk) {
         try {
-          const body = Buffer.concat(chunks).toString('utf8');
-          
-          // Try to parse as JSON
-          try {
-            const json = JSON.parse(body);
-            Object.assign(responseContext, { responseBody: json });
-          } catch {
-            // Not JSON, use as string
-            Object.assign(responseContext, { responseBody: body });
-          }
+          const responseBody = typeof chunk === 'string' ? chunk : chunk.toString();
+          Object.assign(responseContext, { responseBody });
         } catch {
-          const msg = 'Unknown error';
-          Object.assign(responseContext, { responseBodyError: msg });
+          // Ignore errors parsing response body
         }
       }
       
       // Log response
-      const logLevel = res.statusCode >= 500 ? 'error' : res.statusCode >= 400 ? 'warn' : 'info';
-      opts.logger[logLevel](
-        `${_req.method} ${_req.originalUrl || _req.url} ${res.statusCode} ${responseTime}ms`,
-        responseContext,
-      );
+      if (res.statusCode >= 400) {
+        opts.logger.error(`${req.method} ${req.originalUrl ?? req.url} - ${res.statusCode}`, responseContext);
+      } else {
+        opts.logger.info(`${req.method} ${req.originalUrl ?? req.url} - ${res.statusCode}`, responseContext);
+      }
       
-      // Call original end method
-      return originalEnd.apply(res, [chunk, ...args]);
-    } as typeof res.end;
+      // Call original end (normalizando parâmetros)
+      if (typeof encoding === 'function') {
+        return (originalEnd as unknown as (chunk?: unknown, cb?: () => void) => Response).call(this, chunk, encoding as () => void);
+      }
+      return (originalEnd as unknown as (chunk?: unknown, encoding?: BufferEncoding) => Response).call(this, chunk, encoding as BufferEncoding | undefined);
+    };
     
     next();
   };

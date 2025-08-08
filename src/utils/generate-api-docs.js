@@ -1,7 +1,7 @@
 /* eslint-disable */
-const fs = require('fs');
-const path = require('path');
-const { execSync } = require('child_process');
+import fs from 'fs';
+import path from 'path';
+import { execSync } from 'child_process';
 
 // TODO: Refatorar para backend puro. Blocos comentados por depender de variáveis globais Node.js/browser/SSR.
 /*

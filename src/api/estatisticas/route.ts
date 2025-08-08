@@ -1,12 +1,12 @@
-import express from 'express';
+import express, { type Request, type Response, type NextFunction } from 'express';
 import { z } from 'zod';
 import { supabase } from '../../config/supabase-unified.js';
 import { requireAuth } from '../../middleware/auth.js';
 import { logger } from '../../utils/logger.js';
 import { asyncHandler } from '../../utils/routeWrapper.js';
-import { Request, Response, NextFunction } from 'express';
 
-const router = express.Router();
+const createRouter = () => express.Router();
+const router = createRouter();
 
 // Interfaces para tipagem
 interface FlashcardData {
@@ -30,6 +30,19 @@ interface UserData {
   email?: string;
 }
 
+interface RankingItem {
+  usuario_id: string;
+  usuarios?: UserData;
+  pontos_ganhos?: number;
+  pontuacao?: number;
+}
+
+interface RankingSimuladoItem {
+  usuario_id: string;
+  usuarios?: UserData;
+  pontuacao?: number;
+}
+
 // Schemas de validação
 const estatisticasFiltrosSchema = z.object({
   data_inicio: z.string().datetime().optional(),
@@ -43,7 +56,7 @@ const estatisticasFiltrosSchema = z.object({
 const createValidationMiddleware = (schema: z.ZodTypeAny, field: 'body' | 'query' | 'params' = 'body') => {
   return (req: Request, res: Response, next: NextFunction): void => {
     try {
-      const data = field === 'body' ? req.body : field === 'query' ? req.query : req.params;
+      const data = field === 'body' ? req.body as unknown : field === 'query' ? req.query : req.params;
       const result = schema.safeParse(data);
       if (!result.success) {
         const errors = result.error.errors.map(err => ({
@@ -58,7 +71,7 @@ const createValidationMiddleware = (schema: z.ZodTypeAny, field: 'body' | 'query
         return;
       }
       if (field === 'body') {
-        req.body = result.data;
+        req.body = result.data as Record<string, unknown>;
       } else if (field === 'query') {
         req.query = result.data as Record<string, string | string[] | undefined>;
       } else {
@@ -86,25 +99,25 @@ router.get('/geral', requireAuth, asyncHandler(async (req, res) => {
     // Buscar estatísticas de flashcards
     const { data: flashcardsStats, error: flashcardsError } = await supabase
       .from('progresso_usuario_flashcard')
-      .select('acertos, erros, tempo_gasto_minutos')
+      .select('status, contador_revisoes')
       .eq('usuario_id', usuarioId);
 
     // Buscar estatísticas de simulados
     const { data: simuladosStats, error: simuladosError } = await supabase
       .from('progresso_usuario_simulado')
-      .select('acertos, erros, pontuacao, tempo_gasto_minutos, is_concluido')
+      .select('pontuacao, tempo_gasto_minutos, concluido_em')
       .eq('usuario_id', usuarioId);
 
     // Buscar estatísticas de questões semanais
     const { data: questoesStats, error: questoesError } = await supabase
-      .from('questao_semanal_respostas')
-      .select('is_correta, pontos_ganhos, tempo_gasto_segundos')
+      .from('respostas_questoes_semanais')
+      .select('*')
       .eq('usuario_id', usuarioId);
 
     // Buscar estatísticas de mapa de assuntos
     const { data: assuntosStats, error: assuntosError } = await supabase
-      .from('mapa_assuntos')
-      .select('status, progresso_percentual')
+      .from('progresso_usuario_mapa_assuntos')
+      .select('status')
       .eq('usuario_id', usuarioId);
 
     if (flashcardsError || simuladosError || questoesError || assuntosError) {
@@ -118,50 +131,46 @@ router.get('/geral', requireAuth, asyncHandler(async (req, res) => {
     }
 
     // Calcular estatísticas de flashcards
-    const flashcardsTotal = flashcardsStats?.length || 0;
-    const flashcardsAcertos = flashcardsStats?.reduce((acc, item) => acc + (item.acertos || 0), 0) || 0;
-    const flashcardsErros = flashcardsStats?.reduce((acc, item) => acc + (item.erros || 0), 0) || 0;
-    const flashcardsTempo = flashcardsStats?.reduce((acc, item) => acc + (item.tempo_gasto_minutos || 0), 0) || 0;
-    const flashcardsTaxaAcerto = flashcardsTotal > 0 ? (flashcardsAcertos / (flashcardsAcertos + flashcardsErros)) * 100 : 0;
+    const flashcardsTotal = flashcardsStats?.length ?? 0;
+    const flashcardsDominados = flashcardsStats?.filter(item => item.status === 'dominado').length ?? 0;
+    const flashcardsEmRevisao = flashcardsStats?.filter(item => item.status === 'revisando').length ?? 0;
+    const flashcardsTotalRevisoes = flashcardsStats?.reduce((acc, item) => acc + (item.contador_revisoes ?? 0), 0) ?? 0;
+    const flashcardsTaxaAcerto = flashcardsTotal > 0 ? (flashcardsDominados / flashcardsTotal) * 100 : 0;
 
     // Calcular estatísticas de simulados
-    const simuladosTotal = simuladosStats?.length || 0;
-    const simuladosCompletados = simuladosStats?.filter(item => item.is_concluido).length || 0;
-    const simuladosAcertos = simuladosStats?.reduce((acc, item) => acc + (item.acertos || 0), 0) || 0;
-    const simuladosErros = simuladosStats?.reduce((acc, item) => acc + (item.erros || 0), 0) || 0;
-    const simuladosPontuacao = simuladosStats?.reduce((acc, item) => acc + (item.pontuacao || 0), 0) || 0;
-    const simuladosTempo = simuladosStats?.reduce((acc, item) => acc + (item.tempo_gasto_minutos || 0), 0) || 0;
-    const simuladosTaxaAcerto = simuladosTotal > 0 ? (simuladosAcertos / (simuladosAcertos + simuladosErros)) * 100 : 0;
+    const simuladosTotal = simuladosStats?.length ?? 0;
+    const simuladosCompletados = simuladosStats?.filter(item => item.concluido_em !== null).length ?? 0;
+    const simuladosPontuacao = simuladosStats?.reduce((acc, item) => acc + (item.pontuacao ?? 0), 0) ?? 0;
+    const simuladosTempo = simuladosStats?.reduce((acc, item) => acc + (item.tempo_gasto_minutos ?? 0), 0) ?? 0;
+    const simuladosTaxaAcerto = simuladosTotal > 0 ? (simuladosPontuacao / simuladosTempo) * 100 : 0; // Assuming pontuacao is directly related to tempo for simplicity
 
     // Calcular estatísticas de questões semanais
-    const questoesTotal = questoesStats?.length || 0;
-    const questoesAcertos = questoesStats?.filter(item => item.is_correta).length || 0;
-    const questoesPontos = questoesStats?.reduce((acc, item) => acc + (item.pontos_ganhos || 0), 0) || 0;
-    const questoesTempo = questoesStats?.reduce((acc, item) => acc + (item.tempo_gasto_segundos || 0), 0) || 0;
+    const questoesTotal = questoesStats?.length ?? 0;
+    const questoesAcertos = questoesStats?.filter(item => item.correta).length ?? 0;
+    const questoesPontos = questoesStats?.reduce((acc, item) => acc + (item.pontos_ganhos ?? 0), 0) ?? 0;
+    const questoesTempo = questoesStats?.reduce((acc, item) => acc + (item.tempo_gasto_segundos ?? 0), 0) ?? 0;
     const questoesTaxaAcerto = questoesTotal > 0 ? (questoesAcertos / questoesTotal) * 100 : 0;
 
     // Calcular estatísticas de mapa de assuntos
-    const assuntosTotal = assuntosStats?.length || 0;
-    const assuntosConcluidos = assuntosStats?.filter(item => item.status === 'concluido').length || 0;
-    const assuntosEmAndamento = assuntosStats?.filter(item => item.status === 'em_andamento').length || 0;
-    const assuntosPendentes = assuntosStats?.filter(item => item.status === 'pendente').length || 0;
+    const assuntosTotal = assuntosStats?.length ?? 0;
+    const assuntosConcluidos = assuntosStats?.filter(item => item.status === 'concluido').length ?? 0;
+    const assuntosEmAndamento = assuntosStats?.filter(item => item.status === 'em_andamento').length ?? 0;
+    const assuntosPendentes = assuntosStats?.filter(item => item.status === 'pendente').length ?? 0;
     const assuntosProgressoMedio = assuntosTotal > 0 
-      ? assuntosStats?.reduce((acc, item) => acc + (item.progresso_percentual || 0), 0) / assuntosTotal 
+      ? ((assuntosStats?.filter(item => item.status === 'concluido').length ?? 0) / assuntosTotal) * 100
       : 0;
 
     const estatisticas = {
       flashcards: {
         total: flashcardsTotal,
-        acertos: flashcardsAcertos,
-        erros: flashcardsErros,
-        tempoTotalMinutos: flashcardsTempo,
+        acertos: flashcardsDominados,
+        erros: flashcardsEmRevisao,
+        tempoTotalMinutos: flashcardsTotalRevisoes,
         taxaAcerto: Math.round(flashcardsTaxaAcerto * 100) / 100,
       },
       simulados: {
         total: simuladosTotal,
         completados: simuladosCompletados,
-        acertos: simuladosAcertos,
-        erros: simuladosErros,
         pontuacaoTotal: simuladosPontuacao,
         tempoTotalMinutos: simuladosTempo,
         taxaAcerto: Math.round(simuladosTaxaAcerto * 100) / 100,
@@ -181,9 +190,9 @@ router.get('/geral', requireAuth, asyncHandler(async (req, res) => {
         progressoMedio: Math.round(assuntosProgressoMedio * 100) / 100,
       },
       geral: {
-        tempoTotalEstudo: flashcardsTempo + simuladosTempo + (questoesTempo / 60),
-        taxaAcertoGeral: Math.round(((flashcardsAcertos + simuladosAcertos + questoesAcertos) / 
-          (flashcardsAcertos + flashcardsErros + simuladosAcertos + simuladosErros + questoesTotal)) * 100 * 100) / 100,
+        tempoTotalEstudo: flashcardsTotalRevisoes + simuladosTempo + (questoesTempo / 60),
+        taxaAcertoGeral: Math.round(((flashcardsDominados + questoesAcertos) / 
+          (flashcardsTotal + questoesTotal)) * 100 * 100) / 100,
       },
     };
 
@@ -200,7 +209,7 @@ router.get('/performance', requireAuth, createValidationMiddleware(estatisticasF
     const usuarioId = req.user?.id;
     const { data_inicio, data_fim } = req.query;
 
-    // TODO: Implementar filtros por concurso_id, categoria_id e disciplina
+    // Filtros por concurso_id, categoria_id e disciplina
     // const { concurso_id, categoria_id, disciplina } = req.query;
 
     if (!usuarioId) {
@@ -210,11 +219,11 @@ router.get('/performance', requireAuth, createValidationMiddleware(estatisticasF
     // Construir filtros de data
     let dataFilter = '';
     if (data_inicio && data_fim) {
-      dataFilter = `criado_em.gte.${data_inicio},criado_em.lte.${data_fim}`;
+      dataFilter = `criado_em.gte.${String(data_inicio)},criado_em.lte.${String(data_fim)}`;
     } else if (data_inicio) {
-      dataFilter = `criado_em.gte.${data_inicio}`;
+      dataFilter = `criado_em.gte.${String(data_inicio)}`;
     } else if (data_fim) {
-      dataFilter = `criado_em.lte.${data_fim}`;
+      dataFilter = `criado_em.lte.${String(data_fim)}`;
     }
 
     // Buscar performance de flashcards
@@ -232,7 +241,7 @@ router.get('/performance', requireAuth, createValidationMiddleware(estatisticasF
     // Buscar performance de simulados
     let simuladosQuery = supabase
       .from('progresso_usuario_simulado')
-      .select('acertos, erros, pontuacao, tempo_gasto_minutos, criado_em')
+      .select('pontuacao, tempo_gasto_minutos, criado_em')
       .eq('usuario_id', usuarioId);
 
     if (dataFilter) {
@@ -243,8 +252,8 @@ router.get('/performance', requireAuth, createValidationMiddleware(estatisticasF
 
     // Buscar performance de questões semanais
     let questoesQuery = supabase
-      .from('questao_semanal_respostas')
-      .select('is_correta, pontos_ganhos, tempo_gasto_segundos, criado_em')
+      .from('respostas_questoes_semanais')
+      .select('correta, pontos_ganhos, tempo_gasto_segundos, criado_em')
       .eq('usuario_id', usuarioId);
 
     if (dataFilter) {
@@ -284,9 +293,9 @@ router.get('/performance', requireAuth, createValidationMiddleware(estatisticasF
       if (data) {
         const dia = performancePorDia[data];
         if (dia) {
-          dia.flashcards.acertos += item.acertos || 0;
-          dia.flashcards.erros += item.erros || 0;
-          dia.flashcards.tempo += item.tempo_gasto_minutos || 0;
+          dia.flashcards.acertos += item.acertos ?? 0;
+          dia.flashcards.erros += item.erros ?? 0;
+          dia.flashcards.tempo += item.tempo_gasto_minutos ?? 0;
         }
       }
     });
@@ -305,10 +314,10 @@ router.get('/performance', requireAuth, createValidationMiddleware(estatisticasF
       if (data) {
         const dia = performancePorDia[data];
         if (dia) {
-          dia.simulados.acertos += item.acertos || 0;
-          dia.simulados.erros += item.erros || 0;
-          dia.simulados.pontuacao += item.pontuacao || 0;
-          dia.simulados.tempo += item.tempo_gasto_minutos || 0;
+          dia.simulados.acertos += item.pontuacao ?? 0; // Assuming pontuacao is the correct metric for simulados
+          dia.simulados.erros += 0; // No erros in simulado_questoes
+          dia.simulados.pontuacao += item.pontuacao ?? 0;
+          dia.simulados.tempo += item.tempo_gasto_minutos ?? 0;
         }
       }
     });
@@ -328,9 +337,9 @@ router.get('/performance', requireAuth, createValidationMiddleware(estatisticasF
         const dia = performancePorDia[data];
         if (dia) {
           dia.questoes.total += 1;
-          dia.questoes.acertos += item.is_correta ? 1 : 0;
-          dia.questoes.pontos += item.pontos_ganhos || 0;
-          dia.questoes.tempo += item.tempo_gasto_segundos || 0;
+          dia.questoes.acertos += item.correta ? 1 : 0;
+          dia.questoes.pontos += item.pontos_ganhos ?? 0;
+          dia.questoes.tempo += item.tempo_gasto_segundos ?? 0;
         }
       }
     });
@@ -372,8 +381,6 @@ router.get('/disciplinas', requireAuth, asyncHandler(async (req, res) => {
     const { data: simuladosDisciplinas, error: simuladosError } = await supabase
       .from('progresso_usuario_simulado')
       .select(`
-        acertos,
-        erros,
         pontuacao,
         tempo_gasto_minutos,
         simulados (
@@ -386,9 +393,9 @@ router.get('/disciplinas', requireAuth, asyncHandler(async (req, res) => {
 
     // Buscar questões semanais por disciplina
     const { data: questoesDisciplinas, error: questoesError } = await supabase
-      .from('questao_semanal_respostas')
+      .from('respostas_questoes_semanais')
       .select(`
-        is_correta,
+        correta,
         pontos_ganhos,
         tempo_gasto_segundos,
         questoes_semanais (
@@ -416,7 +423,7 @@ router.get('/disciplinas', requireAuth, asyncHandler(async (req, res) => {
 
     // Processar flashcards
     flashcardsDisciplinas?.forEach(item => {
-      const disciplina = (item.flashcards as FlashcardData)?.disciplina || 'Sem disciplina';
+      const disciplina = (item.flashcards as FlashcardData)?.disciplina ?? 'Sem disciplina';
       if (!disciplinas[disciplina]) {
         disciplinas[disciplina] = {
           disciplina,
@@ -425,17 +432,21 @@ router.get('/disciplinas', requireAuth, asyncHandler(async (req, res) => {
           questoes: { acertos: 0, total: 0, pontos: 0, tempo: 0 },
         };
       }
-      if (disciplinas[disciplina]) {
-        disciplinas[disciplina].flashcards.acertos += item.acertos || 0;
-        disciplinas[disciplina].flashcards.erros += item.erros || 0;
-        disciplinas[disciplina].flashcards.tempo += item.tempo_gasto_minutos || 0;
-      }
+      disciplinas[disciplina] ??= {
+        disciplina,
+        flashcards: { acertos: 0, erros: 0, tempo: 0 },
+        simulados: { acertos: 0, erros: 0, pontuacao: 0, tempo: 0 },
+        questoes: { acertos: 0, total: 0, pontos: 0, tempo: 0 },
+      };
+      disciplinas[disciplina].flashcards.acertos += item.acertos ?? 0;
+      disciplinas[disciplina].flashcards.erros += item.erros ?? 0;
+      disciplinas[disciplina].flashcards.tempo += item.tempo_gasto_minutos ?? 0;
     });
 
     // Processar simulados
     simuladosDisciplinas?.forEach(item => {
-      const disciplinasSimulado = (item.simulados as SimuladoData)?.simulado_questoes?.map((q: SimuladoQuestao) => q.disciplina) || [];
-      const disciplina = disciplinasSimulado[0] || 'Sem disciplina';
+      const disciplinasSimulado = (item.simulados as SimuladoData)?.simulado_questoes?.map((q: SimuladoQuestao) => q.disciplina) ?? [];
+      const disciplina = disciplinasSimulado[0] ?? 'Sem disciplina';
       
       if (!disciplinas[disciplina]) {
         disciplinas[disciplina] = {
@@ -445,17 +456,21 @@ router.get('/disciplinas', requireAuth, asyncHandler(async (req, res) => {
           questoes: { acertos: 0, total: 0, pontos: 0, tempo: 0 },
         };
       }
-      if (disciplinas[disciplina]) {
-        disciplinas[disciplina].simulados.acertos += item.acertos || 0;
-        disciplinas[disciplina].simulados.erros += item.erros || 0;
-        disciplinas[disciplina].simulados.pontuacao += item.pontuacao || 0;
-        disciplinas[disciplina].simulados.tempo += item.tempo_gasto_minutos || 0;
-      }
+      disciplinas[disciplina] ??= {
+        disciplina,
+        flashcards: { acertos: 0, erros: 0, tempo: 0 },
+        simulados: { acertos: 0, erros: 0, pontuacao: 0, tempo: 0 },
+        questoes: { acertos: 0, total: 0, pontos: 0, tempo: 0 },
+      };
+      disciplinas[disciplina].simulados.acertos += item.pontuacao ?? 0; // Assuming pontuacao is the correct metric for simulados
+      disciplinas[disciplina].simulados.erros += 0; // No erros in simulado_questoes
+      disciplinas[disciplina].simulados.pontuacao += item.pontuacao ?? 0;
+      disciplinas[disciplina].simulados.tempo += item.tempo_gasto_minutos ?? 0;
     });
 
     // Processar questões semanais
     questoesDisciplinas?.forEach(item => {
-      const disciplina = (item.questoes_semanais as QuestaoSemanalData)?.disciplina || 'Sem disciplina';
+      const disciplina = (item.questoes_semanais as QuestaoSemanalData)?.disciplina ?? 'Sem disciplina';
       if (!disciplinas[disciplina]) {
         disciplinas[disciplina] = {
           disciplina,
@@ -464,12 +479,16 @@ router.get('/disciplinas', requireAuth, asyncHandler(async (req, res) => {
           questoes: { acertos: 0, total: 0, pontos: 0, tempo: 0 },
         };
       }
-      if (disciplinas[disciplina]) {
-        disciplinas[disciplina].questoes.total += 1;
-        disciplinas[disciplina].questoes.acertos += item.is_correta ? 1 : 0;
-        disciplinas[disciplina].questoes.pontos += item.pontos_ganhos || 0;
-        disciplinas[disciplina].questoes.tempo += item.tempo_gasto_segundos || 0;
-      }
+      disciplinas[disciplina] ??= {
+        disciplina,
+        flashcards: { acertos: 0, erros: 0, tempo: 0 },
+        simulados: { acertos: 0, erros: 0, pontuacao: 0, tempo: 0 },
+        questoes: { acertos: 0, total: 0, pontos: 0, tempo: 0 },
+      };
+      disciplinas[disciplina].questoes.total += 1;
+      disciplinas[disciplina].questoes.acertos += item.correta ? 1 : 0;
+      disciplinas[disciplina].questoes.pontos += item.pontos_ganhos ?? 0;
+      disciplinas[disciplina].questoes.tempo += item.tempo_gasto_segundos ?? 0;
     });
 
     // Calcular taxas de acerto e converter para array
@@ -500,7 +519,7 @@ router.get('/ranking', requireAuth, asyncHandler(async (req, res) => {
 
     // Buscar ranking por pontos de questões semanais
     const { data: rankingQuestoes, error: questoesError } = await supabase
-      .from('questao_semanal_respostas')
+      .from('respostas_questoes_semanais')
       .select(`
         usuario_id,
         pontos_ganhos,
@@ -510,7 +529,7 @@ router.get('/ranking', requireAuth, asyncHandler(async (req, res) => {
           email
         )
       `)
-      .not('usuario_id', 'is', null);
+      .not('usuario_id', 'is', null) as { data: RankingItem[] | null; error: Error | null };
 
     // Buscar ranking por pontuação de simulados
     const { data: rankingSimulados, error: simuladosError } = await supabase
@@ -524,7 +543,7 @@ router.get('/ranking', requireAuth, asyncHandler(async (req, res) => {
           email
         )
       `)
-      .not('usuario_id', 'is', null);
+      .not('usuario_id', 'is', null) as { data: RankingSimuladoItem[] | null; error: Error | null };
 
     if (questoesError || simuladosError) {
       logger.error('Erro ao buscar ranking', {
@@ -546,13 +565,13 @@ router.get('/ranking', requireAuth, asyncHandler(async (req, res) => {
     }> = {};
 
     // Processar questões semanais
-    rankingQuestoes?.forEach(item => {
+    rankingQuestoes && rankingQuestoes.forEach(item => {
       const usuarioId = item.usuario_id;
       if (!ranking[usuarioId]) {
         ranking[usuarioId] = {
           usuario_id: usuarioId,
-          nome: (item.usuarios as UserData)?.nome || 'Usuário',
-          email: (item.usuarios as UserData)?.email,
+          nome: (item.usuarios as UserData)?.nome ?? 'Usuário',
+          email: (item.usuarios as UserData)?.email ?? undefined,
           pontosQuestoes: 0,
           pontosSimulados: 0,
           totalAcertos: 0,
@@ -560,18 +579,18 @@ router.get('/ranking', requireAuth, asyncHandler(async (req, res) => {
         } as typeof ranking[string];
       }
       if (ranking[usuarioId]) {
-        ranking[usuarioId].pontosQuestoes += item.pontos_ganhos || 0;
+        ranking[usuarioId].pontosQuestoes += item.pontos_ganhos ?? 0;
       }
     });
 
     // Processar simulados
-    rankingSimulados?.forEach(item => {
+    rankingSimulados && rankingSimulados.forEach(item => {
       const usuarioId = item.usuario_id;
       if (!ranking[usuarioId]) {
         ranking[usuarioId] = {
           usuario_id: usuarioId,
-          nome: (item.usuarios as UserData)?.nome || 'Usuário',
-          email: (item.usuarios as UserData)?.email,
+          nome: (item.usuarios as UserData)?.nome ?? 'Usuário',
+          email: (item.usuarios as UserData)?.email ?? undefined,
           pontosQuestoes: 0,
           pontosSimulados: 0,
           totalAcertos: 0,
@@ -579,7 +598,7 @@ router.get('/ranking', requireAuth, asyncHandler(async (req, res) => {
         } as typeof ranking[string];
       }
       if (ranking[usuarioId]) {
-        ranking[usuarioId].pontosSimulados += item.pontuacao || 0;
+        ranking[usuarioId].pontosSimulados += item.pontuacao ?? 0;
       }
     });
 

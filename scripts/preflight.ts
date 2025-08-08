@@ -16,9 +16,8 @@ dotenv.config();
 
 import { execSync } from 'child_process';
 import { existsSync, mkdirSync, writeFileSync } from 'fs';
-import { join } from 'path';
+import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { dirname } from 'path';
 
 // Configurações
 const __filename = fileURLToPath(import.meta.url);
@@ -51,8 +50,8 @@ interface PreflightReport {
 }
 
 class PreflightChecker {
-  private results: PreflightResult[] = [];
-  private startTime = Date.now();
+  private readonly results: PreflightResult[] = [];
+  private readonly startTime = Date.now();
 
   constructor() {
     // Criar diretório de logs se não existir
@@ -118,7 +117,7 @@ class PreflightChecker {
     // Validar comprimento mínimo de segredos
     const securityKeys = ['JWT_SECRET', 'SUPABASE_SERVICE_ROLE_KEY'];
     for (const key of securityKeys) {
-      if (process.env[key] && process.env[key]!.length < 32) {
+      if (process.env[key] && process.env[key].length < 32) {
         throw new Error(`${key} é muito curta (mínimo 32 caracteres)`);
       }
     }
@@ -134,7 +133,7 @@ class PreflightChecker {
     const npmVersion = execSync('npm --version', { encoding: 'utf8' }).trim();
     
     // Validar versão mínima do Node
-    const nodeMajor = parseInt(nodeVersion.slice(1).split('.')[0]);
+    const nodeMajor = parseInt(nodeVersion.slice(1).split('.')[0] ?? '0');
     if (nodeMajor < 18) {
       throw new Error(`Node.js ${nodeVersion} não é suportado. Requer Node.js >= 18.0.0`);
     }
@@ -410,9 +409,9 @@ class PreflightChecker {
       
       if (auditOutput.includes('found 0 vulnerabilities')) {
         return { message: 'Nenhuma vulnerabilidade encontrada' };
-      } else {
+      } 
         throw new Error('Vulnerabilidades de segurança detectadas');
-      }
+      
     } catch (error) {
       // npm audit pode falhar se encontrar vulnerabilidades
       return {
@@ -455,17 +454,17 @@ class PreflightChecker {
     console.log('🚀 Iniciando Pre-Flight Check Automatizado...\n');
     
     const tasks = [
-      { name: '0.1 - Validação de variáveis de ambiente', fn: () => this.validateEnvironment() },
-      { name: '0.2 - Verificação de versões', fn: () => this.checkVersions() },
-      { name: '0.3 - Verificações de qualidade de código', fn: () => this.runCodeQualityChecks() },
-      { name: '0.4 - Validação do schema do banco', fn: () => this.validateDatabaseSchema() },
-      { name: '0.5 - Verificação de migrações', fn: () => this.checkMigrations() },
-      { name: '0.6 - Criação de usuário de teste', fn: () => this.createTestUser() },
-      { name: '0.7 - Smoke-test das rotas', fn: () => this.smokeTestRoutes() },
-      { name: '0.8 - Teste de permissões', fn: () => this.testPermissions() },
-      { name: '0.9 - Verificação de headers de segurança', fn: () => this.checkSecurityHeaders() },
-      { name: '0.10 - Medição de latência', fn: () => this.measureLatency() },
-      { name: '0.11 - Auditoria de segurança', fn: () => this.securityAudit() },
+      { name: '0.1 - Validação de variáveis de ambiente', fn: async () => this.validateEnvironment() },
+      { name: '0.2 - Verificação de versões', fn: async () => this.checkVersions() },
+      { name: '0.3 - Verificações de qualidade de código', fn: async () => this.runCodeQualityChecks() },
+      { name: '0.4 - Validação do schema do banco', fn: async () => this.validateDatabaseSchema() },
+      { name: '0.5 - Verificação de migrações', fn: async () => this.checkMigrations() },
+      { name: '0.6 - Criação de usuário de teste', fn: async () => this.createTestUser() },
+      { name: '0.7 - Smoke-test das rotas', fn: async () => this.smokeTestRoutes() },
+      { name: '0.8 - Teste de permissões', fn: async () => this.testPermissions() },
+      { name: '0.9 - Verificação de headers de segurança', fn: async () => this.checkSecurityHeaders() },
+      { name: '0.10 - Medição de latência', fn: async () => this.measureLatency() },
+      { name: '0.11 - Auditoria de segurança', fn: async () => this.securityAudit() },
     ];
     
     for (const task of tasks) {
@@ -531,7 +530,7 @@ class PreflightChecker {
 }
 
 // Executar se chamado diretamente
-if (import.meta.url.endsWith(process.argv[1]) || process.argv[1]?.includes('preflight.ts')) {
+if (import.meta.url.endsWith(process.argv[1] ?? '') || process.argv[1]?.includes('preflight.ts')) {
   const checker = new PreflightChecker();
   checker.run().catch(error => {
     console.error('❌ Erro fatal no pre-flight check:', error);

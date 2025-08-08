@@ -1,12 +1,12 @@
 // Serviço de cache para o AprovaFácil
-import { ICacheService, ILogService } from '../interfaces/index.js';
-import { SupabaseClient } from '@supabase/supabase-js';
+import type { ICacheService, ILogService } from '../interfaces/index.js';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 export class CacheService implements ICacheService {
-  private supabase: SupabaseClient;
-  private logService: ILogService;
-  private memoryCache: Map<string, { valor: unknown; expira: Date }>;
-  private configuracoes: Map<string, { ttl: number; descricao: string }>;
+  private readonly supabase: SupabaseClient;
+  private readonly logService: ILogService;
+  private readonly memoryCache: Map<string, { valor: unknown; expira: Date }>;
+  private readonly configuracoes: Map<string, { ttl: number; descricao: string }>;
 
   constructor(supabase: SupabaseClient, logService: ILogService) {
     this.supabase = supabase;
@@ -15,10 +15,14 @@ export class CacheService implements ICacheService {
     this.configuracoes = new Map();
     
     // Carregar configurações de cache
-    this.carregarConfiguracoes();
+    void this.carregarConfiguracoes().catch(error => {
+      this.logService.erro('Erro ao carregar configurações de cache', error as Error);
+    });
     
     // Limpar cache expirado a cada 5 minutos
-    setInterval(() => this.limparCacheExpirado(), 5 * 60 * 1000);
+    setInterval(() => { 
+      this.limparCacheExpirado(); 
+    }, 5 * 60 * 1000);
   }
 
   async obter<T>(chave: string): Promise<T | null> {
@@ -54,7 +58,7 @@ export class CacheService implements ICacheService {
           await this.logService.logarOperacaoCache('GET_PERSISTENT', chave, true);
           return data.dados_cache as T;
         }
-      } catch (dbError) {
+      } catch {
         // Se há erro de banco (tabela não existe, etc.), apenas logar e continuar
         await this.logService.logarOperacaoCache('GET_PERSISTENT', chave, false);
       }
@@ -69,7 +73,7 @@ export class CacheService implements ICacheService {
 
   async definir<T>(chave: string, valor: T, ttlMinutos?: number): Promise<void> {
     try {
-      const ttl = ttlMinutos || this.obterTTLPadrao(chave);
+      const ttl = ttlMinutos ?? this.obterTTLPadrao(chave);
       const expiraEm = new Date();
       expiraEm.setMinutes(expiraEm.getMinutes() + ttl);
 
@@ -96,7 +100,7 @@ export class CacheService implements ICacheService {
         } else {
           await this.logService.logarOperacaoCache('SET', chave, true);
         }
-      } catch (dbError) {
+      } catch {
         // Se há erro de banco (tabela não existe, etc.), apenas logar e continuar
         await this.logService.logarOperacaoCache('SET', chave, false);
       }
@@ -124,7 +128,7 @@ export class CacheService implements ICacheService {
         } else {
           await this.logService.logarOperacaoCache('DELETE', chave, true);
         }
-      } catch (dbError) {
+      } catch {
         // Se há erro de banco (tabela não existe, etc.), apenas logar e continuar
         await this.logService.logarOperacaoCache('DELETE', chave, false);
       }
@@ -232,54 +236,54 @@ export class CacheService implements ICacheService {
 
   // Métodos específicos para diferentes tipos de cache
   async obterProgressoUsuario(usuarioId: string): Promise<unknown> {
-    return this.obter(`progresso_usuario_${usuarioId}`);
+    return this.obter(`progresso_usuario:${usuarioId}`);
   }
 
   async definirProgressoUsuario(usuarioId: string, progresso: unknown): Promise<void> {
-    await this.definir(`progresso_usuario_${usuarioId}`, progresso);
+    return this.definir(`progresso_usuario:${usuarioId}`, progresso, 60);
   }
 
   async obterResultadoSimulado(usuarioId: string, simuladoId: string): Promise<unknown> {
-    return this.obter(`resultado_simulado_${usuarioId}_${simuladoId}`);
+    return this.obter(`resultado_simulado:${usuarioId}:${simuladoId}`);
   }
 
   async definirResultadoSimulado(usuarioId: string, simuladoId: string, resultado: unknown): Promise<void> {
-    await this.definir(`resultado_simulado_${usuarioId}_${simuladoId}`, resultado);
+    return this.definir(`resultado_simulado:${usuarioId}:${simuladoId}`, resultado, 120);
   }
 
   async obterQuestoesSemana(ano: number, semana: number): Promise<unknown> {
-    return this.obter(`questoes_semana_${ano}_${semana}`);
+    return this.obter(`questoes_semana:${ano}:${semana}`);
   }
 
   async definirQuestoesSemana(ano: number, semana: number, questoes: unknown): Promise<void> {
-    await this.definir(`questoes_semana_${ano}_${semana}`, questoes);
+    return this.definir(`questoes_semana:${ano}:${semana}`, questoes, 1440); // 24 horas
   }
 
   async obterConteudoApostila(apostilaId: string): Promise<unknown> {
-    return this.obter(`conteudo_apostila_${apostilaId}`);
+    return this.obter(`conteudo_apostila:${apostilaId}`);
   }
 
   async definirConteudoApostila(apostilaId: string, conteudo: unknown): Promise<void> {
-    await this.definir(`conteudo_apostila_${apostilaId}`, conteudo);
+    return this.definir(`conteudo_apostila:${apostilaId}`, conteudo, 2880); // 48 horas
   }
 
   async obterPlanoEstudo(usuarioId: string): Promise<unknown> {
-    return this.obter(`plano_estudo_${usuarioId}`);
+    return this.obter(`plano_estudo:${usuarioId}`);
   }
 
   async definirPlanoEstudo(usuarioId: string, plano: unknown): Promise<void> {
-    await this.definir(`plano_estudo_${usuarioId}`, plano);
+    return this.definir(`plano_estudo:${usuarioId}`, plano, 60);
   }
 
   // Métodos utilitários
   private async carregarConfiguracoes(): Promise<void> {
     try {
       const { data, error } = await this.supabase
-        .from('configuracao_cache')
+        .from('configuracoes_cache')
         .select('chave_cache, ttl_minutos, descricao');
 
       if (error) {
-        await this.logService.aviso('Erro ao carregar configurações de cache', error);
+        await this.logService.erro('Erro ao carregar configurações de cache', error as Error);
         return;
       }
 
@@ -287,7 +291,7 @@ export class CacheService implements ICacheService {
         data.forEach(config => {
           this.configuracoes.set(config.chave_cache, {
             ttl: config.ttl_minutos,
-            descricao: config.descricao || '',
+            descricao: config.descricao ?? '',
           });
         });
       }
@@ -299,22 +303,30 @@ export class CacheService implements ICacheService {
   }
 
   private obterTTLPadrao(chave: string): number {
-    // Verificar configurações específicas
-    for (const [padraoChave, config] of this.configuracoes.entries()) {
-      if (chave.includes(padraoChave)) {
-        return config.ttl;
-      }
+    // Verificar se há configuração específica para esta chave
+    const config = this.configuracoes.get(chave);
+    if (config) {
+      return config.ttl;
     }
 
-    // TTL padrão baseado no tipo de chave
-    if (chave.includes('progresso_usuario')) return 30;
-    if (chave.includes('resultado_simulado')) return 60;
-    if (chave.includes('questoes_semana')) return 1440;
-    if (chave.includes('conteudo_apostila')) return 240;
-    if (chave.includes('plano_estudo')) return 120;
-    if (chave.includes('flashcard_progress')) return 15;
+    // Verificar padrões de chave
+    if (chave.startsWith('progresso_usuario:')) {
+      return 60; // 1 hora
+    }
+    if (chave.startsWith('resultado_simulado:')) {
+      return 120; // 2 horas
+    }
+    if (chave.startsWith('questoes_semana:')) {
+      return 1440; // 24 horas
+    }
+    if (chave.startsWith('conteudo_apostila:')) {
+      return 2880; // 48 horas
+    }
+    if (chave.startsWith('plano_estudo:')) {
+      return 1440; // 24 horas
+    }
 
-    return 60; // 1 hora por padrão
+    return 30; // Padrão: 30 minutos
   }
 
   private limparCacheExpirado(): void {
@@ -348,48 +360,56 @@ export class CacheService implements ICacheService {
   }> {
     try {
       // Estatísticas do cache em memória
-      const agora = new Date();
-      let chavesExpiradas = 0;
-      
-      for (const cache of this.memoryCache.values()) {
-        if (cache.expira <= agora) {
-          chavesExpiradas++;
-        }
-      }
+      const chavesMemoria = Array.from(this.memoryCache.keys());
+      const chavesExpiradas = chavesMemoria.filter(chave => {
+        const cache = this.memoryCache.get(chave);
+        return cache ? cache.expira <= new Date() : false;
+      });
 
-      const usoMemoria = JSON.stringify([...this.memoryCache.entries()]).length / (1024 * 1024);
+      // Calcular uso de memória (aproximado)
+      const usoMemoria = chavesMemoria.length * 1024; // 1KB por chave (aproximado)
 
       // Estatísticas do cache persistente
-      const { count: totalCount } = await this.supabase
-        .from('cache_performance_usuario_usuario_usuario_usuario')
-        .select('id', { count: 'exact', head: true });
+      let totalRegistros = 0;
+      let registrosExpirados = 0;
+      let ultimoAcesso: Date | null = null;
 
-      const { count: expiradosCount } = await this.supabase
-        .from('cache_performance_usuario_usuario_usuario_usuario')
-        .select('id', { count: 'exact', head: true })
-        .lt('expira_em', new Date().toISOString());
+      try {
+        const { data: registros } = await this.supabase
+          .from('cache_performance_usuario_usuario_usuario_usuario')
+          .select('expira_em, atualizado_em');
 
-      const { data: ultimoAcessoData } = await this.supabase
-        .from('cache_performance_usuario_usuario_usuario_usuario')
-        .select('atualizado_em')
-        .order('atualizado_em', { ascending: false })
-        .limit(1);
+        if (registros) {
+          totalRegistros = registros.length;
+          registrosExpirados = registros.filter(reg => new Date(reg.expira_em) <= new Date()).length;
+          
+          if (registros.length > 0) {
+            const ultimaAtualizacao = registros.reduce((maisRecente, reg) => {
+              const data = new Date(reg.atualizado_em ?? '');
+              return data > maisRecente ? data : maisRecente;
+            }, new Date(0));
+            
+            ultimoAcesso = ultimaAtualizacao > new Date(0) ? ultimaAtualizacao : null;
+          }
+        }
+      } catch {
+        // Se há erro de banco, apenas continuar com valores padrão
+      }
 
       return {
         cache_memoria: {
-          total_chaves: this.memoryCache.size,
-          chaves_expiradas: chavesExpiradas,
-          uso_memoria_mb: Math.round(usoMemoria * 100) / 100,
+          total_chaves: chavesMemoria.length,
+          chaves_expiradas: chavesExpiradas.length,
+          uso_memoria_mb: Math.round(usoMemoria / 1024 / 1024 * 100) / 100,
         },
         cache_persistente: {
-          total_registros: totalCount || 0,
-          registros_expirados: expiradosCount || 0,
-          ultimo_acesso: ultimoAcessoData?.[0]?.atualizado_em ? 
-            new Date(ultimoAcessoData[0].atualizado_em) : null,
+          total_registros: totalRegistros,
+          registros_expirados: registrosExpirados,
+          ultimo_acesso: ultimoAcesso,
         },
       };
     } catch (error) {
-      await this.logService.erro('Erro ao obter estatísticas do cache', error as Error);
+      await this.logService.erro('Erro ao obter estatísticas de cache', error as Error);
       return {
         cache_memoria: {
           total_chaves: 0,
@@ -408,24 +428,20 @@ export class CacheService implements ICacheService {
   // Método para limpar cache expirado do banco
   async limparCacheExpiradoBanco(): Promise<number> {
     try {
-      const { data, error } = await this.supabase
+      const { count, error } = await this.supabase
         .from('cache_performance_usuario_usuario_usuario_usuario')
         .delete()
-        .lt('expira_em', new Date().toISOString());
+        .lt('expira_em', new Date().toISOString())
+        .select('count');
 
       if (error) {
-        throw new Error('Failed to clear expired cache'); // Assuming CacheError is removed, use a generic error
-      }
-
-      if (!data || !Array.isArray(data)) {
+        await this.logService.erro('Erro ao limpar cache expirado no banco', error as Error);
         return 0;
       }
-      const registrosRemovidos = (data as unknown[]).length;
-      await this.logService.info(`Cache expirado limpo: ${registrosRemovidos} registros removidos`);
-      
-      return registrosRemovidos;
+
+      return count ?? 0;
     } catch (error) {
-      await this.logService.erro('Erro ao limpar cache expirado do banco', error as Error);
+      await this.logService.erro('Erro ao limpar cache expirado no banco', error as Error);
       return 0;
     }
   }

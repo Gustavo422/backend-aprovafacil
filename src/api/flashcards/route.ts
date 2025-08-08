@@ -1,8 +1,39 @@
-import { Request, Response } from 'express';
+import { type Request, type Response, Router } from 'express';
 import { z } from 'zod';
 import { supabase } from '../../config/supabase-unified.js';
 import { logger } from '../../lib/logger.js';
-import { getUserConcurso } from '../../utils/concurso-filter.js';
+import { getConcursoIdFromRequest } from '../../middleware/global-concurso-filter.middleware.js';
+import { requireAuth } from '../../middleware/auth.js';
+
+// Tipos para o retorno do Supabase
+interface Flashcard {
+  id: string;
+  pergunta: string;
+  resposta: string;
+  disciplina: string;
+  tema: string;
+  subtema?: string;
+  peso_disciplina: number;
+  ativo: boolean;
+  concurso_id: string;
+  categoria_id?: string;
+  criado_em: string;
+  atualizado_em: string;
+  concursos?: {
+    id: string;
+    nome: string;
+    descricao?: string;
+    ano?: number;
+    banca?: string;
+  };
+  categorias_concursos?: {
+    id: string;
+    nome: string;
+    descricao?: string;
+    cor_primaria?: string;
+    cor_secundaria?: string;
+  };
+}
 
 // Interface para request com usuário autenticado
 interface AuthenticatedRequest extends Request {
@@ -39,7 +70,7 @@ const updateFlashcardSchema = z.object({
 });
 
 const querySchema = z.object({
-  ativo: z.string().optional().transform(val => val === 'true'),
+  ativo: z.string().optional().transform(val => val === 'true').optional(),
   disciplina: z.string().optional(),
   tema: z.string().optional(),
   subtema: z.string().optional(),
@@ -82,10 +113,10 @@ export const listFlashcardsHandler = async (req: AuthenticatedRequest, res: Resp
       });
     }
 
-    // Aplicar filtro automático por concurso do usuário
-    const concursoId = await getUserConcurso(supabase, usuarioId);
+    // O filtro de concurso é aplicado automaticamente pelo middleware global
+    const concursoId = getConcursoIdFromRequest(req);
     if (concursoId) {
-      logger.debug('Concurso do usuário obtido', { concursoId });
+      logger.debug('Filtro de concurso aplicado automaticamente pelo middleware', { concursoId });
     }
 
     let query = supabase
@@ -139,10 +170,10 @@ export const listFlashcardsHandler = async (req: AuthenticatedRequest, res: Resp
     logger.debug('Executando query para flashcards', { filters: { ativo, disciplina, tema, subtema }, offset, limit: Number(limit) });
     const { data: flashcards, error, count } = await query
       .order('criado_em', { ascending: false })
-      .range(offset, offset + limitNum - 1);
+      .range(offset, offset + limitNum - 1) as { data: Flashcard[] | null; error: Error | null; count: number | null };
 
     if (error) {
-      logger.error('Erro ao executar query Supabase para flashcards', { error: error.message, details: error.details, hint: error.hint, filters: { ativo, disciplina, tema, subtema } });
+      logger.error('Erro ao executar query Supabase para flashcards', { error: (error as unknown as { message?: string }).message, details: (error as unknown as { details?: unknown }).details, hint: (error as unknown as { hint?: unknown }).hint, filters: { ativo, disciplina, tema, subtema } });
       return res.status(500).json({
         success: false,
         error: 'Erro interno ao buscar flashcards',
@@ -155,17 +186,17 @@ export const listFlashcardsHandler = async (req: AuthenticatedRequest, res: Resp
       const { count: total } = await supabase
         .from('flashcards')
         .select('*', { count: 'exact', head: true });
-      totalCount = total || 0;
+      totalCount = total ?? 0;
     } else {
       totalCount = count;
     }
 
     const totalPages = Math.ceil(totalCount / limitNum);
 
-    logger.info('Resposta de flashcards preparada', { total: count || 0, page: Number(page), resultsCount: flashcards?.length || 0 });
+    logger.info('Resposta de flashcards preparada', { total: count ?? 0, page: Number(page), resultsCount: flashcards?.length ?? 0 });
     return res.json({
       success: true,
-      data: flashcards || [],
+      data: flashcards ?? [],
       pagination: {
         page: pageNum,
         limit: limitNum,
@@ -198,9 +229,13 @@ export const getFlashcardByIdHandler = async (req: AuthenticatedRequest, res: Re
       });
     }
 
-    const concursoId = await getUserConcurso(supabase, usuarioId);
+    // O filtro de concurso é aplicado automaticamente pelo middleware global
+    const concursoId = getConcursoIdFromRequest(req);
+    if (concursoId) {
+      logger.debug('Filtro de concurso aplicado automaticamente pelo middleware', { concursoId });
+    }
 
-    let query = supabase
+    const query = supabase
       .from('flashcards')
       .select(`
         *,
@@ -221,14 +256,10 @@ export const getFlashcardByIdHandler = async (req: AuthenticatedRequest, res: Re
       `)
       .eq('id', id);
 
-    if (concursoId) {
-      query = query.eq('concurso_id', concursoId);
-    }
-
-    const { data: flashcard, error } = await query.single();
+    const { data: flashcard, error } = await query.single() as { data: Flashcard | null; error: Error | null };
 
     if (error) {
-      if (error.code === 'PGRST116') {
+      if ((error as unknown as { code?: string }).code === 'PGRST116') {
         return res.status(404).json({ 
           success: false,
           error: 'Flashcard não encontrado', 
@@ -280,7 +311,7 @@ export const createFlashcardHandler = async (req: AuthenticatedRequest, res: Res
       .from('flashcards')
       .insert([flashcardData])
       .select()
-      .single();
+      .single() as { data: Flashcard | null; error: Error | null };
 
     if (error) {
       logger.error('Erro ao criar flashcard', { error: error.message });
@@ -327,19 +358,18 @@ export const updateFlashcardHandler = async (req: AuthenticatedRequest, res: Res
       });
     }
 
-    const concursoId = await getUserConcurso(supabase, usuarioId);
-
-    // Verificar se o flashcard existe e pertence ao concurso do usuário
-    let query = supabase
-      .from('flashcards')
-      .select('id')
-      .eq('id', id);
-
+    // O filtro de concurso é aplicado automaticamente pelo middleware global
+    const concursoId = getConcursoIdFromRequest(req);
     if (concursoId) {
-      query = query.eq('concurso_id', concursoId);
+      logger.debug('Filtro de concurso aplicado automaticamente pelo middleware', { concursoId });
     }
 
-    const { data: existingFlashcard, error: checkError } = await query.single();
+    // Verificar se o flashcard existe (o filtro de concurso é aplicado automaticamente)
+    const { data: existingFlashcard, error: checkError } = await supabase
+      .from('flashcards')
+      .select('id')
+      .eq('id', id)
+      .single() as { data: { id: string } | null; error: Error | null };
 
     if (checkError || !existingFlashcard) {
       return res.status(404).json({ 
@@ -353,7 +383,7 @@ export const updateFlashcardHandler = async (req: AuthenticatedRequest, res: Res
       .update(updateData)
       .eq('id', id)
       .select()
-      .single();
+      .single() as { data: Flashcard | null; error: Error | null };
 
     if (error) {
       logger.error('Erro ao atualizar flashcard', { error: error.message });
@@ -388,19 +418,18 @@ export const deleteFlashcardHandler = async (req: AuthenticatedRequest, res: Res
       });
     }
 
-    const concursoId = await getUserConcurso(supabase, usuarioId);
-
-    // Verificar se o flashcard existe e pertence ao concurso do usuário
-    let query = supabase
-      .from('flashcards')
-      .select('id')
-      .eq('id', id);
-
+    // O filtro de concurso é aplicado automaticamente pelo middleware global
+    const concursoId = getConcursoIdFromRequest(req);
     if (concursoId) {
-      query = query.eq('concurso_id', concursoId);
+      logger.debug('Filtro de concurso aplicado automaticamente pelo middleware', { concursoId });
     }
 
-    const { data: existingFlashcard, error: checkError } = await query.single();
+    // Verificar se o flashcard existe (o filtro de concurso é aplicado automaticamente)
+    const { data: existingFlashcard, error: checkError } = await supabase
+      .from('flashcards')
+      .select('id')
+      .eq('id', id)
+      .single() as { data: { id: string } | null; error: Error | null };
 
     if (checkError || !existingFlashcard) {
       return res.status(404).json({ 
@@ -446,17 +475,15 @@ export const getFlashcardStatsHandler = async (req: AuthenticatedRequest, res: R
       });
     }
 
-    let query = supabase
-      .from('flashcards')
-      .select('disciplina, peso_disciplina');
-
-    // Aplicar filtro por concurso do usuário
-    const concursoId = await getUserConcurso(supabase, usuarioId);
+    // O filtro de concurso é aplicado automaticamente pelo middleware global
+    const concursoId = getConcursoIdFromRequest(req);
     if (concursoId) {
-      query = query.eq('concurso_id', concursoId);
+      logger.debug('Filtro de concurso aplicado automaticamente pelo middleware', { concursoId });
     }
 
-    const { data: flashcards, error } = await query;
+    const { data: flashcards, error } = await supabase
+      .from('flashcards')
+      .select('disciplina, peso_disciplina') as { data: Pick<Flashcard, 'disciplina' | 'peso_disciplina'>[] | null; error: Error | null };
 
     if (error) {
       logger.error('Erro ao buscar estatísticas de flashcards', { error: error.message });
@@ -467,7 +494,7 @@ export const getFlashcardStatsHandler = async (req: AuthenticatedRequest, res: R
     }
 
     // Agrupar por disciplina
-    const stats = new Map();
+    const stats = new Map<string, { disciplina: string; total_flashcards: number; peso_total: number }>();
     flashcards?.forEach(flashcard => {
       const disciplina = flashcard.disciplina;
       if (!stats.has(disciplina)) {
@@ -478,7 +505,7 @@ export const getFlashcardStatsHandler = async (req: AuthenticatedRequest, res: R
         });
       }
       
-      const disciplinaStats = stats.get(disciplina);
+      const disciplinaStats = stats.get(disciplina) as { disciplina: string; total_flashcards: number; peso_total: number };
       disciplinaStats.total_flashcards += 1;
       disciplinaStats.peso_total += flashcard.peso_disciplina || 1;
     });
@@ -500,16 +527,64 @@ export const getFlashcardStatsHandler = async (req: AuthenticatedRequest, res: R
 };
 
 // Criar router Express
-import { Router } from 'express';
+const router = Router();  
 
-const router = Router();
+// Aplicar middleware de autenticação em todas as rotas
+router.use(requireAuth);
 
 // Registrar rotas
-router.get('/', listFlashcardsHandler);
-router.get('/:id', getFlashcardByIdHandler);
-router.post('/', createFlashcardHandler);
-router.put('/:id', updateFlashcardHandler);
-router.delete('/:id', deleteFlashcardHandler);
-router.get('/stats/disciplinas', getFlashcardStatsHandler);
+router.get('/', (req, res) => {
+  (async () => {
+    await listFlashcardsHandler(req as AuthenticatedRequest, res);
+  })().catch((error) => {
+    logger.error('Erro não tratado na rota GET /flashcards', { error });
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  });
+});
+
+router.get('/:id', (req, res) => {
+  (async () => {
+    await getFlashcardByIdHandler(req as AuthenticatedRequest, res);
+  })().catch((error) => {
+    logger.error('Erro não tratado na rota GET /flashcards/:id', { error });
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  });
+});
+
+router.post('/', (req, res) => {
+  (async () => {
+    await createFlashcardHandler(req as AuthenticatedRequest, res);
+  })().catch((error) => {
+    logger.error('Erro não tratado na rota POST /flashcards', { error });
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  });
+});
+
+router.put('/:id', (req, res) => {
+  (async () => {
+    await updateFlashcardHandler(req as AuthenticatedRequest, res);
+  })().catch((error) => {
+    logger.error('Erro não tratado na rota PUT /flashcards/:id', { error });
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  });
+});
+
+router.delete('/:id', (req, res) => {
+  (async () => {
+    await deleteFlashcardHandler(req as AuthenticatedRequest, res);
+  })().catch((error) => {
+    logger.error('Erro não tratado na rota DELETE /flashcards/:id', { error });
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  });
+});
+
+router.get('/stats/disciplinas', (req, res) => {
+  (async () => {
+    await getFlashcardStatsHandler(req as AuthenticatedRequest, res);
+  })().catch((error) => {
+    logger.error('Erro não tratado na rota GET /flashcards/stats/disciplinas', { error });
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  });
+});
 
 export { router };

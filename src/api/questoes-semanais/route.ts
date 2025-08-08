@@ -1,7 +1,40 @@
-import { Request, Response } from 'express';
+import express, { type Request, type Response } from 'express';
 import { z } from 'zod';
 import { supabase } from '../../config/supabase-unified.js';
 import { logger } from '../../lib/logger.js';
+import { getConcursoIdFromRequest } from '../../middleware/global-concurso-filter.middleware.js';
+import { requireAuth } from '../../middleware/auth.js';
+
+// Interface para request com usuário autenticado
+interface AuthenticatedRequest extends Request {
+  user?: {
+    id: string;
+    email: string;
+    role: string;
+    [key: string]: unknown;
+  };
+}
+
+// Tipos para o retorno do Supabase
+interface QuestaoSemanal {
+  id: string;
+  titulo: string;
+  enunciado: string;
+  disciplina: string;
+  dificuldade: 'facil' | 'medio' | 'dificil';
+  ativo: boolean;
+  criado_em: string;
+  atualizado_em: string;
+  concurso_id?: string;
+  categoria_id?: string;
+  concursos?: {
+    id: string;
+    nome: string;
+    descricao?: string;
+    ano?: number;
+    banca?: string;
+  };
+}
 
 // Validation schemas
 const querySchema = z.object({
@@ -10,14 +43,13 @@ const querySchema = z.object({
   ativo: z.string().optional().transform(val => val === 'true'),
   disciplina: z.string().optional(),
   dificuldade: z.enum(['facil', 'medio', 'dificil']).optional(),
-  concurso_id: z.string().uuid().optional(),
   categoria_id: z.string().uuid().optional(),
 });
 
 /**
  * GET /api/questoes-semanais - Listar questões semanais
  */
-export const listQuestoesSemanaisHandler = async (req: Request, res: Response) => {
+export const listQuestoesSemanaisHandler = async (req: AuthenticatedRequest, res: Response) => {
   try {
     // Validate query parameters
     const validationResult = querySchema.safeParse(req.query);
@@ -29,7 +61,7 @@ export const listQuestoesSemanaisHandler = async (req: Request, res: Response) =
       });
     }
 
-    const { page = 1, limit = 10, ativo, disciplina, dificuldade, concurso_id, categoria_id } = validationResult.data;
+    const { page = 1, limit = 10, ativo, disciplina, dificuldade } = validationResult.data;
 
     const offset = (Number(page) - 1) * Number(limit);
 
@@ -46,8 +78,14 @@ export const listQuestoesSemanaisHandler = async (req: Request, res: Response) =
         )
       `, { count: 'exact' });
 
-    // Aplicar filtros
-    if (ativo !== undefined) {
+    // O filtro de concurso é aplicado automaticamente pelo middleware global
+    const concursoId = getConcursoIdFromRequest(req);
+    if (concursoId) {
+      logger.debug('Filtro de concurso aplicado automaticamente pelo middleware', { concursoId });
+    }
+    
+    // Aplicar filtros adicionais
+    if (typeof ativo === 'boolean') {
       query = query.eq('ativo', ativo);
     }
     if (disciplina) {
@@ -56,13 +94,10 @@ export const listQuestoesSemanaisHandler = async (req: Request, res: Response) =
     if (dificuldade) {
       query = query.eq('dificuldade', dificuldade);
     }
-    if (concurso_id) {
-      query = query.eq('concurso_id', concurso_id);
-    }
 
     const { data: questoes, error, count } = await query
       .order('criado_em', { ascending: false })
-      .range(offset, offset + Number(limit) - 1);
+      .range(offset, offset + Number(limit) - 1) as { data: QuestaoSemanal[] | null; error: Error | null; count: number | null };
 
     if (error) {
       logger.error('Erro ao buscar questões semanais', { error: error.message });
@@ -72,15 +107,15 @@ export const listQuestoesSemanaisHandler = async (req: Request, res: Response) =
       });
     }
 
-    const totalPages = Math.ceil((count || 0) / Number(limit));
+    const totalPages = Math.ceil((count ?? 0) / Number(limit));
 
     return res.json({
       success: true,
-      data: questoes || [],
+      data: questoes ?? [],
       pagination: {
         page: Number(page),
         limit: Number(limit),
-        total: count || 0,
+        total: count ?? 0,
         totalPages,
       },
     });
@@ -96,7 +131,7 @@ export const listQuestoesSemanaisHandler = async (req: Request, res: Response) =
 /**
  * GET /api/questoes-semanais/:id - Buscar questão específica
  */
-export const getQuestaoSemanalByIdHandler = async (req: Request, res: Response) => {
+export const getQuestaoSemanalByIdHandler = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { data: questao, error } = await supabase
@@ -112,7 +147,7 @@ export const getQuestaoSemanalByIdHandler = async (req: Request, res: Response) 
         )
       `)
       .eq('id', id)
-      .single();
+      .single() as { data: QuestaoSemanal | null; error: Error | null };
 
     if (error) {
       logger.error('Erro ao buscar questão semanal', { error: error.message, id });
@@ -143,12 +178,13 @@ export const getQuestaoSemanalByIdHandler = async (req: Request, res: Response) 
 };
 
 // Criar router Express
-import { Router } from 'express';
+const router = express.Router();  
 
-const router = Router();
+// Aplicar middleware de autenticação em todas as rotas
+router.use(requireAuth);
 
 // Registrar rotas
-router.get('/', listQuestoesSemanaisHandler);
-router.get('/:id', getQuestaoSemanalByIdHandler);
+router.get('/', listQuestoesSemanaisHandler); // eslint-disable-line @typescript-eslint/no-misused-promises
+router.get('/:id', getQuestaoSemanalByIdHandler); // eslint-disable-line @typescript-eslint/no-misused-promises
 
 export { router };

@@ -327,7 +327,7 @@ describe('Validation System', () => {
 
     describe('validatePassword', () => {
       it('deve validar senhas válidas', () => {
-        expect(Validator.validatePassword('password123')).toBe(true);
+        expect(Validator.validatePassword('Password123')).toBe(true);
         expect(Validator.validatePassword('MySecurePass123!')).toBe(true);
       });
 
@@ -338,7 +338,7 @@ describe('Validation System', () => {
       });
     });
   });
-}); 
+});
 
 
 

@@ -1,6 +1,6 @@
-import { IBaseService, IBaseRepository } from '../interfaces/index.js';
-import { FiltroBase, PaginatedResponse, ApiResponse } from '../../shared/types/index.js';
-import { EnhancedLogger, getEnhancedLogger } from '../../lib/logging/enhanced-logging-service.js';
+import type { IBaseService, IBaseRepository } from '../interfaces/index.js';
+import type { FiltroBase, PaginatedResponse, ApiResponse } from '../../shared/types/index.js';
+import { getEnhancedLogger, type EnhancedLogger} from '../../lib/logging/enhanced-logging-service.js';
 import { ValidationError, NotFoundError, DatabaseError } from '../errors/index.js';
 import { performance } from 'perf_hooks';
 
@@ -73,7 +73,7 @@ export abstract class BaseService<T, TFilter extends FiltroBase = FiltroBase> im
   /**
    * Cache simples em memória
    */
-  private cache = new Map<string, { data: unknown; expiry: number }>();
+  private readonly cache = new Map<string, { data: unknown; expiry: number }>();
   
   /**
    * Construtor
@@ -86,9 +86,9 @@ export abstract class BaseService<T, TFilter extends FiltroBase = FiltroBase> im
   ) {
     this.repository = repository;
     this.serviceName = options.serviceName;
-    this.logger = options.logger || getEnhancedLogger(`service:${this.serviceName}`);
-    this.enableCache = options.enableCache || false;
-    this.cacheTime = options.cacheTime || 300; // 5 minutos por padrão
+    this.logger = options.logger ?? getEnhancedLogger(`service:${this.serviceName}`);
+    this.enableCache = options.enableCache ?? false;
+    this.cacheTime = options.cacheTime ?? 300; // 5 minutos por padrão
     
     this.logger.info(`Serviço ${this.serviceName} inicializado`);
   }
@@ -118,7 +118,7 @@ export abstract class BaseService<T, TFilter extends FiltroBase = FiltroBase> im
       }
       
       // Validar entrada
-      await this.validateInput({ id }, 'buscarPorId');
+      this.validateInput({ id }, 'buscarPorId');
       
       // Buscar no repositório
       const data = await this.repository.buscarPorId(id);
@@ -178,23 +178,23 @@ export abstract class BaseService<T, TFilter extends FiltroBase = FiltroBase> im
       
       // Verificar cache
       if (this.enableCache) {
-        const cacheKey = `buscarTodos:${JSON.stringify(filtro || {})}`;
+        const cacheKey = `buscarTodos:${JSON.stringify(filtro ?? {})}`;
         const cached = this.getFromCache(cacheKey);
         if (cached && typeof cached === 'object' && 'pagination' in cached) {
           this.logger.debug('Cache hit para buscarTodos', { operationId });
-          return cached as PaginatedResponse<T>;
+          return cached;
         }
       }
       
       // Validar entrada
-      await this.validateInput(filtro || {}, 'buscarTodos');
+      this.validateInput(filtro ?? {}, 'buscarTodos');
       
       // Buscar no repositório
       const result = await this.repository.buscarTodos(filtro);
       
       // Processar dados após busca
       const processedData = await Promise.all(
-        result.data.map(item => this.processAfterFind(item)),
+        (result.data ?? []).map(async item => Promise.resolve(this.processAfterFind(item))),
       );
       
       const response: PaginatedResponse<T> = {
@@ -205,7 +205,7 @@ export abstract class BaseService<T, TFilter extends FiltroBase = FiltroBase> im
       
       // Salvar no cache
       if (this.enableCache) {
-        const cacheKey = `buscarTodos:${JSON.stringify(filtro || {})}`;
+        const cacheKey = `buscarTodos:${JSON.stringify(filtro ?? {})}`;
         this.setCache(cacheKey, response);
       }
       
@@ -252,19 +252,19 @@ export abstract class BaseService<T, TFilter extends FiltroBase = FiltroBase> im
       });
       
       // Validar entrada
-      await this.validateInput(dados, 'criar');
+      this.validateInput(dados, 'criar');
       
       // Processar dados antes da criação
-      const processedData = await this.processBeforeCreate(dados);
+      const processedData = this.processBeforeCreate(dados);
       
       // Validar regras de negócio
-      await this.validateBusinessRules(processedData, 'criar');
+      this.validateBusinessRules(processedData, 'criar');
       
       // Criar no repositório
       const createdData = await this.repository.criar(processedData);
       
       // Processar dados após criação
-      const finalData = await this.processAfterCreate(createdData);
+      const finalData = this.processAfterCreate(createdData);
       
       // Limpar cache relacionado
       if (this.enableCache) {
@@ -306,19 +306,19 @@ export abstract class BaseService<T, TFilter extends FiltroBase = FiltroBase> im
       });
       
       // Validar entrada
-      await this.validateInput({ id, ...dados }, 'atualizar');
+      this.validateInput({ id, ...dados }, 'atualizar');
       
       // Processar dados antes da atualização
-      const processedData = await this.processBeforeUpdate(dados);
+      const processedData = this.processBeforeUpdate(dados);
       
       // Validar regras de negócio
-      await this.validateBusinessRules(processedData, 'atualizar', id);
+      this.validateBusinessRules(processedData, 'atualizar', id);
       
       // Atualizar no repositório
       const updatedData = await this.repository.atualizar(id, processedData);
       
       // Processar dados após atualização
-      const finalData = await this.processAfterUpdate(updatedData);
+      const finalData = this.processAfterUpdate(updatedData);
       
       // Limpar cache relacionado
       if (this.enableCache) {
@@ -356,19 +356,19 @@ export abstract class BaseService<T, TFilter extends FiltroBase = FiltroBase> im
       this.logger.debug(`Excluindo ${this.serviceName} com ID ${id}`, { operationId });
       
       // Validar entrada
-      await this.validateInput({ id }, 'excluir');
+      this.validateInput({ id }, 'excluir');
       
       // Validar regras de negócio para exclusão
-      await this.validateBusinessRules({}, 'excluir', id);
+      this.validateBusinessRules({}, 'excluir', id);
       
       // Processar antes da exclusão
-      await this.processBeforeDelete(id);
+      this.processBeforeDelete(id);
       
       // Excluir no repositório
       const deleted = await this.repository.excluir(id);
       
       // Processar após exclusão
-      await this.processAfterDelete(id);
+      this.processAfterDelete(id);
       
       // Limpar cache relacionado
       if (this.enableCache) {
@@ -403,10 +403,8 @@ export abstract class BaseService<T, TFilter extends FiltroBase = FiltroBase> im
    * @param data Dados a serem validados
    * @param operation Operação sendo executada
    */
-  protected async validateInput(data: Partial<T> | TFilter | { id: string } | undefined, _operation: string): Promise<void> {
-    if (!data) {
-      throw new ValidationError('Dados não podem ser vazios');
-    }
+  protected validateInput(data: Partial<T> | TFilter | { id: string } | undefined, _operation: string): void {
+    // Implementação padrão - pode ser sobrescrita
   }
   
   /**
@@ -415,8 +413,8 @@ export abstract class BaseService<T, TFilter extends FiltroBase = FiltroBase> im
    * @param operation Operação sendo executada
    * @param id ID do registro (para operações de atualização/exclusão)
    */
-  protected async validateBusinessRules(_data: Partial<T>, _operation: string, _id?: string): Promise<void> {
-    // Implementação base - deve ser sobrescrita por classes filhas
+  protected validateBusinessRules(_data: Partial<T>, _operation: string, _id?: string): void {
+    // Implementação padrão - pode ser sobrescrita
   }
   
   /**
@@ -424,8 +422,7 @@ export abstract class BaseService<T, TFilter extends FiltroBase = FiltroBase> im
    * @param data Dados a serem processados
    * @returns Dados processados
    */
-  protected async processBeforeCreate(data: Partial<T>): Promise<Partial<T>> {
-    // Implementação base - deve ser sobrescrita por classes filhas se necessário
+  protected processBeforeCreate(data: Partial<T>): Partial<T> {
     return data;
   }
   
@@ -434,8 +431,7 @@ export abstract class BaseService<T, TFilter extends FiltroBase = FiltroBase> im
    * @param data Dados criados
    * @returns Dados processados
    */
-  protected async processAfterCreate(data: T): Promise<T> {
-    // Implementação base - deve ser sobrescrita por classes filhas se necessário
+  protected processAfterCreate(data: T): T {
     return data;
   }
   
@@ -444,8 +440,7 @@ export abstract class BaseService<T, TFilter extends FiltroBase = FiltroBase> im
    * @param data Dados a serem processados
    * @returns Dados processados
    */
-  protected async processBeforeUpdate(data: Partial<T>): Promise<Partial<T>> {
-    // Implementação base - deve ser sobrescrita por classes filhas se necessário
+  protected processBeforeUpdate(data: Partial<T>): Partial<T> {
     return data;
   }
   
@@ -454,8 +449,7 @@ export abstract class BaseService<T, TFilter extends FiltroBase = FiltroBase> im
    * @param data Dados atualizados
    * @returns Dados processados
    */
-  protected async processAfterUpdate(data: T): Promise<T> {
-    // Implementação base - deve ser sobrescrita por classes filhas se necessário
+  protected processAfterUpdate(data: T): T {
     return data;
   }
   
@@ -463,16 +457,16 @@ export abstract class BaseService<T, TFilter extends FiltroBase = FiltroBase> im
    * Processar antes da exclusão
    * @param id ID do registro a ser excluído
    */
-  protected async processBeforeDelete(_id: string): Promise<void> {
-    // Implementação base - deve ser sobrescrita por classes filhas se necessário
+  protected processBeforeDelete(_id: string): void {
+    // Implementação padrão - pode ser sobrescrita
   }
   
   /**
    * Processar após exclusão
    * @param id ID do registro excluído
    */
-  protected async processAfterDelete(_id: string): Promise<void> {
-    // Implementação base - deve ser sobrescrita por classes filhas se necessário
+  protected processAfterDelete(_id: string): void {
+    // Implementação padrão - pode ser sobrescrita
   }
   
   /**
@@ -480,8 +474,7 @@ export abstract class BaseService<T, TFilter extends FiltroBase = FiltroBase> im
    * @param data Dados encontrados
    * @returns Dados processados
    */
-  protected async processAfterFind(data: T): Promise<T> {
-    // Implementação base - deve ser sobrescrita por classes filhas se necessário
+  protected processAfterFind(data: T): T {
     return data;
   }
   
@@ -495,7 +488,7 @@ export abstract class BaseService<T, TFilter extends FiltroBase = FiltroBase> im
     const sanitized = { ...data };
     for (const field of sensitiveFields) {
       if (Object.prototype.hasOwnProperty.call(sanitized, field)) {
-        sanitized[field] = '[REDACTED]';
+        (sanitized as Record<string, unknown>)[field] = '[REDACTED]';
       }
     }
     return sanitized;

@@ -1,5 +1,5 @@
 // Cache Invalidation Strategy
-import { ICacheService, ILogService } from '../interfaces/index.js';
+import type { ICacheService, ILogService } from '../interfaces/index.js';
 
 /**
  * Cache invalidation strategies
@@ -47,8 +47,8 @@ export interface CacheDependency {
  * Cache invalidation strategy implementation
  */
 export class CacheInvalidationStrategy {
-  private cacheService: ICacheService;
-  private logService: ILogService;
+  private readonly cacheService: ICacheService;
+  private readonly logService: ILogService;
   private dependencyMap: Map<string, Set<string>> = new Map();
   
   constructor(cacheService: ICacheService, logService: ILogService) {
@@ -213,7 +213,7 @@ export class CacheInvalidationStrategy {
         this.dependencyMap = new Map();
         await this.logService.info('Mapa de dependências de cache inicializado vazio');
       }
-    } catch (error) {
+    } catch {
       // Se há erro ao carregar, inicializar com mapa vazio
       this.dependencyMap = new Map();
       await this.logService.info('Mapa de dependências de cache inicializado vazio devido a erro');

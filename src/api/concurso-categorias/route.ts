@@ -1,4 +1,5 @@
-import express, { Request, Response } from 'express';
+import type { Request, Response } from 'express';
+import express from 'express';
 import { supabase } from '../../config/supabase-unified.js';
 import { requestLogger } from '../../middleware/logger.js';
 import { rateLimit } from '../../middleware/rateLimit.js';
@@ -15,7 +16,7 @@ router.use(rateLimit);
 // GET - Buscar categorias
 // ========================================
 
-router.get('/', async (req: Request, res: Response) => {
+router.get('/', async (req: Request, res: Response): Promise<void> => {
   try {
     const { ativo, slug } = req.query;
 
@@ -35,11 +36,12 @@ router.get('/', async (req: Request, res: Response) => {
     const { data: categorias, error } = await query.order('nome', { ascending: true });
 
     if (error) {
-      logger.error('Erro ao buscar categorias de concurso:', { error: error.message, code: error.code, details: error.details });
-      return res.status(500).json({
+      logger.error('Erro ao buscar categorias de concurso:', { error: error.message, code: (error as unknown as { code?: string }).code, details: (error as unknown as { details?: unknown }).details });
+      res.status(500).json({
         success: false,
         error: 'Erro ao buscar categorias de concurso',
       });
+      return;
     }
 
     res.json({
@@ -47,7 +49,7 @@ router.get('/', async (req: Request, res: Response) => {
       data: categorias || [],
     });
   } catch (error) {
-    logger.error('Erro ao processar requisição GET /api/concurso-categorias:', error);
+    logger.error('Erro ao processar requisição GET /api/concurso-categorias:', { error: error instanceof Error ? error.message : String(error) });
     res.status(500).json({
       success: false,
       error: 'Erro interno do servidor',
@@ -59,7 +61,7 @@ router.get('/', async (req: Request, res: Response) => {
 // POST - Criar categoria (apenas admin)
 // ========================================
 
-router.post('/', requireAuth, async (req: Request, res: Response) => {
+const createCategoriaHandler = async (req: Request, res: Response) => {
   try {
     const { nome, slug, descricao, cor_primaria, cor_secundaria } = req.body;
 
@@ -103,8 +105,8 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
         nome,
         slug,
         descricao,
-        cor_primaria: cor_primaria || '#2563EB',
-        cor_secundaria: cor_secundaria || '#1E40AF',
+        cor_primaria: cor_primaria ?? '#2563EB',
+        cor_secundaria: cor_secundaria ?? '#1E40AF',
         ativo: true,
       })
       .select()
@@ -125,19 +127,19 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
       data: categoria,
     });
   } catch (error) {
-    logger.error('Erro ao processar requisição POST /api/concurso-categorias:', error);
+    logger.error('Erro ao processar requisição POST /api/concurso-categorias:', { error: error instanceof Error ? error.message : String(error) });
     res.status(500).json({
       success: false,
       error: 'Erro interno do servidor',
     });
   }
-});
+};
 
 // ========================================
 // PUT - Atualizar categoria
 // ========================================
 
-router.put('/:id', requireAuth, async (req: Request, res: Response) => {
+const updateCategoriaHandler = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { nome, slug, descricao, cor_primaria, cor_secundaria, ativo } = req.body;
@@ -214,19 +216,19 @@ router.put('/:id', requireAuth, async (req: Request, res: Response) => {
       data: categoria,
     });
   } catch (error) {
-    logger.error('Erro ao processar requisição PUT /api/concurso-categorias/:id:', error);
+    logger.error('Erro ao processar requisição PUT /api/concurso-categorias/:id:', { error: error instanceof Error ? error.message : String(error) });
     res.status(500).json({
       success: false,
       error: 'Erro interno do servidor',
     });
   }
-});
+};
 
 // ========================================
 // DELETE - Deletar categoria
 // ========================================
 
-router.delete('/:id', requireAuth, async (req: Request, res: Response) => {
+const deleteCategoriaHandler = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -265,15 +267,17 @@ router.delete('/:id', requireAuth, async (req: Request, res: Response) => {
       message: 'Categoria deletada com sucesso',
     });
   } catch (error) {
-    logger.error('Erro interno:', error);
+    logger.error('Erro interno:', { error: error instanceof Error ? error.message : String(error) });
     res.status(500).json({
       success: false,
       error: 'Erro interno do servidor',
     });
   }
-});
+};
 
 // Registrar rotas
-// TODO: Adicionar rotas específicas para cada arquivo
+router.post('/', requireAuth, async (req, res) => await createCategoriaHandler(req, res));
+router.put('/:id', requireAuth, async (req, res) => await updateCategoriaHandler(req, res));
+router.delete('/:id', requireAuth, async (req, res) => await deleteCategoriaHandler(req, res));
 
 export { router };

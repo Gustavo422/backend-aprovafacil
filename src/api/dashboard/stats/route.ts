@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import { z } from 'zod';
 import { supabase } from '../../../config/supabase-unified.js';
 import { logger } from '../../../lib/logger.js';
@@ -129,7 +129,7 @@ export const getDashboardStatsHandler = async (req: AuthenticatedRequest, res: R
         .filter(q => q.respostas)
         .reduce((total, q) => {
           const respostas = Array.isArray(q.respostas) ? q.respostas : [];
-          return total + respostas.filter(r => r.correta).length;
+          return total + respostas.filter((r: { correta?: boolean }) => r.correta).length;
         }, 0);
       stats.questoes_semanais.acertos = respostasCorretas;
     }
@@ -214,7 +214,7 @@ export const getDashboardStatsHandler = async (req: AuthenticatedRequest, res: R
     });
 
   } catch (error) {
-    logger.error('Erro ao buscar estatísticas do dashboard:', error);
+    logger.error('Erro ao buscar estatísticas do dashboard:', { error: error instanceof Error ? error.message : String(error) });
     return res.status(500).json({
       success: false,
       error: 'Erro interno do servidor',

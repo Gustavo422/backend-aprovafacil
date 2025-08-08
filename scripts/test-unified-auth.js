@@ -190,7 +190,7 @@ async function runTests() {
       email: testUser.email,
       role: testUser.role,
       iat: Math.floor(Date.now() / 1000) - 7200, // 2 horas atrás
-      exp: Math.floor(Date.now() / 1000) - 3600  // 1 hora atrás
+      exp: Math.floor(Date.now() / 1000) - 3600 // 1 hora atrás
     },
     JWT_SECRET
   );

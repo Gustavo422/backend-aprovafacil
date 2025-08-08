@@ -1,6 +1,6 @@
-import { BaseService, BaseServiceOptions } from '../../core/services/base-service.js';
-import { IUsuarioService, IUsuarioRepository, IAuthService } from '../../core/interfaces/index.js';
-import { Usuario, ApiResponse, EstatisticasUsuario, FiltroBase } from '../../shared/types/index.js';
+import { BaseService, type BaseServiceOptions } from '../../core/services/base-service.js';
+import type { IUsuarioService, IUsuarioRepository, IAuthService } from '../../core/interfaces/index.js';
+import type { Usuario, ApiResponse, EstatisticasUsuario, FiltroBase } from '../../shared/types/index.js';
 import { ValidationError, NotFoundError } from '../../core/errors/index.js';
 import { performance } from 'perf_hooks';
 
@@ -133,7 +133,7 @@ export class UsuarioService extends BaseService<Usuario, FiltroUsuario> implemen
       }
       
       // Processar dados após busca
-      const processedUser = await this.processAfterFind(usuario);
+      const processedUser = this.processAfterFind(usuario);
       
       // Salvar no cache
       if (this.enableCache) {
@@ -173,7 +173,7 @@ export class UsuarioService extends BaseService<Usuario, FiltroUsuario> implemen
       });
       
       // Validar entrada
-      await this.validateCreateUserInput(dados);
+      this.validateCreateUserInput(dados);
       
       // Verificar se email já existe
       const usuarioExistente = await (this.repository as IUsuarioRepository).buscarPorEmail(dados.email);
@@ -194,7 +194,7 @@ export class UsuarioService extends BaseService<Usuario, FiltroUsuario> implemen
         nome: dados.nome,
         email: dados.email.toLowerCase(),
         senha_hash: senhaHash,
-        role: dados.role || 'user',
+        role: dados.role ?? 'user',
         ativo: true,
         primeiro_login: true,
         total_questoes_respondidas: 0,
@@ -207,7 +207,7 @@ export class UsuarioService extends BaseService<Usuario, FiltroUsuario> implemen
       const usuario = await this.repository.criar(dadosUsuario);
       
       // Processar dados após criação
-      const processedUser = await this.processAfterCreate(usuario);
+      const processedUser = this.processAfterCreate(usuario);
       
       // Limpar cache relacionado
       if (this.enableCache) {
@@ -250,7 +250,7 @@ export class UsuarioService extends BaseService<Usuario, FiltroUsuario> implemen
       });
       
       // Validar entrada
-      await this.validateUpdateProfileInput(dados);
+      this.validateUpdateProfileInput(dados);
       
       // Verificar se usuário existe
       const usuarioExistente = await this.repository.buscarPorId(id);
@@ -287,7 +287,7 @@ export class UsuarioService extends BaseService<Usuario, FiltroUsuario> implemen
       const usuarioAtualizado = await this.repository.atualizar(id, dadosAtualizacao);
       
       // Processar dados após atualização
-      const processedUser = await this.processAfterUpdate(usuarioAtualizado);
+      const processedUser = this.processAfterUpdate(usuarioAtualizado);
       
       // Limpar cache relacionado
       if (this.enableCache) {
@@ -451,7 +451,7 @@ export class UsuarioService extends BaseService<Usuario, FiltroUsuario> implemen
    * @param data Dados do usuário
    * @returns Dados processados
    */
-  protected async processAfterFind(data: Usuario): Promise<Usuario> {
+  protected override processAfterFind(data: Usuario): Usuario {
     // Remover dados sensíveis
     const usuarioSemSenha = { ...data };
     return usuarioSemSenha as Usuario;
@@ -462,7 +462,7 @@ export class UsuarioService extends BaseService<Usuario, FiltroUsuario> implemen
    * @param data Dados do usuário criado
    * @returns Dados processados
    */
-  protected async processAfterCreate(data: Usuario): Promise<Usuario> {
+  protected override processAfterCreate(data: Usuario): Usuario {
     // Remover dados sensíveis
     const usuarioSemSenha = { ...data };
     return usuarioSemSenha as Usuario;
@@ -473,7 +473,7 @@ export class UsuarioService extends BaseService<Usuario, FiltroUsuario> implemen
    * @param data Dados do usuário atualizado
    * @returns Dados processados
    */
-  protected async processAfterUpdate(data: Usuario): Promise<Usuario> {
+  protected override processAfterUpdate(data: Usuario): Usuario {
     // Remover dados sensíveis
     const usuarioSemSenha = { ...data };
     return usuarioSemSenha as Usuario;
@@ -483,7 +483,7 @@ export class UsuarioService extends BaseService<Usuario, FiltroUsuario> implemen
    * Validar entrada para criação de usuário
    * @param dados Dados do usuário
    */
-  private async validateCreateUserInput(dados: CriarUsuarioData): Promise<void> {
+  private validateCreateUserInput(dados: CriarUsuarioData): void {
     if (!dados.nome || dados.nome.trim().length < 2) {
       throw new ValidationError('Nome deve ter pelo menos 2 caracteres');
     }
@@ -505,7 +505,7 @@ export class UsuarioService extends BaseService<Usuario, FiltroUsuario> implemen
    * Validar entrada para atualização de perfil
    * @param dados Dados para atualização
    */
-  private async validateUpdateProfileInput(dados: AtualizarPerfilData): Promise<void> {
+  private validateUpdateProfileInput(dados: AtualizarPerfilData): void {
     if (dados.nome !== undefined && dados.nome.trim().length < 2) {
       throw new ValidationError('Nome deve ter pelo menos 2 caracteres');
     }
@@ -536,8 +536,8 @@ export class UsuarioService extends BaseService<Usuario, FiltroUsuario> implemen
     const [local, domain] = email.split('@');
     if (!domain) return '[INVALID]';
     
-    const sanitizedLocal = local.length > 2 
-      ? local.substring(0, 2) + '***'
+    const sanitizedLocal = (local ?? '').length > 2 
+      ? `${(local ?? '').substring(0, 2) }***`
       : '***';
     
     return `${sanitizedLocal}@${domain}`;

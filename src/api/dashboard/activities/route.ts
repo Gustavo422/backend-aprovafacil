@@ -1,4 +1,5 @@
-import express, { Request, Response } from 'express';
+import type { Request, Response } from 'express';
+import express from 'express';
 import { supabase } from '../../../config/supabase-unified.js';
 import { requestLogger } from '../../../middleware/logger.js';
 import { rateLimit } from '../../../middleware/rateLimit.js';
@@ -11,18 +12,18 @@ const router = express.Router();
 router.use(requestLogger);
 router.use(rateLimit);
 
-interface SimuladoPersonalizado {
+interface Simulado {
     titulo: string;
     dificuldade: string;
 }
 
-interface usuariosimuladoProgress {
+interface UsuarioSimuladoProgress {
     id: string;
     usuario_id: string;
-    concluido_at: string;
-    time_taken_minutes: number | null;
-    score: number;
-    simulados_personalizados: SimuladoPersonalizado;
+    concluido_em: string;
+    tempo_gasto_minutos: number | null;
+    pontuacao: number;
+    simulados: Simulado;
     [key: string]: unknown;
 }
 
@@ -32,7 +33,7 @@ interface Activity {
     titulo: string;
     descricao: string;
     time: string;
-    criado_em: string;
+    created_at: string;
     score?: number;
     improvement?: number;
 }
@@ -42,31 +43,31 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
   try {
     const activities: Activity[] = [];
 
-    // Buscar atividades de simulados-personalizados
+    // Buscar atividades de simulados
     const { data: simuladoProgress } = await supabase
       .from('progresso_usuario_simulado')
       .select(`
                 *,
-                simulados_personalizados:simulados_personalizados (
+                simulados:simulados (
                     titulo,
                     dificuldade
                 )
             `)
-      .eq('usuario_id', req.user.id)
-      .order('concluido_at', { ascending: false })
-      .limit(10) as { data: usuariosimuladoProgress[] | null };
+      .eq('usuario_id', (req as unknown as { user: { id: string } }).user.id)
+      .order('concluido_em', { ascending: false })
+      .limit(10) as { data: UsuarioSimuladoProgress[] | null };
 
     if (simuladoProgress) {
       for (const progress of simuladoProgress) {
         activities.push({
           id: `simulado-${progress.id}`,
           type: 'simulado',
-          titulo: progress.simulados_personalizados?.titulo || 'Simulado',
-          descricao: `Pontuação: ${progress.score}% - ${progress.simulados_personalizados?.dificuldade || 'Médio'}`,
-          time: progress.time_taken_minutes ? `${progress.time_taken_minutes}min` : '',
-          criado_em: progress.concluido_at,
-          score: progress.score,
-          improvement: 0, // Será calculado comparando com simulados-personalizados anteriores
+          titulo: progress.simulados?.titulo || 'Simulado',
+          descricao: `Pontuação: ${progress.pontuacao}% - ${progress.simulados?.dificuldade || 'Médio'}`,
+          time: progress.tempo_gasto_minutos ? `${progress.tempo_gasto_minutos}min` : '',
+          created_at: progress.concluido_em,
+          score: progress.pontuacao,
+          improvement: 0, // Será calculado comparando com simulados anteriores
         });
       }
     }
@@ -76,25 +77,24 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
             id: string;
             criado_em: string;
             status: string;
-            flashcard: {
-                front: string;
+            cartoes_memorizacao: {
+                frente: string;
                 disciplina: string;
             } | null;
             atualizado_em: string;
             usuario_id: string;
-            percentual_progresso?: number;
         }
 
         const { data: flashcardProgress } = await supabase
           .from('progresso_usuario_flashcard')
           .select(`
                 *,
-                flashcard:flashcard (
-                    front,
+                cartoes_memorizacao:cartoes_memorizacao (
+                    frente,
                     disciplina
                 )
             `)
-          .eq('usuario_id', req.user.id)
+          .eq('usuario_id', (req as unknown as { user: { id: string } }).user.id)
           .order('atualizado_em', { ascending: false })
           .limit(10) as { data: FlashcardProgress[] | null };
 
@@ -104,9 +104,9 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
               id: `flashcard-${progress.id}`,
               type: 'flashcard',
               titulo: 'Revisão de Flashcard',
-              descricao: `${progress.flashcard?.disciplina || 'Disciplina'} - ${progress.status}`,
+              descricao: `${progress.cartoes_memorizacao?.disciplina || 'Disciplina'} - ${progress.status}`,
               time: '',
-              criado_em: progress.atualizado_em,
+              created_at: progress.atualizado_em,
             });
           }
         }
@@ -131,7 +131,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
                     titulo
                 )
             `)
-          .eq('usuario_id', req.user.id)
+          .eq('usuario_id', (req as unknown as { user: { id: string } }).user.id)
           .order('atualizado_em', { ascending: false })
           .limit(5) as { data: ApostilaProgress[] | null };
 
@@ -143,15 +143,15 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
               titulo: 'Estudo de Apostila',
               descricao: `${progress.conteudo_apostila?.titulo || 'Apostila'} - ${progress['percentual_progresso']}% concluído`,
               time: '',
-              criado_em: progress.atualizado_em,
+              created_at: progress.atualizado_em,
             });
           }
         }
 
         // Ordenar todas as atividades por data
-        activities.sort((a, b) => new Date(b.criado_em).getTime() - new Date(a.criado_em).getTime());
+        activities.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-        // Calcular melhorias para simulados-personalizados
+        // Calcular melhorias para simulados
         if (simuladoProgress && simuladoProgress.length > 1) {
           for (let i = 0; i < activities.length; i++) {
             const activity = activities[i];
@@ -162,8 +162,8 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
                     
               if (currentIndex > 0) {
                 const previousSimulado = simuladoProgress[currentIndex - 1];
-                if (previousSimulado?.score !== undefined) {
-                  activity.improvement = activity.score - previousSimulado.score;
+                if (previousSimulado?.pontuacao !== undefined) {
+                  activity.improvement = activity.score - previousSimulado.pontuacao;
                 }
               }
             }
@@ -176,7 +176,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
         });
 
   } catch (error) {
-    logger.error('Erro ao buscar atividades do dashboard:', error);
+    logger.error('Erro ao buscar atividades do dashboard:', { error: error instanceof Error ? error.message : String(error) });
     res.status(500).json({
       success: false,
       error: 'Erro interno do servidor',

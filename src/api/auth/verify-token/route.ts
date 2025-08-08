@@ -1,4 +1,5 @@
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
+import { Router } from 'express';
 import { supabase } from '../../../config/supabase-unified.js';
 import { logger } from '../../../lib/logger.js';
 
@@ -6,7 +7,7 @@ export const verifyTokenHandler = async (req: Request, res: Response) => {
   try {
     const authHeader = req.headers.authorization;
     
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (!authHeader?.startsWith('Bearer ')) {
       return res.status(401).json({
         valid: false,
         error: 'Token de autenticação não fornecido',
@@ -27,9 +28,9 @@ export const verifyTokenHandler = async (req: Request, res: Response) => {
       valid: true,
       user: {
         id: user.id,
-        nome: user.user_metadata?.nome || user.email || '',
-        email: user.email || '',
-        role: user.user_metadata?.role || 'user',
+        nome: user.user_metadata?.nome ?? user.email ?? '',
+        email: user.email ?? '',
+        role: user.user_metadata?.role ?? 'user',
       },
     });
 
@@ -43,11 +44,10 @@ export const verifyTokenHandler = async (req: Request, res: Response) => {
 };
 
 // Criar router Express
-import { Router } from 'express';
-
-const router = Router();
+const createRouter = () => Router();
+const router = createRouter();
 
 // Registrar rotas
-router.get('/', verifyTokenHandler);
+router.get('/', async (req, res) => await verifyTokenHandler(req, res));
 
 export { router }; 

@@ -1,4 +1,4 @@
-import { SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { getLogger } from '../lib/logging/logging-service.js';
 
 const logger = getLogger('concurso-filter');
@@ -14,7 +14,7 @@ interface QueryWithEq {
  * Helper para filtrar conteúdo automaticamente pelo concurso do usuário
  */
 export class ConcursoFilter {
-  private supabase: SupabaseClient;
+  private readonly supabase: SupabaseClient;
 
   constructor(supabase: SupabaseClient) {
     this.supabase = supabase;
@@ -90,7 +90,6 @@ export class ConcursoFilter {
   async applyConcursoFilter<T extends QueryWithEq>(
     query: T,
     usuarioId: string,
-    _tablenome: string,
   ): Promise<T> {
     const concursoId = await this.getUserConcurso(usuarioId);
     if (!concursoId) {
@@ -98,7 +97,8 @@ export class ConcursoFilter {
     }
     // Só aplica o filtro se query for um builder (tiver eq)
     if (typeof query.eq === 'function') {
-      return query.eq('concurso_id', concursoId) as T;
+      const result = query.eq('concurso_id', concursoId);
+      return result as T;
     }
     return query;
   }
@@ -146,23 +146,15 @@ export class ConcursoFilter {
   }
 }
 
-/**
- * Função helper para aplicar filtro de concurso em queries
- * @returns {Promise<T>} O builder da query filtrada
- */
 export async function applyConcursoFilterToQuery<T extends QueryWithEq>(
   supabase: SupabaseClient,
   usuarioId: string,
   query: T,
-  _tablenome: string,
 ): Promise<T> {
   const filter = new ConcursoFilter(supabase);
-  return filter.applyConcursoFilter(query, usuarioId, _tablenome);
+  return await filter.applyConcursoFilter(query, usuarioId);
 }
 
-/**
- * Função helper para verificar acesso a recurso específico
- */
 export async function checkConcursoAccess(
   supabase: SupabaseClient,
   usuarioId: string,
@@ -170,72 +162,13 @@ export async function checkConcursoAccess(
   tablenome: string,
 ): Promise<boolean> {
   const filter = new ConcursoFilter(supabase);
-  return filter.hasAccessToResource(usuarioId, resourceId, tablenome);
-} 
+  return await filter.hasAccessToResource(usuarioId, resourceId, tablenome);
+}
 
-/**
- * Função utilitária para obter o concurso ativo do usuário (exportada para uso externo)
- */
 export async function getUserConcurso(supabase: SupabaseClient, usuarioId: string): Promise<string | null> {
-  try {
-    const { data: preference, error } = await supabase
-      .from('preferencias_usuario_concurso')
-      .select('concurso_id')
-      .eq('usuario_id', usuarioId)
-      .eq('ativo', true)
-      .single();
-
-    if (error) {
-      // Verificar se é um erro de "não encontrado"
-      if (error.code === 'PGRST116') {
-        logger.info(`Nenhuma preferência ativa encontrada para o usuário ${usuarioId}`);
-        
-        // Tentar buscar o concurso mais recente do usuário (mesmo que não esteja ativo)
-        const { data: lastPreference, error: lastError } = await supabase
-          .from('preferencias_usuario_concurso')
-          .select('concurso_id')
-          .eq('usuario_id', usuarioId)
-          .order('criado_em', { ascending: false })
-          .limit(1)
-          .single();
-          
-        if (!lastError && lastPreference) {
-          logger.info(`Usando concurso mais recente como fallback para o usuário ${usuarioId}`);
-          return lastPreference.concurso_id;
-        }
-        
-        // Se não encontrar nenhuma preferência, tentar buscar o concurso padrão
-        const { data: defaultConcurso, error: defaultError } = await supabase
-          .from('concursos')
-          .select('id')
-          .eq('ativo', true)
-          .order('criado_em', { ascending: false })
-          .limit(1)
-          .single();
-          
-        if (!defaultError && defaultConcurso) {
-          logger.info(`Usando concurso padrão como fallback para o usuário ${usuarioId}`);
-          return defaultConcurso.id;
-        }
-      } else if (error.code === '42703') {
-        // Erro de coluna não existente (problema com usuario_id vs usuario_id)
-        logger.error('Erro de esquema de banco de dados:', { error: error.message });
-      } else {
-        logger.error('Erro ao buscar preferência de concurso:', { error: error.message });
-      }
-      return null;
-    }
-
-    if (!preference) {
-      return null;
-    }
-
-    return preference.concurso_id;
-  } catch (error) {
-    logger.error('Erro ao obter concurso do usuário:', { error });
-    return null;
-  }
-} 
+  const filter = new ConcursoFilter(supabase);
+  return await filter.getUserConcurso(usuarioId);
+}
 
 
 

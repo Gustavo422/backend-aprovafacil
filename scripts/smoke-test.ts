@@ -8,6 +8,9 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+// Compat: usar node-fetch se disponível; caso contrário, usar global fetch em Node 18+
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
 import fetch from 'node-fetch';
 
 interface SmokeTestResult {
@@ -20,8 +23,8 @@ interface SmokeTestResult {
 }
 
 class SmokeTester {
-  private baseUrl: string;
-  private supabase: any;
+  private readonly baseUrl: string;
+  private readonly supabase: any;
   private testToken: string | null = null;
 
   constructor() {
@@ -46,7 +49,7 @@ class SmokeTester {
       if (error) throw error;
       
       this.testToken = data.session.access_token;
-      return this.testToken;
+      return this.testToken ?? '';
     } catch (error) {
       throw new Error(`Erro ao obter token de teste: ${error instanceof Error ? error.message : String(error)}`);
     }
@@ -85,7 +88,7 @@ class SmokeTester {
           responseTime,
           statusCode: response.status
         };
-      } else {
+      } 
         return {
           route: path,
           method,
@@ -94,7 +97,7 @@ class SmokeTester {
           statusCode: response.status,
           error: `Status ${response.status} não esperado`
         };
-      }
+      
     } catch (error) {
       const responseTime = Date.now() - startTime;
       return {

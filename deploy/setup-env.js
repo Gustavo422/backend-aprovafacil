@@ -15,7 +15,7 @@ const colors = {
 };
 
 // Caminhos importantes
-const rootDir = path.resolve(__dirnome, '../..');
+const rootDir = path.resolve(__dirname, '../..');
 const envExamplePath = path.join(rootDir, '.env.production.example');
 const envPath = path.join(rootDir, '.env.production');
 const gitignorePath = path.join(rootDir, '.gitignore');
@@ -38,9 +38,9 @@ const question = (query) => {
 // Função para validar URL
 const isValidUrl = (url) => {
   try {
-    new URL(url);
-    return true;
-  } catch (e) {
+    const validUrl = new URL(url);
+    return Boolean(validUrl);
+  } catch {
     return false;
   }
 };
@@ -117,7 +117,7 @@ const main = async () => {
       try {
         const release = execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim();
         console.log(`Release configurado: ${colors.cyan}${release}${colors.reset}`);
-      } catch (e) {
+      } catch {
         console.warn(`${colors.yellow}⚠️  Não foi possível configurar o release do Sentry automaticamente.${colors.reset}`);
       }
     }

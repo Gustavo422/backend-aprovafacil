@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { MigrationManager } from '../src/database/MigrationManager.ts';
+import { MigrationManager } from '../src/database/MigrationManager.js';
 
 // Load environment variables
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });

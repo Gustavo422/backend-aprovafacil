@@ -1,10 +1,10 @@
-import { Request, Response } from 'express';
-import { supabase } from '../../../config/supabase-unified.js';
+import express from 'express';
 import { logger } from '../../../lib/logger.js';
+import { supabase } from '../../../config/supabase-unified.js';
 import jwt from 'jsonwebtoken';
 
 // Interface para request com usuário autenticado
-interface AuthenticatedRequest extends Request {
+interface AuthenticatedRequest extends express.Request {
   user?: {
     id: string;
     email: string;
@@ -17,10 +17,19 @@ interface AuthenticatedRequest extends Request {
 }
 
 // Função para verificar token JWT
-function verifyJWTToken(token: string): any {
+function verifyJWTToken(token: string): { id: string; email: string; role: string } | null {
   try {
     const secret = process.env.JWT_SECRET || 'seu_jwt_secret_aqui_com_pelo_menos_32_caracteres';
-    return jwt.verify(token, secret);
+    const decoded = jwt.verify(token, secret);
+    if (typeof decoded === 'object' && decoded && 'usuarioId' in decoded) {
+      const decodedObj = decoded as { usuarioId: string; email: string; role: string };
+      return {
+        id: decodedObj.usuarioId,
+        email: decodedObj.email,
+        role: decodedObj.role,
+      };
+    }
+    return null;
   } catch (error) {
     logger.error('Erro ao verificar token JWT:', { 
       component: 'backend',
@@ -30,11 +39,11 @@ function verifyJWTToken(token: string): any {
   }
 }
 
-export const getConcursoPreferenceHandler = async (req: AuthenticatedRequest, res: Response) => {
+export const getConcursoPreferenceHandler = async (req: AuthenticatedRequest, res: express.Response) => {
   try {
     const authHeader = req.headers.authorization;
     
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (!authHeader?.startsWith('Bearer ')) {
       logger.warn('Token de autenticação não fornecido', { 
         component: 'backend',
         url: req.url,
@@ -51,7 +60,7 @@ export const getConcursoPreferenceHandler = async (req: AuthenticatedRequest, re
     // Verificar token JWT em vez de Supabase Auth
     const decoded = verifyJWTToken(token);
     
-    if (!decoded || !decoded.id) {
+    if (!decoded?.id) {
       logger.warn('Token JWT inválido ou expirado', { 
         component: 'backend',
         url: req.url,
@@ -67,7 +76,7 @@ export const getConcursoPreferenceHandler = async (req: AuthenticatedRequest, re
 
     logger.info('Buscando preferências do usuário', { 
       component: 'backend',
-      userId: userId,
+      userId,
       url: req.url, 
     });
 
@@ -93,7 +102,7 @@ export const getConcursoPreferenceHandler = async (req: AuthenticatedRequest, re
       logger.error('Erro ao buscar preferências:', { 
         component: 'backend',
         error: preferencesError,
-        userId: userId, 
+        userId, 
       });
       return res.status(500).json({
         success: false,
@@ -103,13 +112,42 @@ export const getConcursoPreferenceHandler = async (req: AuthenticatedRequest, re
 
     logger.info('Preferências encontradas', { 
       component: 'backend',
-      userId: userId,
+      userId,
       count: preferences?.length || 0, 
     });
 
+    // Se não há preferências, retornar null
+    if (preferences.length === 0) {
+      return res.json({
+        success: true,
+        data: null,
+      });
+    }
+
+    // Pegar a primeira preferência ativa
+    const preference = preferences[0];
+    
+    if (!preference) {
+      return res.json({
+        success: true,
+        data: null,
+      });
+    }
+
+    const concursoData = preference.concurso as { categoria_id?: string } | null;
+    const podeAlterarAte = preference.pode_alterar_ate as string | null;
+    const criadoEm = preference.criado_em as string;
+    const atualizadoEm = preference.atualizado_em as string;
+    
     return res.json({
       success: true,
-      preferences: preferences || [],
+      data: {
+        concurso_id: preference.concurso_id,
+        categoria_id: concursoData?.categoria_id ?? null,
+        pode_alterar_ate: podeAlterarAte ?? null,
+        criado_em: criadoEm,
+        atualizado_em: atualizadoEm,
+      },
     });
 
   } catch (error) {
@@ -125,11 +163,11 @@ export const getConcursoPreferenceHandler = async (req: AuthenticatedRequest, re
   }
 };
 
-export const postConcursoPreferenceHandler = async (req: AuthenticatedRequest, res: Response) => {
+export const postConcursoPreferenceHandler = async (req: AuthenticatedRequest, res: express.Response) => {
   try {
     const authHeader = req.headers.authorization;
     
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (!authHeader?.startsWith('Bearer ')) {
       logger.warn('Token de autenticação não fornecido', { 
         component: 'backend',
         url: req.url,
@@ -146,7 +184,7 @@ export const postConcursoPreferenceHandler = async (req: AuthenticatedRequest, r
     // Verificar token JWT em vez de Supabase Auth
     const decoded = verifyJWTToken(token);
     
-    if (!decoded || !decoded.id) {
+    if (!decoded?.id) {
       logger.warn('Token JWT inválido ou expirado', { 
         component: 'backend',
         url: req.url,
@@ -159,13 +197,13 @@ export const postConcursoPreferenceHandler = async (req: AuthenticatedRequest, r
     }
 
     const userId = decoded.id;
-    const body = req.body;
+    const body = req.body as { concurso_id: string; preferencias?: Record<string, unknown> };
     const { concurso_id, preferencias } = body;
 
     if (!concurso_id) {
       logger.warn('ID do concurso não fornecido', { 
         component: 'backend',
-        userId: userId,
+        userId,
         body, 
       });
       return res.status(400).json({
@@ -176,7 +214,7 @@ export const postConcursoPreferenceHandler = async (req: AuthenticatedRequest, r
 
     logger.info('Salvando preferências do usuário', { 
       component: 'backend',
-      userId: userId,
+      userId,
       concursoId: concurso_id, 
     });
 
@@ -186,7 +224,7 @@ export const postConcursoPreferenceHandler = async (req: AuthenticatedRequest, r
       .upsert({
         usuario_id: userId,
         concurso_id,
-        preferencias: preferencias || {},
+        preferencias: preferencias ?? {},
         ativo: true,
         criado_em: new Date().toISOString(),
         atualizado_em: new Date().toISOString(),
@@ -209,7 +247,7 @@ export const postConcursoPreferenceHandler = async (req: AuthenticatedRequest, r
       logger.error('Erro ao salvar preferências:', { 
         component: 'backend',
         error: createError,
-        userId: userId,
+        userId,
         concursoId: concurso_id, 
       });
       return res.status(500).json({
@@ -220,7 +258,7 @@ export const postConcursoPreferenceHandler = async (req: AuthenticatedRequest, r
 
     logger.info('Preferências salvas com sucesso', { 
       component: 'backend',
-      userId: userId,
+      userId,
       concursoId: concurso_id, 
     });
 
@@ -244,12 +282,20 @@ export const postConcursoPreferenceHandler = async (req: AuthenticatedRequest, r
 };
 
 // Criar router Express
-import { Router } from 'express';
-
-const router = Router();
+const router = express.Router();
 
 // Registrar rotas
-router.get('/', getConcursoPreferenceHandler);
-router.post('/', postConcursoPreferenceHandler);
+router.get('/', (req, res) => {
+  getConcursoPreferenceHandler(req as AuthenticatedRequest, res).catch((error) => {
+    logger.error('Erro não tratado em getConcursoPreferenceHandler', { error });
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  });
+});
+router.post('/', (req, res) => {
+  postConcursoPreferenceHandler(req as AuthenticatedRequest, res).catch((error) => {
+    logger.error('Erro não tratado em postConcursoPreferenceHandler', { error });
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  });
+});
 
-export { router };
+export default router;

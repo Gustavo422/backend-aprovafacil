@@ -6,9 +6,9 @@ import { GET } from './route.js';
 vi.mock('next/server', () => ({
   NextResponse: {
     json: vi.fn((data, options) => ({
-      json: () => Promise.resolve(data),
-      status: options?.status || 200,
-      headers: options?.headers || {},
+      json: async () => Promise.resolve(data),
+      status: options?.status ?? 200,
+      headers: options?.headers ?? {},
     })),
   },
 }));

@@ -1,20 +1,20 @@
 // Serviço de logs para o AprovaFácil
-import { ILogService } from '../interfaces/index.js';
-import { SupabaseClient } from '@supabase/supabase-js';
+import type { ILogService } from '../interfaces/index.js';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 export class LogService implements ILogService {
-  private supabase: SupabaseClient;
-  private contexto: string;
+  private readonly supabase: SupabaseClient;
+  private readonly contexto: string;
 
-  constructor(supabase: SupabaseClient, contexto: string = 'SISTEMA') {
+  constructor(supabase: SupabaseClient, contexto = 'SISTEMA') {
     this.supabase = supabase;
     this.contexto = contexto;
   }
 
   async info(mensagem: string, detalhes?: unknown): Promise<void> {
     await this.logarEvento('INFO', mensagem, detalhes);
-    // eslint-disable-next-line no-console
-    console.log(`[INFO] ${this.contexto}: ${mensagem}`, detalhes || '');
+     
+    console.log(`[INFO] ${this.contexto}: ${mensagem}`, detalhes ?? '');
   }
 
   async erro(mensagem: string, erro?: Error, detalhes?: unknown): Promise<void> {
@@ -26,21 +26,21 @@ export class LogService implements ILogService {
     };
     
     await this.logarEvento('ERROR', mensagem, detalhesCompletos);
-    // eslint-disable-next-line no-console
-    console.error(`[ERROR] ${this.contexto}: ${mensagem}`, erro, detalhes || '');
+     
+    console.error(`[ERROR] ${this.contexto}: ${mensagem}`, erro, detalhes ?? '');
   }
 
   async aviso(mensagem: string, detalhes?: unknown): Promise<void> {
     await this.logarEvento('WARN', mensagem, detalhes);
-    // eslint-disable-next-line no-console
-    console.warn(`[WARN] ${this.contexto}: ${mensagem}`, detalhes || '');
+     
+    console.warn(`[WARN] ${this.contexto}: ${mensagem}`, detalhes ?? '');
   }
 
   async debug(mensagem: string, detalhes?: unknown): Promise<void> {
     if (process.env.NODE_ENV === 'development') {
       await this.logarEvento('DEBUG', mensagem, detalhes);
-      // eslint-disable-next-line no-console
-      console.debug(`[DEBUG] ${this.contexto}: ${mensagem}`, detalhes || '');
+       
+      console.debug(`[DEBUG] ${this.contexto}: ${mensagem}`, detalhes ?? '');
     }
   }
 
@@ -64,11 +64,11 @@ export class LogService implements ILogService {
         });
 
       if (error) {
-        // eslint-disable-next-line no-console
+         
         console.error('Erro ao registrar log de auditoria:', error);
       }
     } catch (error) {
-      // eslint-disable-next-line no-console
+       
       console.error('Erro inesperado ao registrar log de auditoria:', error);
     }
   }
@@ -86,12 +86,12 @@ export class LogService implements ILogService {
         });
 
       if (error) {
-        // eslint-disable-next-line no-console
+         
         console.error('Erro ao salvar log no banco:', error);
       }
     } catch (error) {
       // Não fazer nada para evitar loop infinito de logs
-      // eslint-disable-next-line no-console
+       
       console.error('Erro crítico no sistema de logs:', error);
     }
   }
@@ -137,9 +137,9 @@ export class LogService implements ILogService {
 
   async logarTentativaLogin(email: string, sucesso: boolean, ip?: string): Promise<void> {
     const mensagem = sucesso ? 'Login realizado com sucesso' : 'Tentativa de login falhada';
-    const metodo = sucesso ? this.info : this.aviso;
+    const metodo = sucesso ? this.info.bind(this) : this.aviso.bind(this);
     
-    await metodo.call(this, mensagem, {
+    await metodo(mensagem, {
       email,
       endereco_ip: ip,
       sucesso,
@@ -171,9 +171,9 @@ export class LogService implements ILogService {
 
   async logarOperacaoCache(operacao: string, chave: string, sucesso: boolean): Promise<void> {
     const mensagem = `Operação de cache ${operacao}: ${chave}`;
-    const metodo = sucesso ? this.debug : this.aviso;
+    const metodo = sucesso ? this.debug.bind(this) : this.aviso.bind(this);
     
-    await metodo.call(this, mensagem, {
+    await metodo(mensagem, {
       operacao_cache: operacao,
       chave_cache: chave,
       sucesso,
@@ -182,12 +182,18 @@ export class LogService implements ILogService {
 
   async logarConexaoBanco(sucesso: boolean, tempoResposta?: number): Promise<void> {
     const mensagem = sucesso ? 'Conexão com banco estabelecida' : 'Falha na conexão com banco';
-    const metodo = sucesso ? this.info : this.erro;
+    const metodo = sucesso ? this.info.bind(this) : this.erro.bind(this);
     
-    await metodo.call(this, mensagem, {
+    const detalhes = {
       conexao_banco: sucesso,
       tempo_resposta_ms: tempoResposta,
-    });
+    };
+    
+    if (sucesso) {
+      await this.info(mensagem, detalhes);
+    } else {
+      await this.erro(mensagem, undefined, detalhes);
+    }
   }
 
   // Método para obter logs com filtros
@@ -242,17 +248,17 @@ export class LogService implements ILogService {
 
       return {
         logs: Array.isArray(data) ? data : [],
-        total: count || 0,
+        total: count ?? 0,
       };
     } catch (error) {
-      // eslint-disable-next-line no-console
+       
       console.error('Erro ao obter logs:', error);
       return { logs: [], total: 0 };
     }
   }
 
   // Método para limpar logs antigos
-  async limparLogsAntigos(diasParaManter: number = 30): Promise<number> {
+  async limparLogsAntigos(diasParaManter = 30): Promise<number> {
     try {
       const dataLimite = new Date();
       dataLimite.setDate(dataLimite.getDate() - diasParaManter);
@@ -269,7 +275,7 @@ export class LogService implements ILogService {
       if (!data || !Array.isArray(data)) {
         return 0;
       }
-      const registrosRemovidos = (data as unknown as Record<string, unknown>[]).length;
+      const registrosRemovidos = (data as Record<string, unknown>[]).length;
       await this.info(`Limpeza de logs concluída: ${registrosRemovidos} registros removidos`);
       
       return registrosRemovidos;
@@ -309,24 +315,26 @@ export class LogService implements ILogService {
 
       // Contar logs por nível
       const logsPorNivel: Record<string, number> = {};
-      nivelData?.forEach(log => {
-        logsPorNivel[log.nivel] = (logsPorNivel[log.nivel] || 0) + 1;
+      nivelData?.forEach((log: Record<string, unknown>) => {
+        const nivel = log.nivel as string;
+        logsPorNivel[nivel] = (logsPorNivel[nivel] ?? 0) + 1;
       });
 
       // Contar logs por serviço
       const logsPorServico: Record<string, number> = {};
-      servicoData?.forEach(log => {
-        logsPorServico[log.servico] = (logsPorServico[log.servico] || 0) + 1;
+      servicoData?.forEach((log: Record<string, unknown>) => {
+        const servico = log.servico as string;
+        logsPorServico[servico] = (logsPorServico[servico] ?? 0) + 1;
       });
 
       return {
-        total_logs: totalData?.length || 0,
+        total_logs: totalData?.length ?? 0,
         logs_por_nivel: logsPorNivel,
         logs_por_servico: logsPorServico,
-        ultimo_log: ultimoLogData?.[0]?.criado_em ? new Date(ultimoLogData[0].criado_em) : null,
+        ultimo_log: ultimoLogData?.[0]?.criado_em ? new Date(ultimoLogData[0].criado_em as string) : null,
       };
     } catch (error) {
-      // eslint-disable-next-line no-console
+       
       console.error('Erro ao obter estatísticas de logs:', error);
       return {
         total_logs: 0,
@@ -340,6 +348,9 @@ export class LogService implements ILogService {
 
 export default LogService;
 
-
-
-
+/**
+ * Factory function para criar instância do LogService
+ */
+export const createLogService = (supabase: SupabaseClient, contexto = 'SISTEMA'): LogService => {
+  return new LogService(supabase, contexto);
+};

@@ -1,7 +1,7 @@
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import { generateOpenAPISpec } from '../../src/core/documentation/openapi';
 
-export const GET = async (req: Request, res: Response) => {
+export const GET = (req: Request, res: Response) => {
   try {
     const spec = generateOpenAPISpec();
     return res.json(spec);
@@ -9,7 +9,7 @@ export const GET = async (req: Request, res: Response) => {
     console.error('Erro ao gerar documentação OpenAPI:', error);
     return res.status(500).json({ error: 'Erro interno do servidor' });
   }
-}; 
+};
 
 
 

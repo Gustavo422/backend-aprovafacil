@@ -74,10 +74,10 @@ function testTokenGeneration() {
   if (userToken && adminToken) {
     console.log('✅ Tokens gerados com sucesso');
     return { userToken, adminToken };
-  } else {
+  } 
     console.log('❌ Falha na geração de tokens');
     return null;
-  }
+  
 }
 
 /**
@@ -94,10 +94,10 @@ function testTokenVerification(userToken, adminToken) {
     console.log(`   Usuário: ${userDecoded.usuarioId} (${userDecoded.role})`);
     console.log(`   Admin: ${adminDecoded.usuarioId} (${adminDecoded.role})`);
     return true;
-  } else {
+  } 
     console.log('❌ Falha na verificação de tokens');
     return false;
-  }
+  
 }
 
 /**
@@ -122,10 +122,10 @@ function testRoleValidation() {
     console.log(`   Usuário (${userDecoded.role}): ❌ Acesso negado`);
     console.log(`   Admin (${adminDecoded.role}): ✅ Acesso permitido`);
     return true;
-  } else {
+  } 
     console.log('❌ Falha na validação de roles');
     return false;
-  }
+  
 }
 
 /**
@@ -163,10 +163,10 @@ function testMiddlewareStructure() {
   if (allFound) {
     console.log('✅ Estrutura do middleware está correta');
     return true;
-  } else {
+  } 
     console.log('❌ Estrutura do middleware incompleta');
     return false;
-  }
+  
 }
 
 /**
@@ -204,7 +204,7 @@ function runAllTests() {
     passedTests++;
   }
   
-  console.log('\n' + '=' .repeat(60));
+  console.log(`\n${ '=' .repeat(60)}`);
   console.log(`📊 RESULTADOS: ${passedTests}/${totalTests} testes passaram`);
   
   if (passedTests === totalTests) {

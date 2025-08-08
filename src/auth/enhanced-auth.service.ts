@@ -1,5 +1,5 @@
-import { SupabaseClient } from '@supabase/supabase-js';
-import { EnhancedLogger, getEnhancedLogger } from '../lib/logging/enhanced-logging-service.js';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { getEnhancedLogger, type EnhancedLogger } from '../lib/logging/enhanced-logging-service.js';
 import { LoginSecurityService } from '../security/login-security.service.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
@@ -41,13 +41,24 @@ interface UserSession {
   active: boolean;
 }
 
+interface Usuario {
+  id: string;
+  email: string;
+  senha_hash: string;
+  ativo: boolean;
+  primeiro_login?: boolean;
+  role?: string;
+  nome?: string;
+  is_admin?: boolean;
+}
+
 export class EnhancedAuthService {
-  private supabase: SupabaseClient;
-  private logger: EnhancedLogger;
-  private securityService: LoginSecurityService;
-  private jwtSecret: string;
-  private accessTokenExpiry: number;
-  private refreshTokenExpiry: number;
+  private readonly supabase: SupabaseClient;
+  private readonly logger: EnhancedLogger;
+  private readonly securityService: LoginSecurityService;
+  private readonly jwtSecret: string;
+  private readonly accessTokenExpiry: number;
+  private readonly refreshTokenExpiry: number;
 
   constructor(
     supabaseClient: SupabaseClient,
@@ -63,8 +74,8 @@ export class EnhancedAuthService {
     
     this.jwtSecret = options.jwtSecret;
     // Configurar para 1 mês de duração por padrão
-    this.accessTokenExpiry = options.accessTokenExpiry || 2592000; // 30 dias por padrão
-    this.refreshTokenExpiry = options.refreshTokenExpiry || 7776000; // 90 dias por padrão
+    this.accessTokenExpiry = options.accessTokenExpiry ?? 2592000; // 30 dias por padrão
+    this.refreshTokenExpiry = options.refreshTokenExpiry ?? 7776000; // 90 dias por padrão
   }
 
   /**
@@ -115,7 +126,7 @@ export class EnhancedAuthService {
 
         return {
           success: false,
-          error: securityCheck.reason || 'Acesso bloqueado por segurança',
+          error: securityCheck.reason ?? 'Acesso bloqueado por segurança',
           errorCode: 'SECURITY_BLOCK',
         };
       }
@@ -144,8 +155,10 @@ export class EnhancedAuthService {
         };
       }
 
+      const usuario = user as Usuario;
+
       // 4. Verificar se usuário está ativo
-      if (!user.ativo) {
+      if (!usuario.ativo) {
         await this.securityService.recordLoginAttempt(
           credentials.email,
           credentials.ipAddress,
@@ -163,7 +176,7 @@ export class EnhancedAuthService {
       }
 
       // 5. Verificar senha
-      const passwordValid = await bcrypt.compare(credentials.password, user.senha_hash);
+      const passwordValid = await bcrypt.compare(credentials.password, usuario.senha_hash);
       if (!passwordValid) {
         await this.securityService.recordLoginAttempt(
           credentials.email,
@@ -182,9 +195,9 @@ export class EnhancedAuthService {
       }
 
       // 6. Gerar tokens
-      const accessToken = this.generateAccessToken(user);
+      const accessToken = this.generateAccessToken(usuario);
       const refreshToken = await this.generateRefreshToken(
-        user.id,
+        usuario.id,
         credentials.deviceFingerprint,
         credentials.deviceName,
         credentials.ipAddress,
@@ -194,7 +207,7 @@ export class EnhancedAuthService {
 
       // 7. Criar sessão
       await this.createUserSession(
-        user.id,
+        usuario.id,
         accessToken,
         {
           deviceFingerprint: credentials.deviceFingerprint,
@@ -209,7 +222,7 @@ export class EnhancedAuthService {
       await this.supabase
         .from('usuarios')
         .update({ ultimo_login: new Date().toISOString() })
-        .eq('id', user.id);
+        .eq('id', usuario.id);
 
       // 9. Registrar login bem-sucedido
       await this.securityService.recordLoginAttempt(
@@ -223,10 +236,10 @@ export class EnhancedAuthService {
 
       // 10. Log de auditoria
       await this.logAuditEvent(
-        user.id,
+        usuario.id,
         'LOGIN',
         'auth',
-        user.id,
+        usuario.id,
         { ipAddress: credentials.ipAddress, deviceName: credentials.deviceName },
         credentials.ipAddress,
         credentials.userAgent,
@@ -235,13 +248,13 @@ export class EnhancedAuthService {
       const executionTime = performance.now() - startTime;
       this.logger.info('Login realizado com sucesso', {
         operationId,
-        usuarioId: user.id,
+        usuarioId: usuario.id,
         executionTimeMs: executionTime.toFixed(2),
         securityRisk: securityCheck.riskLevel,
       });
 
       // Remover dados sensíveis
-      const userWithoutPassword = { ...user };
+      const userWithoutPassword = { ...usuario };
 
       let securityWarning: string | undefined;
       if (securityCheck.riskLevel === 'high') {
@@ -254,15 +267,16 @@ export class EnhancedAuthService {
         refreshToken,
         user: userWithoutPassword,
         expiresIn: this.accessTokenExpiry,
-        requiresPasswordChange: user.primeiro_login,
+        requiresPasswordChange: usuario.primeiro_login,
         securityWarning,
       };
 
     } catch (error) {
       const executionTime = performance.now() - startTime;
+      const errorMessage = error instanceof Error ? error.message : 'Erro interno do servidor';
       this.logger.error('Erro durante login', {
         operationId,
-        error: error.message,
+        error: errorMessage,
         executionTimeMs: executionTime.toFixed(2),
       });
 
@@ -298,14 +312,14 @@ export class EnhancedAuthService {
         };
       }
 
-      // Buscar usuário
+      // Verificar se o usuário ainda existe e está ativo
       const { data: user, error: userError } = await this.supabase
         .from('usuarios')
         .select('*')
-        .eq('id', refreshTokenData.usuario_id) // CORRIGIDO
+        .eq('id', refreshTokenData.usuario_id)
         .single();
 
-      if (userError || !user || !user.ativo) {
+      if (userError || !user?.ativo) {
         return {
           success: false,
           error: 'Usuário não encontrado ou inativo',
@@ -313,31 +327,41 @@ export class EnhancedAuthService {
         };
       }
 
-      // Gerar novo access token
-      const newAccessToken = this.generateAccessToken(user);
+      const usuario = user as Usuario;
 
-      // Atualizar último uso do refresh token
+      // Gerar novos tokens
+      const accessToken = this.generateAccessToken(usuario);
+      const refreshToken = await this.generateRefreshToken(
+        usuario.id,
+        refreshTokenData.device_fingerprint,
+        refreshTokenData.device_name,
+        ipAddress,
+        _userAgent,
+        refreshTokenData.remember_me,
+      );
+
+      // Atualizar refresh token
       await this.supabase
         .from('refresh_tokens')
-        .update({ last_used_at: new Date().toISOString() })
+        .update({ 
+          revoked: true,
+          revoked_at: new Date().toISOString(),
+          revoked_reason: 'refreshed'
+        })
         .eq('id', refreshTokenData.id);
-
-      // Atualizar sessão
-      await this.updateSessionActivity(user.id, ipAddress);
-
-      this.logger.info('Token refreshed com sucesso', { usuarioId: user.id });
-
-      const userWithoutPassword = { ...user };
 
       return {
         success: true,
-        accessToken: newAccessToken,
-        user: userWithoutPassword,
+        accessToken,
+        refreshToken,
+        user: usuario as unknown as Record<string, unknown>,
         expiresIn: this.accessTokenExpiry,
       };
 
     } catch (error) {
-      this.logger.error('Erro no refresh de token', { error: error.message });
+      const errorMessage = error instanceof Error ? error.message : 'Erro interno do servidor';
+      this.logger.error('Erro durante refresh de token', { error: errorMessage });
+
       return {
         success: false,
         error: 'Erro interno do servidor',
@@ -361,13 +385,13 @@ export class EnhancedAuthService {
           revoked_at: new Date().toISOString(),
           revoked_reason: 'User logout',
         })
-        .eq('usuario_id', usuarioId); // CORRIGIDO
+        .eq('usuario_id', usuarioId);
 
       // Desativar sessão
       await this.supabase
-        .from('sessoes_usuario') // Tabela correta
+        .from('sessoes_usuario')
         .update({ ativo: false })
-        .eq('usuario_id', usuarioId) // Coluna correta
+        .eq('usuario_id', usuarioId)
         .eq('token_hash', tokenHash);
 
       // Log de auditoria
@@ -378,7 +402,8 @@ export class EnhancedAuthService {
       return { success: true };
 
     } catch (error) {
-      this.logger.error('Erro no logout', { error: error.message, usuarioId });
+      const errorMessage = error instanceof Error ? error.message : 'Erro interno';
+      this.logger.error('Erro no logout', { error: errorMessage, usuarioId });
       return { success: false, error: 'Erro interno' };
     }
   }
@@ -396,13 +421,13 @@ export class EnhancedAuthService {
           revoked_at: new Date().toISOString(),
           revoked_reason: 'Logout all sessions',
         })
-        .eq('usuario_id', usuarioId); // CORRIGIDO
+        .eq('usuario_id', usuarioId);
 
       // Desativar todas as sessões
       await this.supabase
-        .from('sessoes_usuario') // Tabela correta
+        .from('sessoes_usuario')
         .update({ ativo: false })
-        .eq('usuario_id', usuarioId); // Coluna correta
+        .eq('usuario_id', usuarioId);
 
       // Log de auditoria
       await this.logAuditEvent(usuarioId, 'LOGOUT_ALL', 'auth', usuarioId);
@@ -412,7 +437,8 @@ export class EnhancedAuthService {
       return { success: true };
 
     } catch (error) {
-      this.logger.error('Erro no logout geral', { error: error.message, usuarioId });
+      const errorMessage = error instanceof Error ? error.message : 'Erro interno';
+      this.logger.error('Erro no logout geral', { error: errorMessage, usuarioId });
       return { success: false, error: 'Erro interno' };
     }
   }
@@ -422,36 +448,36 @@ export class EnhancedAuthService {
    */
   async validateAccessToken(token: string): Promise<{ valid: boolean; user?: { id: string; email: string; role: string; nome?: string; ativo?: boolean; primeiro_login?: boolean; is_admin?: boolean; }; error?: string }> {
     try {
-      const decoded = jwt.verify(token, this.jwtSecret) as { usuarioId: string }; // CORRIGIDO
+      const decoded = jwt.verify(token, this.jwtSecret) as { usuarioId: string };
       
       // Buscar usuário
       const { data: user, error } = await this.supabase
         .from('usuarios')
         .select('*')
-        .eq('id', decoded.usuarioId) // CORRIGIDO
+        .eq('id', decoded.usuarioId)
         .single();
 
-      if (error || !user || !user.ativo) {
+      if (error || !user?.ativo) {
         return { valid: false, error: 'Usuário não encontrado ou inativo' };
       }
 
+      const usuario = user as Usuario;
+
       const userWithoutPassword = {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        nome: user.nome,
-        ativo: user.ativo,
-        primeiro_login: user.primeiro_login,
-        is_admin: user.is_admin,
+        id: usuario.id,
+        email: usuario.email,
+        role: usuario.role ?? 'user',
+        nome: usuario.nome,
+        ativo: usuario.ativo,
+        primeiro_login: usuario.primeiro_login,
+        is_admin: usuario.is_admin,
       };
 
       return { valid: true, user: userWithoutPassword };
 
     } catch (error) {
-      if (error.name === 'TokenExpiredError') {
-        return { valid: false, error: 'Token expirado' };
-      }
-      return { valid: false, error: 'Token inválido' };
+      const errorMessage = error instanceof Error ? error.message : 'Token inválido';
+      return { valid: false, error: errorMessage };
     }
   }
 
@@ -472,7 +498,7 @@ export class EnhancedAuthService {
       return [];
     }
 
-    return data || [];
+    return (data as UserSession[]) ?? [];
   }
 
   /**
@@ -481,16 +507,15 @@ export class EnhancedAuthService {
   async revokeSession(usuarioId: string, sessionId: string): Promise<{ success: boolean }> {
     try {
       await this.supabase
-        .from('sessoes_usuario') // Tabela correta
+        .from('sessoes_usuario')
         .update({ ativo: false })
-        .eq('usuario_id', usuarioId) // Coluna correta
-        .eq('id', sessionId);
-
-      await this.logAuditEvent(usuarioId, 'REVOKE_SESSION', 'session', sessionId);
+        .eq('id', sessionId)
+        .eq('usuario_id', usuarioId);
 
       return { success: true };
     } catch (error) {
-      this.logger.error('Erro ao revogar sessão', { error: error.message });
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      this.logger.error('Erro ao revogar sessão', { error: errorMessage });
       return { success: false };
     }
   }
@@ -513,11 +538,11 @@ export class EnhancedAuthService {
     return null;
   }
 
-  private generateAccessToken(user: Record<string, unknown>): string {
+  private generateAccessToken(user: Usuario): string {
     const payload = {
       usuarioId: user.id, // CORRIGIDO
       email: user.email,
-      role: user.role,
+      role: user.role ?? 'user',
       iat: Math.floor(Date.now() / 1000),
       exp: Math.floor(Date.now() / 1000) + this.accessTokenExpiry,
     };
@@ -604,7 +629,7 @@ export class EnhancedAuthService {
       await this.supabase
         .from('audit_logs')
         .insert({
-          usuario_id: usuarioId, // CORRIGIDO
+          usuario_id: usuarioId,
           action,
           resource,
           resource_id: resourceId,
@@ -613,7 +638,8 @@ export class EnhancedAuthService {
           user_agent: userAgent,
         });
     } catch (error) {
-      this.logger.error('Erro ao registrar log de auditoria', { error: error.message });
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      this.logger.error('Erro ao registrar log de auditoria', { error: errorMessage });
     }
   }
 
@@ -623,7 +649,7 @@ export class EnhancedAuthService {
 
   private sanitizeEmail(email: string): string {
     const [local, domain] = email.split('@');
-    return `${local.substring(0, 2)}***@${domain}`;
+    return `${(local ?? '').substring(0, 2)}***@${domain}`;
   }
 
   private isValidEmail(email: string): boolean {
@@ -664,8 +690,8 @@ export class EnhancedAuthService {
   /**
    * Gerar token (compatibilidade)
    */
-  async gerarToken(usuario: Record<string, unknown>): Promise<string> {
-    return this.generateAccessToken(usuario);
+  gerarToken(usuario: Record<string, unknown>): string {
+    return this.generateAccessToken(usuario as unknown as Usuario);
   }
 
   /**
@@ -673,7 +699,7 @@ export class EnhancedAuthService {
    */
   async validarToken(token: string): Promise<Record<string, unknown> | null> {
     const validation = await this.validateAccessToken(token);
-    return validation.valid ? validation.user : null;
+    return validation.valid && validation.user ? validation.user : null;
   }
 
   /**
@@ -693,11 +719,11 @@ export class EnhancedAuthService {
         user: result.user,
         accessToken: result.accessToken,
       };
-    } else {
+    } 
       return {
         success: false,
         error: result.error,
       };
-    }
+    
   }
 } 

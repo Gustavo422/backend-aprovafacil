@@ -1,11 +1,43 @@
-import express from 'express';
-import { Request, Response, NextFunction } from 'express';
+import express, { type Request, type Response, type NextFunction } from 'express';
 import { z } from 'zod';
 import { supabase } from '../../config/supabase-unified.js';
 import { requireAuth } from '../../middleware/auth.js';
 import { logger } from '../../utils/logger.js';
+import { getConcursoIdFromRequest } from '../../middleware/global-concurso-filter.middleware.js';
 
-const router = express.Router();
+const router = express.Router();  
+
+// Tipos para o retorno do Supabase
+interface MapaAssunto {
+  id: string;
+  usuario_id: string;
+  assunto: string;
+  disciplina: string;
+  categoria_id?: string;
+  concurso_id?: string;
+  status: 'pendente' | 'em_andamento' | 'concluido' | 'revisao';
+  prioridade: 'baixa' | 'media' | 'alta';
+  data_inicio?: string;
+  data_fim?: string;
+  observacoes?: string;
+  progresso_percentual: number;
+  criado_em: string;
+  atualizado_em: string;
+  disciplinas_categoria?: {
+    id: string;
+    nome: string;
+    descricao?: string;
+    cor_primaria?: string;
+    cor_secundaria?: string;
+  };
+  concursos?: {
+    id: string;
+    nome: string;
+    descricao?: string;
+    ano?: number;
+    banca?: string;
+  };
+}
 
 // Schemas de validação
 const createMapaAssuntoSchema = z.object({
@@ -39,7 +71,7 @@ const updateMapaAssuntoSchema = z.object({
 const createValidationMiddleware = (schema: z.ZodTypeAny, field: 'body' | 'query' | 'params' = 'body') => {
   return (req: Request, res: Response, next: NextFunction): void => {
     try {
-      const data = field === 'body' ? req.body : field === 'query' ? req.query : req.params;
+      const data = field === 'body' ? req.body as unknown : field === 'query' ? req.query : req.params;
       const result = schema.safeParse(data);
       if (!result.success) {
         const errors = result.error.errors.map(err => ({
@@ -54,7 +86,7 @@ const createValidationMiddleware = (schema: z.ZodTypeAny, field: 'body' | 'query
         return;
       }
       if (field === 'body') {
-        req.body = result.data;
+        req.body = result.data as Record<string, unknown>;
       } else if (field === 'query') {
         req.query = result.data as Record<string, string | string[] | undefined>;
       } else {
@@ -71,10 +103,11 @@ const createValidationMiddleware = (schema: z.ZodTypeAny, field: 'body' | 'query
 };
 
 // GET /api/mapa-assuntos - Listar mapa de assuntos do usuário
-router.get('/', requireAuth, async (req, res) => {
-  try {
+router.get('/', requireAuth, (req, res) => {
+  (async () => {
+    try {
     const usuarioId = req.user?.id;
-    const { page = 1, limit = 10, status, disciplina, categoria_id, concurso_id } = req.query;
+    const { page = 1, limit = 10, status, disciplina, categoria_id } = req.query;
 
     if (!usuarioId) {
       res.status(401).json({ error: 'Usuário não autenticado' });
@@ -109,18 +142,20 @@ router.get('/', requireAuth, async (req, res) => {
       query = query.eq('status', status);
     }
     if (disciplina) {
-      query = query.ilike('disciplina', `%${disciplina}%`);
+      query = query.ilike('disciplina', `%${String(disciplina)}%`);
     }
     if (categoria_id) {
       query = query.eq('categoria_id', categoria_id);
     }
-    if (concurso_id) {
-      query = query.eq('concurso_id', concurso_id);
+    // O filtro de concurso é aplicado automaticamente pelo middleware global
+    const concursoId = getConcursoIdFromRequest(req);
+    if (concursoId) {
+      logger.debug('Filtro de concurso aplicado automaticamente pelo middleware', { concursoId });
     }
 
     const { data: assuntos, error, count } = await query
       .order('criado_em', { ascending: false })
-      .range(offset, offset + Number(limit) - 1);
+      .range(offset, offset + Number(limit) - 1) as { data: MapaAssunto[] | null; error: Error | null; count: number | null };
 
     if (error) {
       logger.error('Erro ao buscar mapa de assuntos', { error: error.message });
@@ -128,7 +163,7 @@ router.get('/', requireAuth, async (req, res) => {
       return;
     }
 
-    const totalPages = Math.ceil((count || 0) / Number(limit));
+    const totalPages = Math.ceil((count ?? 0) / Number(limit));
 
     res.json({
       success: true,
@@ -136,19 +171,24 @@ router.get('/', requireAuth, async (req, res) => {
       pagination: {
         page: Number(page),
         limit: Number(limit),
-        total: count || 0,
+        total: count ?? 0,
         totalPages,
       },
     });
-  } catch (error) {
-    logger.error('Erro na rota GET /mapa-assuntos', { error: error instanceof Error ? error.message : 'Erro desconhecido' });
+    } catch (error) {
+      logger.error('Erro na rota GET /mapa-assuntos', { error: error instanceof Error ? error.message : 'Erro desconhecido' });
+      res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+  })().catch((error) => {
+    logger.error('Erro não tratado na rota GET /mapa-assuntos', { error });
     res.status(500).json({ error: 'Erro interno do servidor' });
-  }
+  });
 });
 
 // GET /api/mapa-assuntos/:id - Buscar assunto específico
-router.get('/:id', requireAuth, async (req, res) => {
-  try {
+router.get('/:id', requireAuth, (req, res) => {
+  (async () => {
+    try {
     const { id } = req.params;
     const usuarioId = req.user?.id;
 
@@ -178,10 +218,10 @@ router.get('/:id', requireAuth, async (req, res) => {
       `)
       .eq('id', id)
       .eq('usuario_id', usuarioId)
-      .single();
+      .single() as { data: MapaAssunto | null; error: Error | null };
 
     if (error) {
-      if (error.code === 'PGRST116') {
+      if ((error as unknown as { code?: string }).code === 'PGRST116') {
         res.status(404).json({ error: 'Assunto não encontrado' });
         return;
       }
@@ -191,17 +231,22 @@ router.get('/:id', requireAuth, async (req, res) => {
     }
 
     res.json({ success: true, data: assunto });
-  } catch (error) {
-    logger.error('Erro na rota GET /mapa-assuntos/:id', { error: error instanceof Error ? error.message : 'Erro desconhecido' });
+    } catch (error) {
+      logger.error('Erro na rota GET /mapa-assuntos/:id', { error: error instanceof Error ? error.message : 'Erro desconhecido' });
+      res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+  })().catch((error) => {
+    logger.error('Erro não tratado na rota GET /mapa-assuntos/:id', { error });
     res.status(500).json({ error: 'Erro interno do servidor' });
-  }
+  });
 });
 
 // POST /api/mapa-assuntos - Criar novo assunto
-router.post('/', requireAuth, createValidationMiddleware(createMapaAssuntoSchema, 'body'), async (req, res) => {
-  try {
+router.post('/', requireAuth, createValidationMiddleware(createMapaAssuntoSchema, 'body'), (req, res) => {
+  (async () => {
+    try {
     const usuarioId = req.user?.id;
-    const assuntoData = { ...req.body, usuario_id: usuarioId };
+    const assuntoData = { ...(req.body as Record<string, unknown>), usuario_id: usuarioId };
 
     if (!usuarioId) {
       res.status(401).json({ error: 'Usuário não autenticado' });
@@ -212,7 +257,7 @@ router.post('/', requireAuth, createValidationMiddleware(createMapaAssuntoSchema
       .from('mapa_assuntos')
       .insert([assuntoData])
       .select()
-      .single();
+      .single() as { data: MapaAssunto | null; error: Error | null };
 
     if (error) {
       logger.error('Erro ao criar assunto', { error: error.message });
@@ -221,18 +266,23 @@ router.post('/', requireAuth, createValidationMiddleware(createMapaAssuntoSchema
     }
 
     res.status(201).json({ success: true, data: assunto });
-  } catch (error) {
-    logger.error('Erro na rota POST /mapa-assuntos', { error: error instanceof Error ? error.message : 'Erro desconhecido' });
+    } catch (error) {
+      logger.error('Erro na rota POST /mapa-assuntos', { error: error instanceof Error ? error.message : 'Erro desconhecido' });
+      res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+  })().catch((error) => {
+    logger.error('Erro não tratado na rota POST /mapa-assuntos', { error });
     res.status(500).json({ error: 'Erro interno do servidor' });
-  }
+  });
 });
 
 // PUT /api/mapa-assuntos/:id - Atualizar assunto
-router.put('/:id', requireAuth, createValidationMiddleware(updateMapaAssuntoSchema, 'body'), async (req, res) => {
-  try {
+router.put('/:id', requireAuth, createValidationMiddleware(updateMapaAssuntoSchema, 'body'), (req, res) => {
+  (async () => {
+    try {
     const { id } = req.params;
     const usuarioId = req.user?.id;
-    const updateData = req.body;
+    const updateData = req.body as Record<string, unknown>;
 
     if (!usuarioId) {
       res.status(401).json({ error: 'Usuário não autenticado' });
@@ -245,10 +295,10 @@ router.put('/:id', requireAuth, createValidationMiddleware(updateMapaAssuntoSche
       .eq('id', id)
       .eq('usuario_id', usuarioId)
       .select()
-      .single();
+      .single() as { data: MapaAssunto | null; error: Error | null };
 
     if (error) {
-      if (error.code === 'PGRST116') {
+      if ((error as unknown as { code?: string }).code === 'PGRST116') {
         res.status(404).json({ error: 'Assunto não encontrado' });
         return;
       }
@@ -258,15 +308,20 @@ router.put('/:id', requireAuth, createValidationMiddleware(updateMapaAssuntoSche
     }
 
     res.json({ success: true, data: assunto });
-  } catch (error) {
-    logger.error('Erro na rota PUT /mapa-assuntos/:id', { error: error instanceof Error ? error.message : 'Erro desconhecido' });
+    } catch (error) {
+      logger.error('Erro na rota PUT /mapa-assuntos/:id', { error: error instanceof Error ? error.message : 'Erro desconhecido' });
+      res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+  })().catch((error) => {
+    logger.error('Erro não tratado na rota PUT /mapa-assuntos/:id', { error });
     res.status(500).json({ error: 'Erro interno do servidor' });
-  }
+  });
 });
 
 // DELETE /api/mapa-assuntos/:id - Deletar assunto
-router.delete('/:id', requireAuth, async (req, res) => {
-  try {
+router.delete('/:id', requireAuth, (req, res) => {
+  (async () => {
+    try {
     const { id } = req.params;
     const usuarioId = req.user?.id;
 
@@ -292,15 +347,20 @@ router.delete('/:id', requireAuth, async (req, res) => {
     }
 
     res.json({ success: true });
-  } catch (error) {
-    logger.error('Erro na rota DELETE /mapa-assuntos/:id', { error: error instanceof Error ? error.message : 'Erro desconhecido' });
+    } catch (error) {
+      logger.error('Erro na rota DELETE /mapa-assuntos/:id', { error: error instanceof Error ? error.message : 'Erro desconhecido' });
+      res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+  })().catch((error) => {
+    logger.error('Erro não tratado na rota DELETE /mapa-assuntos/:id', { error });
     res.status(500).json({ error: 'Erro interno do servidor' });
-  }
+  });
 });
 
 // GET /api/mapa-assuntos/stats/resumo - Resumo estatístico
-router.get('/stats/resumo', requireAuth, async (req, res) => {
-  try {
+router.get('/stats/resumo', requireAuth, (req, res) => {
+  (async () => {
+    try {
     const usuarioId = req.user?.id;
 
     if (!usuarioId) {
@@ -312,7 +372,7 @@ router.get('/stats/resumo', requireAuth, async (req, res) => {
     const { data: stats, error } = await supabase
       .from('mapa_assuntos')
       .select('status, progresso_percentual')
-      .eq('usuario_id', usuarioId);
+      .eq('usuario_id', usuarioId) as { data: Pick<MapaAssunto, 'status' | 'progresso_percentual'>[] | null; error: Error | null };
 
     if (error) {
       logger.error('Erro ao buscar estatísticas', { error: error.message });
@@ -321,15 +381,15 @@ router.get('/stats/resumo', requireAuth, async (req, res) => {
     }
 
     // Calcular estatísticas
-    const total = stats?.length || 0;
+    const total = stats ? stats.length : 0;
     const porStatus = {
-      pendente: stats?.filter(s => s.status === 'pendente').length || 0,
-      em_andamento: stats?.filter(s => s.status === 'em_andamento').length || 0,
-      concluido: stats?.filter(s => s.status === 'concluido').length || 0,
-      revisao: stats?.filter(s => s.status === 'revisao').length || 0,
+      pendente: stats ? stats.filter(s => s.status === 'pendente').length : 0,
+      em_andamento: stats ? stats.filter(s => s.status === 'em_andamento').length : 0,
+      concluido: stats ? stats.filter(s => s.status === 'concluido').length : 0,
+      revisao: stats ? stats.filter(s => s.status === 'revisao').length : 0,
     };
 
-    const progressoMedio = stats?.length > 0 
+    const progressoMedio = stats && stats.length > 0 
       ? stats.reduce((acc, curr) => acc + (curr.progresso_percentual || 0), 0) / stats.length 
       : 0;
 
@@ -341,13 +401,14 @@ router.get('/stats/resumo', requireAuth, async (req, res) => {
         progressoMedio: Math.round(progressoMedio * 100) / 100,
       },
     });
-  } catch (error) {
-    logger.error('Erro na rota GET /mapa-assuntos/stats/resumo', { error: error instanceof Error ? error.message : 'Erro desconhecido' });
+    } catch (error) {
+      logger.error('Erro na rota GET /mapa-assuntos/stats/resumo', { error: error instanceof Error ? error.message : 'Erro desconhecido' });
+      res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+  })().catch((error) => {
+    logger.error('Erro não tratado na rota GET /mapa-assuntos/stats/resumo', { error });
     res.status(500).json({ error: 'Erro interno do servidor' });
-  }
+  });
 });
-
-// Registrar rotas
-// TODO: Adicionar rotas específicas para cada arquivo
 
 export { router };

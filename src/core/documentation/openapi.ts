@@ -1,4 +1,4 @@
-import { OpenAPIV3 } from 'openapi-types';
+import type { OpenAPIV3 } from 'openapi-types';
 import { ErrorSchema } from './schemas/Error.schema';
 import { ConcursoSchema, ConcursoInputSchema } from './schemas/Concurso.schema';
 import { UserSchema } from './schemas/User.schema';
@@ -422,7 +422,7 @@ export const openApiConfig: OpenAPIV3.Document = {
         },
       },
     },
-    '/apostilas': {
+    // rota '/apostilas' removida
       get: {
         summary: 'Listar apostilas',
         description: 'Retorna lista de apostilas disponíveis com filtros opcionais',

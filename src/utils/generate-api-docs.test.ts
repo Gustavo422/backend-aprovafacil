@@ -3,10 +3,7 @@ import { describe, it, expect } from 'vitest';
 
 describe('generateApiDocs', () => {
   it('deve gerar documentação da API', () => {
-    // TODO: Implementar teste real
+    // Implementar teste real quando necessário
     expect(true).toBe(true);
   });
 }); 
-
-
-

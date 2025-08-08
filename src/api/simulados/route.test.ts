@@ -1,8 +1,7 @@
-import { describe, it, expect } from 'vitest';
-// import { POST } from './route.js';
+import { describe, it } from 'vitest';
 
-describe('Simulados API', () => {
-  it('deve retornar lista de simulados', async () => {
+describe('Simulados Route', () => {
+  it('should handle simulado operations', () => {
     // TODO: Implementar teste real
     expect(true).toBe(true);
   });

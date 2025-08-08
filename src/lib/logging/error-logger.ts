@@ -1,4 +1,5 @@
-import { EnhancedLogger, getEnhancedLogger } from './enhanced-logging-service.js';
+import type { EnhancedLogger} from './enhanced-logging-service.js';
+import { getEnhancedLogger } from './enhanced-logging-service.js';
 
 /**
  * Error logger options
@@ -54,10 +55,10 @@ export class ErrorLogger {
    * @param options Error logger options
    */
   constructor(options: ErrorLoggerOptions = {}) {
-    this.logger = options.logger || getEnhancedLogger('error');
-    this.includeStack = options.includeStack !== false;
-    this.includeCause = options.includeCause !== false;
-    this.context = options.context || {};
+    this.logger = options.logger ?? getEnhancedLogger('error');
+    this.includeStack = options.includeStack ?? true;
+    this.includeCause = options.includeCause ?? true;
+    this.context = options.context ?? {};
   }
   
   /**
@@ -93,31 +94,34 @@ export class ErrorLogger {
         };
         if (typeof currentCause === 'object' && currentCause !== null) {
           if ('name' in currentCause && typeof (currentCause as { name?: unknown }).name === 'string') {
-            causeInfo.name = (currentCause as { name?: string }).name || 'Unknown';
+            causeInfo.name = (currentCause as { name?: string }).name ?? 'Unknown';
           }
           if ('message' in currentCause && typeof (currentCause as { message?: unknown }).message === 'string') {
-            causeInfo.message = (currentCause as { message?: string }).message || '';
+            causeInfo.message = (currentCause as { message?: string }).message ?? '';
           }
-          if (this.includeStack && 'stack' in currentCause && typeof (currentCause as { stack?: unknown }).stack === 'string') {
+          if ('stack' in currentCause && typeof (currentCause as { stack?: unknown }).stack === 'string') {
             causeInfo.stack = (currentCause as { stack?: string }).stack;
           }
-          if ('cause' in currentCause) {
-            currentCause = (currentCause as { cause?: unknown }).cause;
-          } else {
-            currentCause = undefined;
-          }
-        } else {
-          currentCause = undefined;
         }
         causes.push(causeInfo);
+        currentCause = (currentCause as { cause?: unknown }).cause;
       }
       if (causes.length > 0) {
         Object.assign(errorContext.error, { causes });
       }
     }
     
-    // Log error
-    this.logger.error(message || error.message, errorContext, error);
+    // Log the error
+    this.logger.error(message ?? error.message, errorContext, error);
+  }
+  
+  /**
+   * Log an error with additional context
+   * @param error Error to log
+   * @param context Additional context
+   */
+  logErrorWithContext(error: Error, context: Record<string, unknown>): void {
+    this.logError(error, undefined, context);
   }
   
   /**
@@ -136,19 +140,10 @@ export class ErrorLogger {
 }
 
 /**
- * Singleton instance of the error logger
- */
-let instance: ErrorLogger | null = null;
-
-/**
- * Get the singleton instance of the error logger
+ * Get an error logger instance
  * @param options Error logger options
  * @returns Error logger instance
  */
 export function getErrorLogger(options: ErrorLoggerOptions = {}): ErrorLogger {
-  if (!instance) {
-    instance = new ErrorLogger(options);
-  }
-  
-  return instance;
+  return new ErrorLogger(options);
 }

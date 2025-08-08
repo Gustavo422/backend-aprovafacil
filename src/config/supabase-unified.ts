@@ -1,5 +1,5 @@
 // backend/src/config/supabase-unified.ts
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { createSupabaseDebugWrapper } from '../core/utils/debug-logger.js';
 import 'dotenv/config';
 
@@ -39,7 +39,7 @@ export class SupabaseManager {
       // Aplicar wrapper de debug se estiver em modo debug
       if (process.env.NODE_ENV === 'development' && 
           (process.env.DEBUG === 'true' || process.argv.includes('--debug'))) {
-        SupabaseManager.instance = createSupabaseDebugWrapper(client);
+        SupabaseManager.instance = createSupabaseDebugWrapper(client as unknown as Record<string, unknown>) as unknown as SupabaseClient;
       } else {
         SupabaseManager.instance = client;
       }
@@ -53,7 +53,7 @@ export class SupabaseManager {
    * Usado principalmente para testes ou para forçar uma reconexão.
    */
   public static resetInstance(): void {
-    SupabaseManager.instance = null as SupabaseClient;
+    SupabaseManager.instance = null as unknown as SupabaseClient;
   }
 
   // Função para executar queries SQL customizadas

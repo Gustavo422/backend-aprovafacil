@@ -1,7 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it } from 'vitest';
 
-describe('User API', () => {
-  it('deve retornar usuário', async () => {
+describe('User Route', () => {
+  it('should handle user operations', () => {
     // TODO: Implementar teste real
     expect(true).toBe(true);
   });

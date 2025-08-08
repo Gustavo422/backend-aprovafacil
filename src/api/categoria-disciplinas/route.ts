@@ -1,11 +1,13 @@
-import express, { Request, Response } from 'express';
+import type { Request, Response } from 'express';
+import express from 'express';
 import { supabase } from '../../config/supabase-unified.js';
 import { requestLogger } from '../../middleware/logger.js';
 import { rateLimit } from '../../middleware/rateLimit.js';
 import { requireAuth } from '../../middleware/auth.js';
 import { logger } from '../../lib/logger.js';
 
-const router = express.Router();
+const createRouter = () => express.Router();
+const router = createRouter();
 
 // Aplicar middlewares globais
 router.use(requestLogger);
@@ -15,7 +17,7 @@ router.use(rateLimit);
 // GET - Buscar disciplinas
 // ========================================
 
-router.get('/', async (req: Request, res: Response) => {
+const getDisciplinasHandler = async (req: Request, res: Response) => {
   try {
     const { categoria_id, ativo } = req.query;
 
@@ -48,19 +50,19 @@ router.get('/', async (req: Request, res: Response) => {
       data: disciplinas || [],
     });
   } catch (error) {
-    logger.error('Erro ao processar requisição GET /api/categoria-disciplinas:', error);
+    logger.error('Erro ao processar requisição GET /api/categoria-disciplinas:', { error: error instanceof Error ? error.message : String(error) });
     res.status(500).json({
       success: false,
       error: 'Erro interno do servidor',
     });
   }
-});
+};
 
 // ========================================
 // POST - Criar disciplina (apenas admin)
 // ========================================
 
-router.post('/', requireAuth, async (req: Request, res: Response) => {
+const createDisciplinaHandler = async (req: Request, res: Response) => {
   try {
     const { categoria_id, nome, peso, horas_semanais, ordem } = req.body;
 
@@ -141,7 +143,7 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
         peso,
         horas_semanais,
         ordem,
-        ativo: true,
+        ativo: true
       })
       .select()
       .single();
@@ -161,13 +163,16 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
       data: disciplina,
     });
   } catch (error) {
-    logger.error('Erro ao processar requisição POST /api/categoria-disciplinas:', error);
+    logger.error('Erro ao processar requisição POST /api/categoria-disciplinas:', { error: error instanceof Error ? error.message : String(error) });
     res.status(500).json({
       success: false,
       error: 'Erro interno do servidor',
     });
   }
-});
+};
+
+// Registrar rota POST
+router.post('/', requireAuth, async (req, res) => await createDisciplinaHandler(req, res));
 
 // ========================================
 // PUT - Atualizar disciplina
@@ -241,7 +246,7 @@ router.put('/:id', requireAuth, async (req: Request, res: Response) => {
       data: disciplina,
     });
   } catch (error) {
-    logger.error('Erro ao processar requisição PUT /api/categoria-disciplinas/:id:', error);
+    logger.error('Erro ao processar requisição PUT /api/categoria-disciplinas/:id:', { error: error instanceof Error ? error.message : String(error) });
     res.status(500).json({
       success: false,
       error: 'Erro interno do servidor',
@@ -292,7 +297,7 @@ router.delete('/:id', requireAuth, async (req: Request, res: Response) => {
       message: 'Disciplina deletada com sucesso',
     });
   } catch (error) {
-    logger.error('Erro interno:', error);
+    logger.error('Erro interno:', { error: error instanceof Error ? error.message : String(error) });
     res.status(500).json({
       success: false,
       error: 'Erro interno do servidor',
@@ -300,7 +305,7 @@ router.delete('/:id', requireAuth, async (req: Request, res: Response) => {
   }
 });
 
-// Registrar rotas
-// TODO: Adicionar rotas específicas para cada arquivo
+// Registrar rota GET
+router.get('/', async (req, res) => await getDisciplinasHandler(req, res));
 
 export { router };

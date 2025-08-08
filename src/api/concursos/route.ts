@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import { z } from 'zod';
 import { supabase } from '../../config/supabase-unified.js';
 import { logger } from '../../lib/logger.js';
@@ -108,7 +108,7 @@ export const getConcursosHandler = async (req: Request, res: Response) => {
     }
 
     if (ano) {
-      concursosQuery = concursosQuery.eq('ano', parseInt(ano));
+      concursosQuery = concursosQuery.eq('ano', parseInt(ano, 10));
     }
 
     if (banca) {
@@ -159,11 +159,11 @@ export const getConcursosHandler = async (req: Request, res: Response) => {
     });
 
     // Calculate pagination info
-    const totalPages = Math.ceil((count || 0) / limitNum);
+    const totalPages = Math.ceil((count ?? 0) / limitNum);
 
     logger.info('Resposta de concursos preparada', { 
       component: 'backend', 
-      totalCount: count || 0, 
+      totalCount: count ?? 0, 
       page: pageNum, 
       resultsCount: formattedConcursos.length, 
     });
@@ -174,7 +174,7 @@ export const getConcursosHandler = async (req: Request, res: Response) => {
       pagination: {
         page: pageNum,
         limit: limitNum,
-        total: count || 0,
+        total: count ?? 0,
         totalPages,
       },
     });
@@ -609,14 +609,15 @@ export const deleteConcursoHandler = async (req: AuthenticatedRequest, res: Resp
 // Criar router Express
 import { Router } from 'express';
 
-const router = Router();
+const createRouter = () => Router();
+const router = createRouter();
 
 // Registrar rotas
-router.get('/', getConcursosHandler);
-router.get('/:id', getConcursoByIdHandler);
-router.post('/', createConcursoHandler);
-router.put('/:id', updateConcursoHandler);
-router.patch('/:id', patchConcursoHandler);
-router.delete('/:id', deleteConcursoHandler);
+router.get('/', async (req, res) => await getConcursosHandler(req, res));
+router.get('/:id', async (req, res) => await getConcursoByIdHandler(req, res));
+router.post('/', async (req, res) => await createConcursoHandler(req as AuthenticatedRequest, res));
+router.put('/:id', async (req, res) => await updateConcursoHandler(req as AuthenticatedRequest, res));
+router.patch('/:id', async (req, res) => await patchConcursoHandler(req as AuthenticatedRequest, res));
+router.delete('/:id', async (req, res) => await deleteConcursoHandler(req as AuthenticatedRequest, res));
 
 export { router };

@@ -126,6 +126,6 @@ function getScriptDescription(scriptName) {
   return descriptions[scriptName] || 'Script da FASE 5';
 }
 
-console.log('\n' + '='.repeat(50));
+console.log(`\n${ '='.repeat(50)}`);
 logSuccess('SCRIPTS DA FASE 5 ADICIONADOS COM SUCESSO!');
 console.log('='.repeat(50)); 

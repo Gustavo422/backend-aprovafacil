@@ -284,6 +284,6 @@ if (passedTests === totalTests) {
   process.exit(1);
 }
 
-console.log('\n' + '='.repeat(60));
+console.log(`\n${ '='.repeat(60)}`);
 logSuccess('FASE 5: OTIMIZAÇÃO E MONITORAMENTO - TESTE CONCLUÍDO');
 console.log('='.repeat(60)); 

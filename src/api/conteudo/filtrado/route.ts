@@ -1,18 +1,20 @@
-import express, { Request, Response } from 'express';
+import type { Request, Response } from 'express';
+import express from 'express';
 import { supabase } from '../../../config/supabase-unified.js';
 import { requestLogger } from '../../../middleware/logger.js';
 import { rateLimit } from '../../../middleware/rateLimit.js';
 import { requireAuth } from '../../../middleware/auth.js';
 import { logger } from '../../../lib/logger.js';
 
-const router = express.Router();
+const createRouter = () => express.Router();
+const router = createRouter();
 
 // Aplicar middlewares globais
 router.use(requestLogger);
 router.use(rateLimit);
 
 // GET - Buscar conteúdo filtrado
-router.get('/', requireAuth, async (req: Request, res: Response) => {
+const getConteudoFiltradoHandler = async (req: Request, res: Response) => {
   try {
     // Parâmetros obrigatórios
     const { categoria_id, concurso_id } = req.query;
@@ -21,8 +23,8 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
     const disciplina = req.query['disciplina'] as string;
     const dificuldade = req.query['dificuldade'] as string;
     const isPublic = req.query['is_public'] as string;
-    const page = parseInt(req.query['page'] as string || '1');
-    const limit = parseInt(req.query['limit'] as string || '20');
+    const page = parseInt(req.query['page'] as string ?? '1', 10);
+    const limit = parseInt(req.query['limit'] as string ?? '20', 10);
 
     // Validar parâmetros obrigatórios
     if (!categoria_id || !concurso_id) {
@@ -41,7 +43,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
     // ========================================
 
     let simuladosQuery = supabase
-      .from('simulados_personalizados')
+      .from('simulados')
       .select(`
                 *,
                 concursos (
@@ -172,7 +174,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
       { count: totalMapaAssuntos },
     ] = await Promise.all([
       supabase
-        .from('simulados_personalizados')
+        .from('simulados')
         .select('*', { count: 'exact', head: true })
         .eq('categoria_id', categoria_id)
         .eq('concurso_id', concurso_id)
@@ -194,7 +196,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
         .eq('concurso_id', concurso_id),
     ]);
 
-    const total = (totalSimulados || 0) + (totalFlashcards || 0) + (totalApostilas || 0) + (totalMapaAssuntos || 0);
+    const total = (totalSimulados ?? 0) + (totalFlashcards ?? 0) + (totalApostilas ?? 0) + (totalMapaAssuntos ?? 0);
 
     // ========================================
     // MONTAR RESPOSTA
@@ -203,10 +205,10 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
     const response = {
       success: true,
       data: {
-        simulados: simulados || [],
-        flashcards: cartoes || [],
-        apostilas: apostilas || [],
-        mapaAssuntos: mapaAssuntos || [],
+        simulados: simulados ?? [],
+        flashcards: cartoes ?? [],
+        apostilas: apostilas ?? [],
+        mapaAssuntos: mapaAssuntos ?? [],
       },
       total,
       page,
@@ -219,10 +221,10 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
       concursoId: concurso_id,
       disciplina,
       dificuldade,
-      totalSimulados: simulados?.length || 0,
-      totalFlashcards: cartoes?.length || 0,
-      totalApostilas: apostilas?.length || 0,
-      totalMapaAssuntos: mapaAssuntos?.length || 0,
+      totalSimulados: simulados?.length ?? 0,
+      totalFlashcards: cartoes?.length ?? 0,
+      totalApostilas: apostilas?.length ?? 0,
+      totalMapaAssuntos: mapaAssuntos?.length ?? 0,
     });
 
     res.json(response);
@@ -237,9 +239,9 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
       error: 'Erro interno do servidor',
     });
   }
-});
+};
 
 // Registrar rotas
-// TODO: Adicionar rotas específicas para cada arquivo
+router.get('/', requireAuth, async (req, res) => await getConteudoFiltradoHandler(req, res));
 
 export { router };

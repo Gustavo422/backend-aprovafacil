@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import { serveSwaggerUI } from '../../../src/core/documentation/swagger-ui';
 
 export const GET = async (req: Request, res: Response) => {

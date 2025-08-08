@@ -1,5 +1,5 @@
 import debug from 'debug';
-import { Request, Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 
 // Configurar namespaces de debug
 const debugSupabase = debug('app:supabase');
@@ -18,26 +18,26 @@ export interface DebugContext {
 export interface SupabaseDebugInfo {
   endpoint: string;
   method: string;
-  params?: any;
-  headers?: any;
-  payload?: any;
-  response?: any;
-  error?: any;
+  params?: unknown[];
+  headers?: Record<string, string>;
+  payload?: Record<string, unknown>;
+  response?: unknown;
+  error?: Error | string;
   duration: number;
 }
 
 export interface FrontendDebugInfo {
   route: string;
   method: string;
-  payload?: any;
-  response?: any;
-  error?: any;
+  payload?: Record<string, unknown>;
+  response?: unknown;
+  error?: Error | string;
   duration: number;
 }
 
 export class DebugLogger {
   private static instance: DebugLogger;
-  private isDebugMode: boolean = false;
+  private isDebugMode = false;
 
   private constructor() {
     // Verificar se está em modo debug
@@ -166,7 +166,7 @@ export class DebugLogger {
     debugBackend(`${emoji} Backend Response:`, JSON.stringify(logData, null, 2));
   }
 
-  private sanitizeHeaders(headers?: any): any {
+  private sanitizeHeaders(headers?: Record<string, string>): Record<string, string> | undefined {
     if (!headers) return undefined;
     
     const sanitized = { ...headers };
@@ -187,21 +187,21 @@ export class DebugLogger {
     return sanitized;
   }
 
-  private sanitizePayload(payload?: any): any {
+  private sanitizePayload(payload?: unknown): unknown {
     if (!payload) return undefined;
     
     // Remover campos sensíveis
     const sensitiveFields = ['password', 'token', 'secret', 'key'];
     const sanitized = JSON.parse(JSON.stringify(payload));
     
-    const sanitizeObject = (obj: any): any => {
+    const sanitizeObject = (obj: unknown): unknown => {
       if (typeof obj !== 'object' || obj === null) return obj;
       
       if (Array.isArray(obj)) {
         return obj.map(sanitizeObject);
       }
       
-      const result: any = {};
+      const result: Record<string, unknown> = {};
       for (const [key, value] of Object.entries(obj)) {
         if (sensitiveFields.some(field => key.toLowerCase().includes(field))) {
           if (typeof value === 'string' && value.length > 8) {
@@ -220,25 +220,26 @@ export class DebugLogger {
     return sanitizeObject(sanitized);
   }
 
-  private sanitizeResponse(response?: any): any {
+  private sanitizeResponse(response?: unknown): unknown {
     if (!response) return undefined;
     
     // Para respostas do Supabase, mostrar estrutura mas limitar dados
-    if (response.data && Array.isArray(response.data)) {
+    if (response && typeof response === 'object' && 'data' in response && Array.isArray((response as Record<string, unknown>).data)) {
+      const responseData = (response as Record<string, unknown>).data as unknown[];
       return {
-        count: response.data.length,
-        sample: response.data.slice(0, 3), // Mostrar apenas 3 primeiros registros
-        structure: this.getDataStructure(response.data[0]),
+        count: responseData.length,
+        sample: responseData.slice(0, 3), // Mostrar apenas 3 primeiros registros
+        structure: this.getDataStructure(responseData[0]),
       };
     }
     
     return this.sanitizePayload(response);
   }
 
-  private getDataStructure(obj: any): any {
+  private getDataStructure(obj: unknown): Record<string, string> | string {
     if (!obj || typeof obj !== 'object') return typeof obj;
     
-    const structure: any = {};
+    const structure: Record<string, string> = {};
     for (const [key, value] of Object.entries(obj)) {
       structure[key] = typeof value;
     }
@@ -267,7 +268,7 @@ export function debugRequestMiddleware(req: Request, res: Response, next: NextFu
 
   // Interceptar resposta
   const originalEnd = res.end;
-  res.end = function (chunk?: any, encoding?: any): any {
+  res.end = function (chunk?: unknown, encoding?: BufferEncoding | (() => void), cb?: () => void): Response {
     const duration = Date.now() - startTime;
     
     logger.logBackendResponse({
@@ -276,22 +277,26 @@ export function debugRequestMiddleware(req: Request, res: Response, next: NextFu
       duration,
     });
 
-    return originalEnd.call(this, chunk, encoding);
+    if (typeof encoding === 'function') {
+      return originalEnd.call(this, chunk as never, undefined as never);
+    }
+    return (originalEnd as unknown as (chunk?: unknown, encoding?: BufferEncoding, cb?: () => void) => Response).call(this, chunk, encoding as BufferEncoding | undefined, cb);
+    
   };
 
   next();
 }
 
 // Wrapper para interceptar chamadas do Supabase
-export function createSupabaseDebugWrapper(supabaseClient: any) {
+export function createSupabaseDebugWrapper(supabaseClient: Record<string, unknown>) {
   const logger = DebugLogger.getInstance();
   
   return new Proxy(supabaseClient, {
     get(target, prop) {
-      const value = target[prop];
+      const value = target[prop as string];
       
       if (typeof value === 'function') {
-        return function (...args: any[]) {
+        return function (...args: unknown[]) {
           const startTime = Date.now();
           const method = prop as string;
           
@@ -308,7 +313,7 @@ export function createSupabaseDebugWrapper(supabaseClient: any) {
             
             if (result && typeof result.then === 'function') {
               // É uma Promise
-              return result.then((response: any) => {
+              return result.then((response: unknown) => {
                 const duration = Date.now() - startTime;
                 
                 logger.logSupabaseResponse({
@@ -319,7 +324,7 @@ export function createSupabaseDebugWrapper(supabaseClient: any) {
                 });
                 
                 return response;
-              }).catch((error: any) => {
+              }).catch((error: Error) => {
                 const duration = Date.now() - startTime;
                 
                 logger.logSupabaseResponse({
@@ -331,7 +336,7 @@ export function createSupabaseDebugWrapper(supabaseClient: any) {
                 
                 throw error;
               });
-            } else {
+            } 
               // Não é uma Promise
               const duration = Date.now() - startTime;
               
@@ -343,14 +348,15 @@ export function createSupabaseDebugWrapper(supabaseClient: any) {
               });
               
               return result;
-            }
+            
+            
           } catch (error) {
             const duration = Date.now() - startTime;
             
             logger.logSupabaseResponse({
               endpoint: method,
               method: 'SUPABASE',
-              error,
+              error: error instanceof Error ? error : String(error),
               duration,
             });
             

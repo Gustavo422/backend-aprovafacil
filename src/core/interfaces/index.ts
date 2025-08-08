@@ -1,7 +1,7 @@
 // Interfaces principais do sistema AprovaFácil
 // Seguindo os princípios SOLID
 
-import { 
+import type { 
   Usuario, 
   Concurso, 
   Simulado, 

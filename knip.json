@@ -23,9 +23,7 @@
   ],
   "ignoreBinaries": [
     "tsx",
-    "vitest",
-    "eslint",
-    "rimraf"
+    "vitest"
   ],
   "rules": {
     "dependencies": "warn",

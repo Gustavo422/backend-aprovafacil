@@ -102,27 +102,26 @@ export class ConsoleTransport implements LogTransport {
     }
     
     // Format log message
-    const format = this.options.format || this.defaultFormat;
+    const format = this.options.format ?? this.defaultFormat;
     const message = format(entry);
     const meta = entry.meta && Object.keys(entry.meta).length > 0 ? entry.meta : undefined;
     
     // Log to console
     switch (entry.level) {
     case LogLevel.DEBUG:
-      // eslint-disable-next-line no-console
       console.debug(message, meta);
       break;
     case LogLevel.INFO:
-      // eslint-disable-next-line no-console
       console.info(message, meta);
       break;
     case LogLevel.WARN:
-      // eslint-disable-next-line no-console
       console.warn(message, meta);
       break;
     case LogLevel.ERROR:
-      // eslint-disable-next-line no-console
       console.error(message, meta);
+      break;
+    case LogLevel.SILENT:
+      // Do nothing for silent level
       break;
     }
   }
@@ -134,7 +133,7 @@ export class ConsoleTransport implements LogTransport {
    */
   private isLevelEnabled(level: LogLevel): boolean {
     const levels = [LogLevel.DEBUG, LogLevel.INFO, LogLevel.WARN, LogLevel.ERROR, LogLevel.SILENT];
-    const minLevel = this.options.minLevel || LogLevel.DEBUG;
+    const minLevel = this.options.minLevel ?? LogLevel.DEBUG;
     const minLevelIndex = levels.indexOf(minLevel);
     const levelIndex = levels.indexOf(level);
     
@@ -146,7 +145,7 @@ export class ConsoleTransport implements LogTransport {
    * @param entry Log entry
    * @returns Formatted log message
    */
-  private defaultFormat = (entry: LogEntry): string => {
+  private readonly defaultFormat = (entry: LogEntry): string => {
     const parts: string[] = [];
     
     // Add timestamp
@@ -249,7 +248,7 @@ export class MemoryTransport implements LogTransport {
    */
   private isLevelEnabled(level: LogLevel): boolean {
     const levels = [LogLevel.DEBUG, LogLevel.INFO, LogLevel.WARN, LogLevel.ERROR, LogLevel.SILENT];
-    const minLevel = this.options.minLevel || LogLevel.DEBUG;
+    const minLevel = this.options.minLevel ?? LogLevel.DEBUG;
     const minLevelIndex = levels.indexOf(minLevel);
     const levelIndex = levels.indexOf(level);
     

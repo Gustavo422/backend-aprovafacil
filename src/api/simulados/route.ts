@@ -1,7 +1,17 @@
-import { Request, Response } from 'express';
+import express, { type Request, type Response } from 'express';
 import { z } from 'zod';
 import { supabase } from '../../config/supabase-unified.js';
-import { logger } from '../../utils/logger.js';
+import { logger } from '../../lib/logger.js';
+import { getConcursoIdFromRequest } from '../../middleware/global-concurso-filter.middleware.js';
+import type {
+  UpdateSimuladoDTO,
+  SimuladoFiltersDTO,
+  PaginatedSimuladosResponseDTO,
+  SimuladoWithRelationsDTO,
+  CreateSimuladoQuestaoDTO,
+  UpdateSimuladoQuestaoDTO,
+  UpdateusuariosimuladoProgressDTO,
+} from '../../types/simulados.dto.js';
 
 // Interface para request com usuário autenticado
 interface AuthenticatedRequest extends Request {
@@ -11,16 +21,8 @@ interface AuthenticatedRequest extends Request {
     role: string;
     [key: string]: unknown;
   };
+  concursoId?: string | null;
 }
-import {
-  UpdateSimuladoDTO,
-  SimuladoFiltersDTO,
-  PaginatedSimuladosResponseDTO,
-  SimuladoWithRelationsDTO,
-  CreateSimuladoQuestaoDTO,
-  UpdateSimuladoQuestaoDTO,
-  UpdateusuariosimuladoProgressDTO,
-} from '../../types/simulados.dto.js';
 
 // Schemas de validação
 const createSimuladoSchema = z.object({
@@ -72,20 +74,60 @@ const createProgressSchema = z.object({
 /**
  * GET /api/simulados - Listar simulados com paginação e filtros
  */
-export const getSimuladosHandler = async (req: Request, res: Response) => {
+export const getSimuladosHandler = async (req: AuthenticatedRequest, res: Response) => {
   try {
+    logger.debug('getSimuladosHandler - Iniciando', {
+      user: req.user,
+      concursoId: req.concursoId,
+      hasAuth: req.headers.authorization ? 'presente' : 'ausente',
+    });
+    
     const {
       page = 1,
       limit = 10,
-      concurso_id,
-      categoria_id,
-      ativo,
-      search,
-    } = req.query as SimuladoFiltersDTO;
+      // categoria_id,
+      // ativo,
+      // search,
+    } = req.query as unknown as SimuladoFiltersDTO;
 
     const offset = (Number(page) - 1) * Number(limit);
 
-    let query = supabase
+    // Remover variável não utilizada
+    // let query = supabase
+    //   .from('simulados')
+    //   .select(`
+    //     *,
+    //     categorias_concursos (
+    //       id,
+    //       nome,
+    //       slug,
+    //       descricao,
+    //       cor_primaria,
+    //       cor_secundaria
+    //     ),
+    //     concursos (
+    //       id,
+    //       nome,
+    //       descricao,
+    //       ano,
+    //       banca
+    //     )
+    //   `, { count: 'exact' });
+
+    // Aplicar filtro de concurso
+    const concursoId = getConcursoIdFromRequest(req);
+    logger.debug('concursoId obtido', { concursoId });
+    
+    if (!concursoId) {
+      logger.warn('Nenhum concurso configurado para o usuário');
+      return res.status(400).json({
+        success: false,
+        error: 'Concurso não configurado. Selecione um concurso primeiro.',
+        code: 'CONCURSO_NOT_CONFIGURED',
+      });
+    }
+
+    const { data: simulados, error, count } = await supabase
       .from('simulados')
       .select(`
         *,
@@ -104,40 +146,27 @@ export const getSimuladosHandler = async (req: Request, res: Response) => {
           ano,
           banca
         )
-      `, { count: 'exact' });
-
-    // Aplicar filtros
-    if (concurso_id) {
-      query = query.eq('concurso_id', concurso_id);
-    }
-    if (categoria_id) {
-      query = query.eq('categoria_id', categoria_id);
-    }
-    if (ativo !== undefined) {
-      query = query.eq('ativo', ativo);
-    }
-    if (search) {
-      query = query.or(`titulo.ilike.%${search}%,descricao.ilike.%${search}%`);
-    }
-
-    const { data: simulados, error, count } = await query
-      .order('criado_em', { ascending: false })
-      .range(offset, offset + Number(limit) - 1);
+      `, { count: 'exact' })
+      .eq('concurso_id', concursoId)
+      .range(offset, offset + Number(limit) - 1) as { data: SimuladoWithRelationsDTO[] | null; error: Error | null; count: number | null };
 
     if (error) {
       logger.error('Erro ao buscar simulados', { error: error.message });
       return res.status(500).json({ error: 'Erro interno do servidor' });
     }
 
-    const totalPages = Math.ceil((count || 0) / Number(limit));
+    const simuladosData = simulados;
+    const countData = count;
+
+    const totalPages = Math.ceil((countData ?? 0) / Number(limit));
 
     const response: PaginatedSimuladosResponseDTO = {
       success: true,
-      data: simulados as SimuladoWithRelationsDTO[],
+      data: simuladosData ?? [],
       pagination: {
         page: Number(page),
         limit: Number(limit),
-        total: count || 0,
+        total: countData ?? 0,
         totalPages,
       },
     };
@@ -152,7 +181,7 @@ export const getSimuladosHandler = async (req: Request, res: Response) => {
 /**
  * GET /api/simulados/:id - Buscar simulado por ID
  */
-export const getSimuladoByIdHandler = async (req: Request, res: Response) => {
+export const getSimuladoByIdHandler = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -193,7 +222,7 @@ export const getSimuladoByIdHandler = async (req: Request, res: Response) => {
         )
       `)
       .eq('id', id)
-      .single();
+      .single() as { data: SimuladoWithRelationsDTO | null; error: { message: string; code?: string } | null };
 
     if (error) {
       if (error.code === 'PGRST116') {
@@ -234,7 +263,7 @@ export const createSimuladoHandler = async (req: Request, res: Response) => {
       .from('simulados')
       .insert([simuladoData])
       .select()
-      .single();
+      .single() as { data: SimuladoWithRelationsDTO | null; error: { message: string; code?: string } | null };
 
     if (error) {
       logger.error('Erro ao criar simulado', { error: error.message });
@@ -268,14 +297,14 @@ export const updateSimuladoHandler = async (req: Request, res: Response) => {
       });
     }
 
-    const updateData: UpdateSimuladoDTO = validationResult.data as UpdateSimuladoDTO;
+    const updateData: UpdateSimuladoDTO = validationResult.data;
 
     const { data: simulado, error } = await supabase
       .from('simulados')
       .update(updateData)
       .eq('id', id)
       .select()
-      .single();
+      .single() as { data: SimuladoWithRelationsDTO | null; error: { message: string; code?: string } | null };
 
     if (error) {
       if (error.code === 'PGRST116') {
@@ -338,14 +367,14 @@ export const addQuestaoHandler = async (req: Request, res: Response) => {
 
     const questaoData: CreateSimuladoQuestaoDTO = {
       ...validationResult.data,
-      simulado_id: simuladoId,
-    } as CreateSimuladoQuestaoDTO;
+      simulado_id: simuladoId as string,
+    };
 
     const { data: questao, error } = await supabase
       .from('simulado_questoes')
       .insert([questaoData])
       .select()
-      .single();
+      .single() as { data: CreateSimuladoQuestaoDTO | null; error: { message: string; code?: string } | null };
 
     if (error) {
       logger.error('Erro ao adicionar questão', { error: error.message });
@@ -365,7 +394,7 @@ export const addQuestaoHandler = async (req: Request, res: Response) => {
 export const updateQuestaoHandler = async (req: Request, res: Response) => {
   try {
     const { simuladoId, questaoId } = req.params;
-    const updateData: UpdateSimuladoQuestaoDTO = req.body;
+    const updateData: UpdateSimuladoQuestaoDTO = req.body as UpdateSimuladoQuestaoDTO;
 
     const { data: questao, error } = await supabase
       .from('simulado_questoes')
@@ -373,7 +402,7 @@ export const updateQuestaoHandler = async (req: Request, res: Response) => {
       .eq('id', questaoId)
       .eq('simulado_id', simuladoId)
       .select()
-      .single();
+      .single() as { data: UpdateSimuladoQuestaoDTO | null; error: { message: string; code?: string } | null };
 
     if (error) {
       if (error.code === 'PGRST116') {
@@ -438,14 +467,14 @@ export const createProgressHandler = async (req: Request, res: Response) => {
     const progressData = {
       ...validationResult.data,
       simulado_id: simuladoId,
-      data_inicio: validationResult.data.data_inicio || new Date().toISOString(),
+      data_inicio: validationResult.data.data_inicio ?? new Date().toISOString(),
     };
 
     const { data: progress, error } = await supabase
       .from('progresso_usuario_simulado')
       .insert([progressData])
       .select()
-      .single();
+      .single() as { data: UpdateusuariosimuladoProgressDTO | null; error: { message: string; code?: string } | null };
 
     if (error) {
       logger.error('Erro ao criar progresso', { error: error.message });
@@ -465,7 +494,7 @@ export const createProgressHandler = async (req: Request, res: Response) => {
 export const updateProgressHandler = async (req: Request, res: Response) => {
   try {
     const { simuladoId, progressId } = req.params;
-    const updateData: UpdateusuariosimuladoProgressDTO = req.body;
+    const updateData: UpdateusuariosimuladoProgressDTO = req.body as UpdateusuariosimuladoProgressDTO;
 
     const { data: progress, error } = await supabase
       .from('progresso_usuario_simulado')
@@ -473,7 +502,7 @@ export const updateProgressHandler = async (req: Request, res: Response) => {
       .eq('id', progressId)
       .eq('simulado_id', simuladoId)
       .select()
-      .single();
+      .single() as { data: UpdateusuariosimuladoProgressDTO | null; error: { message: string; code?: string } | null };
 
     if (error) {
       if (error.code === 'PGRST116') {
@@ -507,7 +536,7 @@ export const getProgressHandler = async (req: AuthenticatedRequest, res: Respons
       .select('*')
       .eq('simulado_id', simuladoId)
       .eq('usuario_id', usuarioId)
-      .order('criado_em', { ascending: false });
+      .order('criado_em', { ascending: false }) as { data: UpdateusuariosimuladoProgressDTO[] | null; error: { message: string; code?: string } | null };
 
     if (error) {
       logger.error('Erro ao buscar progresso', { error: error.message });
@@ -522,25 +551,51 @@ export const getProgressHandler = async (req: AuthenticatedRequest, res: Respons
 };
 
 // Criar router Express
-import { Router } from 'express';
+const router = express.Router();  
 
-const router = Router();
+// Middleware de autenticação já é aplicado globalmente
+// router.use(requireAuth);
 
 // Registrar rotas principais
-router.get('/', getSimuladosHandler);
-router.get('/:id', getSimuladoByIdHandler);
-router.post('/', createSimuladoHandler);
-router.put('/:id', updateSimuladoHandler);
-router.delete('/:id', deleteSimuladoHandler);
+router.get('/', (req, res) => {
+  getSimuladosHandler(req as AuthenticatedRequest, res).catch((error) => {
+    logger.error('Erro não tratado em getSimuladosHandler', { error });
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  });
+});
+router.get('/:id', (req, res) => {
+  getSimuladoByIdHandler(req as AuthenticatedRequest, res).catch((error) => {
+    logger.error('Erro não tratado em getSimuladoByIdHandler', { error });
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  });
+});
+router.post('/', (req, res) => {
+  createSimuladoHandler(req, res).catch((error) => {
+    logger.error('Erro não tratado em createSimuladoHandler', { error });
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  });
+});
+router.put('/:id', (req, res) => {
+  updateSimuladoHandler(req, res).catch((error) => {
+    logger.error('Erro não tratado em updateSimuladoHandler', { error });
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  });
+});
+router.delete('/:id', (req, res) => {
+  deleteSimuladoHandler(req, res).catch((error) => {
+    logger.error('Erro não tratado em deleteSimuladoHandler', { error });
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  });
+});
 
 // Rotas de questões
-router.post('/:id/questoes', addQuestaoHandler);
-router.put('/questoes/:questaoId', updateQuestaoHandler);
-router.delete('/questoes/:questaoId', deleteQuestaoHandler);
+router.post('/:id/questoes', addQuestaoHandler); // eslint-disable-line @typescript-eslint/no-misused-promises
+router.put('/questoes/:questaoId', updateQuestaoHandler); // eslint-disable-line @typescript-eslint/no-misused-promises
+router.delete('/questoes/:questaoId', deleteQuestaoHandler); // eslint-disable-line @typescript-eslint/no-misused-promises
 
 // Rotas de progresso
-router.post('/:id/progresso', createProgressHandler);
-router.put('/:simuladoId/progresso/:progressId', updateProgressHandler);
-router.get('/:id/progresso', getProgressHandler);
+router.post('/:id/progresso', createProgressHandler); // eslint-disable-line @typescript-eslint/no-misused-promises
+router.put('/:simuladoId/progresso/:progressId', updateProgressHandler); // eslint-disable-line @typescript-eslint/no-misused-promises
+router.get('/:id/progresso', getProgressHandler); // eslint-disable-line @typescript-eslint/no-misused-promises
 
 export { router };
