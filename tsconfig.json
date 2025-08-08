@@ -121,6 +121,8 @@
     "**/*.test.ts",
     "**/*.spec.ts",
     "src/middleware/admin-auth.js",
-    "src/middleware/optimized-auth.middleware.ts"
+    "src/middleware/optimized-auth.middleware.ts",
+    // Exclui documentação OpenAPI gerada grande para não bloquear o typecheck do servidor
+    "src/core/documentation/openapi.ts"
   ]
 }

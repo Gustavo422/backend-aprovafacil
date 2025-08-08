@@ -3414,4 +3414,4 @@ export function generateOpenAPISpec(): OpenAPIV3.Document {
   return openApiConfig;
 }
 
-export default openApiConfig; 
+export default openApiConfig;

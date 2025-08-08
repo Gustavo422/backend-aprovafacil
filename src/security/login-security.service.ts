@@ -151,7 +151,7 @@ export class LoginSecurityService {
 
       // Salvar no banco
       const { error } = await this.supabase
-        .from('login_attempts')
+        .from('tentativas_login')
         .insert(attempt);
 
       if (error) {
@@ -188,7 +188,7 @@ export class LoginSecurityService {
   private async checkIPBlock(ipAddress: string): Promise<{ blocked: boolean; blockedUntil?: Date }> {
     try {
       const { data, error } = await this.supabase
-        .from('login_attempts')
+        .from('tentativas_login')
         .select('blocked_until')
         .eq('ip_address', ipAddress)
         .not('blocked_until', 'is', null)
@@ -224,7 +224,7 @@ export class LoginSecurityService {
   private async checkEmailBlock(email: string): Promise<{ blocked: boolean; blockedUntil?: Date }> {
     try {
       const { data, error } = await this.supabase
-        .from('login_attempts')
+        .from('tentativas_login')
         .select('blocked_until')
         .eq('email', email)
         .not('blocked_until', 'is', null)
@@ -263,7 +263,7 @@ export class LoginSecurityService {
 
     // Contar tentativas na última hora
     const { data: hourlyAttempts, error: hourlyError } = await this.supabase
-      .from('login_attempts')
+      .from('tentativas_login')
       .select('id', { count: 'exact', head: true })
       .or(`email.eq.${email},ip_address.eq.${ipAddress}`)
       .gte('attempted_at', oneHourAgo.toISOString());
@@ -275,7 +275,7 @@ export class LoginSecurityService {
 
     // Contar tentativas no último dia
     const { data: dailyAttempts, error: dailyError } = await this.supabase
-      .from('login_attempts')
+      .from('tentativas_login')
       .select('id', { count: 'exact', head: true })
       .or(`email.eq.${email},ip_address.eq.${ipAddress}`)
       .gte('attempted_at', oneDayAgo.toISOString());
@@ -287,7 +287,7 @@ export class LoginSecurityService {
 
     // Contar falhas recentes
     const { data: recentFailures } = await this.supabase
-      .from('login_attempts')
+      .from('tentativas_login')
       .select('id', { count: 'exact', head: true })
       .eq('email', email)
       .eq('ip_address', ipAddress)
@@ -331,7 +331,7 @@ export class LoginSecurityService {
 
     // Verificar múltiplos IPs para o mesmo email
     const { data: uniqueIPs, error } = await this.supabase
-      .from('login_attempts')
+      .from('tentativas_login')
       .select('ip_address')
       .eq('email', email)
       .gte('attempted_at', last24Hours.toISOString());
@@ -363,7 +363,7 @@ export class LoginSecurityService {
 
     // Contar falhas recentes para este email
     const { data: emailFailures, error: emailError } = await this.supabase
-      .from('login_attempts')
+      .from('tentativas_login')
       .select('id', { count: 'exact', head: true })
       .eq('email', email)
       .eq('success', false)
@@ -371,7 +371,7 @@ export class LoginSecurityService {
 
     // Contar falhas recentes para este IP
     const { data: ipFailures, error: ipError } = await this.supabase
-      .from('login_attempts')
+      .from('tentativas_login')
       .select('id', { count: 'exact', head: true })
       .eq('ip_address', ipAddress)
       .eq('success', false)
@@ -477,7 +477,7 @@ export class LoginSecurityService {
 
     const [attempts, blocks, uniqueIPs] = await Promise.all([
       this.supabase
-        .from('login_attempts')
+        .from('tentativas_login')
         .select('success', { count: 'exact', head: true })
         .gte('attempted_at', since.toISOString()),
       
@@ -487,7 +487,7 @@ export class LoginSecurityService {
         .gte('created_at', since.toISOString()),
       
       this.supabase
-        .from('login_attempts')
+        .from('tentativas_login')
         .select('ip_address')
         .gte('attempted_at', since.toISOString()),
     ]);

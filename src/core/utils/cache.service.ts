@@ -37,7 +37,7 @@ export class CacheService implements ICacheService {
       // Se não encontrou em memória, verificar cache persistente
       try {
         const { data, error } = await this.supabase
-          .from('cache_performance_usuario_usuario_usuario_usuario')
+          .from('cache_performance_usuario')
           .select('dados_cache, expira_em')
           .eq('chave_cache', chave)
           .gt('expira_em', new Date().toISOString())
@@ -86,7 +86,7 @@ export class CacheService implements ICacheService {
       // Salvar em cache persistente
       try {
         const { error } = await this.supabase
-          .from('cache_performance_usuario_usuario_usuario_usuario')
+          .from('cache_performance_usuario')
           .upsert({
             chave_cache: chave,
             dados_cache: valor,
@@ -118,7 +118,7 @@ export class CacheService implements ICacheService {
       // Remover do cache persistente
       try {
         const { error } = await this.supabase
-          .from('cache_performance_usuario_usuario_usuario_usuario')
+          .from('cache_performance_usuario')
           .delete()
           .eq('chave_cache', chave);
 
@@ -150,7 +150,7 @@ export class CacheService implements ICacheService {
 
         // Limpar cache persistente por padrão
         const { error } = await this.supabase
-          .from('cache_performance_usuario_usuario_usuario_usuario')
+          .from('cache_performance_usuario')
           .delete()
           .ilike('chave_cache', `%${padrao}%`);
 
@@ -163,7 +163,7 @@ export class CacheService implements ICacheService {
         this.memoryCache.clear();
 
         const { error } = await this.supabase
-          .from('cache_performance_usuario_usuario_usuario_usuario')
+          .from('cache_performance_usuario')
           .delete()
           .neq('chave_cache', '');
 
@@ -191,7 +191,7 @@ export class CacheService implements ICacheService {
 
       // Limpar cache persistente por prefixo
       const { error } = await this.supabase
-        .from('cache_performance_usuario_usuario_usuario_usuario')
+        .from('cache_performance_usuario')
         .delete()
         .ilike('chave_cache', `${prefixo}%`);
 
@@ -217,7 +217,7 @@ export class CacheService implements ICacheService {
 
       // Verificar cache persistente
       const { data, error } = await this.supabase
-        .from('cache_performance_usuario_usuario_usuario_usuario')
+        .from('cache_performance_usuario')
         .select('id')
         .eq('chave_cache', chave)
         .gt('expira_em', new Date().toISOString())
@@ -279,7 +279,7 @@ export class CacheService implements ICacheService {
   private async carregarConfiguracoes(): Promise<void> {
     try {
       const { data, error } = await this.supabase
-        .from('configuracoes_cache')
+        .from('configuracao_cache')
         .select('chave_cache, ttl_minutos, descricao');
 
       if (error) {
@@ -376,7 +376,7 @@ export class CacheService implements ICacheService {
 
       try {
         const { data: registros } = await this.supabase
-          .from('cache_performance_usuario_usuario_usuario_usuario')
+          .from('cache_performance_usuario')
           .select('expira_em, atualizado_em');
 
         if (registros) {
@@ -429,7 +429,7 @@ export class CacheService implements ICacheService {
   async limparCacheExpiradoBanco(): Promise<number> {
     try {
       const { count, error } = await this.supabase
-        .from('cache_performance_usuario_usuario_usuario_usuario')
+        .from('cache_performance_usuario')
         .delete()
         .lt('expira_em', new Date().toISOString())
         .select('count');

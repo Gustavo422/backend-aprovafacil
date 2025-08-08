@@ -1,5 +1,6 @@
 /* global Response */
-import { generateOpenAPISpec } from './openapi.js';
+// Evitar import estático do arquivo TS grande durante typecheck
+// import { generateOpenAPISpec } from './openapi.js';
 
 const SWAGGER_UI_HTML = `
 <!DOCTYPE html>
@@ -80,13 +81,35 @@ export function serveSwaggerUI(): Response {
 }
 
 export function serveOpenAPISpec(): Response {
-  const spec = generateOpenAPISpec();
-  return new Response(JSON.stringify(spec, null, 2), {
-    headers: {
-      'Content-Type': 'application/json; charset=utf-8',
-    },
-  });
-} 
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const mod = require('./openapi.js');
+    const generateOpenAPISpec = mod?.generateOpenAPISpec as (() => unknown) | undefined;
+    if (typeof generateOpenAPISpec !== 'function') {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Documentação indisponível. Rode "npm run build" para gerar a documentação.',
+      }), {
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
+        status: 503,
+      });
+    }
+    const spec = generateOpenAPISpec();
+    return new Response(JSON.stringify(spec, null, 2), {
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+      },
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'Erro ao carregar documentação',
+    }), {
+      headers: { 'Content-Type': 'application/json; charset=utf-8' },
+      status: 500,
+    });
+  }
+}
 
 
 
