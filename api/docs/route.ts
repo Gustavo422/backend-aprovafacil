@@ -1,9 +1,20 @@
 import type { Request, Response } from 'express';
-// import { generateOpenAPISpec } from '../../src/core/documentation/openapi';
 
 export const GET = (req: Request, res: Response) => {
   try {
-    // Tentar carregar dinamicamente do build para evitar typecheck do arquivo TS gigante
+    // Preferir arquivo estático exportado caso exista
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { existsSync } = require('fs');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { join } = require('path');
+    const staticPath = join(__dirname, '..', '..', 'openapi.json');
+    if (existsSync(staticPath)) {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const staticSpec = require(staticPath);
+      return res.json(staticSpec);
+    }
+
+    // Fallback: carregar do build
     // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-unsafe-assignment
     const mod = require('../../dist/src/core/documentation/openapi.js');
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
@@ -12,7 +23,7 @@ export const GET = (req: Request, res: Response) => {
     if (typeof generateOpenAPISpec !== 'function') {
       return res.status(503).json({
         success: false,
-        error: 'Documentação indisponível em modo dev sem build. Rode "npm run build" para gerar a documentação.',
+        error: 'Documentação indisponível. Rode "npm run build" ou "npm run openapi:export".',
       });
     }
 

@@ -56,7 +56,7 @@ export function createRequestLoggerMiddleware(options: RequestLoggerOptions = {}
     logHeaders: false,
     logResponseBody: false,
     logResponseTime: true,
-    excludeHeaders: ['authorization', 'cookie', 'set-cookie'],
+    excludeHeaders: ['authorization', 'cookie', 'set-cookie', 'x-supabase-api-key', 'x-api-key'],
     skip: () => false,
     ...options,
   };
@@ -69,9 +69,12 @@ export function createRequestLoggerMiddleware(options: RequestLoggerOptions = {}
     
     // Generate request ID if not present
     const requestId = (req.headers['x-request-id'] as string) ?? uuidv4();
+    // Correlation id propagada do frontend, se houver
+    const correlationId = req.get('x-correlation-id') ?? undefined;
     
     // Add request ID to response headers
     res.setHeader('x-request-id', requestId);
+    if (correlationId) res.setHeader('x-correlation-id', correlationId);
     
     // Get start time
     const startTime = Date.now();
@@ -79,6 +82,7 @@ export function createRequestLoggerMiddleware(options: RequestLoggerOptions = {}
     // Create request context
     const context = {
       requestId,
+      correlationId,
       method: req.method,
       url: req.originalUrl ?? req.url,
       ip: req.ip ?? req.socket.remoteAddress,

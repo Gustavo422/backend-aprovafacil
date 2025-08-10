@@ -1,0 +1,16 @@
+import type { LogService } from '../../core/utils/log.service.js';
+import { {{properCase name}}Repository } from './{{dashCase name}}.repository.js';
+
+export class {{properCase name}}Service {
+  constructor(
+    private readonly repo: {{properCase name}}Repository,
+    private readonly logService: LogService,
+  ) {}
+
+  async getById(id: string) {
+    await this.logService.info('Service getById', { id, entity: '{{dashCase name}}' });
+    return this.repo.findById(id);
+  }
+}
+
+

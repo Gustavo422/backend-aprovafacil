@@ -1,0 +1,39 @@
+name: Contract Tests
+
+on:
+  pull_request:
+    paths:
+      - 'backend/**'
+  push:
+    branches: [ main ]
+    paths:
+      - 'backend/**'
+
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+      - name: Install deps
+        run: npm ci --prefer-offline --no-audit --no-fund
+      - name: Build (para gerar openapi via dist quando possível)
+        run: npm run build --silent
+      - name: Export OpenAPI
+        run: npm run openapi:export --silent
+      - name: Validate OpenAPI (swagger-cli)
+        run: npm run openapi:validate --silent
+      - name: Lint OpenAPI (Spectral)
+        run: npm run openapi:spectral --silent
+
+
+

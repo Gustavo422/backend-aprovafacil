@@ -1,0 +1,12 @@
+import type { LogService } from '../../core/utils/log.service.js';
+
+export class {{properCase name}}Repository {
+  constructor(private readonly logService: LogService) {}
+
+  async findById(id: string) {
+    this.logService.debug('Buscando por ID', { id, entity: '{{dashCase name}}' }).catch(() => {});
+    return null;
+  }
+}
+
+

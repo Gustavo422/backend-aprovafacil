@@ -1,0 +1,18 @@
+import type { Request, Response, NextFunction } from 'express';
+import { {{properCase name}}Service } from '../{{dashCase name}}.service.js';
+
+export class {{properCase name}}Controller {
+  constructor(private readonly service: {{properCase name}}Service) {}
+
+  getById = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params as { id: string };
+      const result = await this.service.getById(id);
+      res.json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  };
+}
+
+

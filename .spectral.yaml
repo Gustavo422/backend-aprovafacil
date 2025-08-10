@@ -1,0 +1,11 @@
+extends: spectral:oas
+rules:
+  operation-operationId-unique: error
+  info-contact: warn
+  info-description: warn
+  operation-tags: warn
+  oas3-unused-component: warn
+
+
+
+

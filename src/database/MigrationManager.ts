@@ -39,7 +39,7 @@ export class MigrationManager {
         .limit(1);
 
       // If the table doesn't exist, we'll get an error
-      if (checkError?.message.includes('does not exist')) {
+      if (checkError?.message?.includes('does not exist')) {
         // Create migrations table using SQL
         const createTableSQL = `
           CREATE TABLE IF NOT EXISTS ${this.migrationTableName} (
@@ -54,10 +54,20 @@ export class MigrationManager {
           );
         `;
         
-        const { error: createError } = await this.client.rpc('exec_sql', { sql: createTableSQL });
-        
-        if (createError) {
-          throw new Error(`Failed to create migrations table: ${createError.message}`);
+        // Tentar preferencialmente via RPC exec_sql; se indisponível, fazer fallback informativo
+        let createErrorMessage: string | null = null;
+        try {
+          const { error } = await this.client.rpc('exec_sql', { sql: createTableSQL });
+          if (error) {
+            createErrorMessage = (error as unknown as { message?: string }).message ?? String(error);
+          }
+        } catch (e) {
+          createErrorMessage = e instanceof Error ? e.message : String(e);
+        }
+
+        if (createErrorMessage) {
+          // Fallback: não há como criar via REST (DDL). Informar claramente.
+          throw new Error(`Failed to create migrations table: ${createErrorMessage}`);
         }
         
         this.logger.info('Migrations table created successfully');

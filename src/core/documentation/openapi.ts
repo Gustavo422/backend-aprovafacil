@@ -1,14 +1,14 @@
-import type { OpenAPIV3 } from 'openapi-types';
-import { ErrorSchema } from './schemas/Error.schema';
-import { ConcursoSchema, ConcursoInputSchema } from './schemas/Concurso.schema';
-import { UserSchema } from './schemas/User.schema';
+// Import ESM direto para compatibilidade com "type: module" e export estático
+import { ErrorSchema } from './schemas/Error.schema.js';
+import { ConcursoSchema, ConcursoInputSchema } from './schemas/Concurso.schema.js';
+import { UserSchema } from './schemas/User.schema.js';
 
-export const openApiConfig: OpenAPIV3.Document = {
+export const openApiConfig = {
   openapi: '3.0.0',
   info: {
     title: 'AprovaFácil API',
     description: 'API para sistema de estudos e preparação para concursos',
-    version: '1.0.0',
+    version: '1.1.0',
     contact: {
       name: 'AprovaFacil Team',
       email: 'contato@aprovafacil.com',
@@ -25,8 +25,292 @@ export const openApiConfig: OpenAPIV3.Document = {
     },
   ],
   paths: {
+    // Guru v1 - aliases versionados mantendo compatibilidade
+    '/guru/v1/dashboard/enhanced-stats': {
+      get: {
+        operationId: 'getGuruEnhancedStatsV1',
+        summary: 'Guru v1 - Estatísticas aprimoradas do dashboard',
+        description: 'Retorna dados agregados do dashboard do usuário (alias versionado).',
+        tags: ['Guru'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { $ref: '#/components/parameters/CorrelationId' },
+        ],
+        responses: {
+          '200': {
+            description: 'OK',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: { $ref: '#/components/schemas/GuruEnhancedStats' },
+                  },
+                },
+              },
+            },
+            headers: {
+              'x-correlation-id': {
+                description: 'ID de correlação para rastreamento ponta a ponta',
+                schema: { type: 'string' },
+              },
+            },
+          },
+          '401': {
+            description: 'Não autorizado',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/Error' } },
+            },
+            headers: {
+              'x-correlation-id': { description: 'ID de correlação', schema: { type: 'string' } },
+            },
+          },
+          '429': {
+            description: 'Rate limit excedido',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/Error' } },
+            },
+            headers: {
+              'x-correlation-id': { description: 'ID de correlação', schema: { type: 'string' } },
+              'retry-after': { description: 'Sugestão de tempo (segundos) para tentar novamente', schema: { type: 'integer' } },
+            },
+          },
+        },
+      },
+    },
+    '/guru/v1/dashboard/activities': {
+      get: {
+        operationId: 'getGuruActivitiesV1',
+        summary: 'Guru v1 - Atividades recentes',
+        description: 'Lista atividades recentes do usuário no período, ordenadas por data.',
+        tags: ['Guru'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'limit',
+            in: 'query',
+            description: 'Quantidade máxima de atividades',
+            schema: { type: 'integer', minimum: 1, maximum: 50, default: 10 },
+          },
+          { $ref: '#/components/parameters/CorrelationId' },
+        ],
+        responses: {
+          '200': {
+            description: 'OK',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: {
+                      type: 'array',
+                      items: { $ref: '#/components/schemas/GuruActivity' },
+                    },
+                  },
+                },
+              },
+            },
+            headers: {
+              'x-correlation-id': {
+                description: 'ID de correlação para rastreamento ponta a ponta',
+                schema: { type: 'string' },
+              },
+            },
+          },
+          '401': {
+            description: 'Não autorizado',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/Error' } },
+            },
+            headers: {
+              'x-correlation-id': { description: 'ID de correlação', schema: { type: 'string' } },
+            },
+          },
+          '429': {
+            description: 'Rate limit excedido',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/Error' } },
+            },
+            headers: {
+              'x-correlation-id': { description: 'ID de correlação', schema: { type: 'string' } },
+              'retry-after': { description: 'Sugestão de tempo (segundos) para tentar novamente', schema: { type: 'integer' } },
+            },
+          },
+        },
+      },
+    },
+    // Sub-rotas auxiliares do módulo Guru
+    '/guru/v1/activities/simulados': {
+      get: {
+        operationId: 'getGuruActivitiesSimuladosV1',
+        summary: 'Guru v1 - Atividades de simulados',
+        description: 'Lista as atividades recentes relacionadas a simulados.',
+        tags: ['Guru'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'limit', in: 'query', description: 'Quantidade máxima de atividades', schema: { type: 'integer', minimum: 1, maximum: 50, default: 10 } },
+          { $ref: '#/components/parameters/CorrelationId' },
+        ],
+        responses: {
+          '200': {
+            description: 'OK',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: { type: 'array', items: { $ref: '#/components/schemas/GuruActivity' } },
+                  },
+                },
+              },
+            },
+            headers: {
+              'x-correlation-id': { description: 'ID de correlação', schema: { type: 'string' } },
+            },
+          },
+          '401': { description: 'Não autorizado', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+          '429': { description: 'Rate limit excedido', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+        },
+      },
+    },
+    '/guru/v1/activities/flashcards': {
+      get: {
+        operationId: 'getGuruActivitiesFlashcardsV1',
+        summary: 'Guru v1 - Atividades de flashcards',
+        description: 'Lista as atividades recentes relacionadas a flashcards.',
+        tags: ['Guru'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'limit', in: 'query', description: 'Quantidade máxima de atividades', schema: { type: 'integer', minimum: 1, maximum: 50, default: 10 } },
+          { $ref: '#/components/parameters/CorrelationId' },
+        ],
+        responses: {
+          '200': {
+            description: 'OK',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: { type: 'array', items: { $ref: '#/components/schemas/GuruActivity' } },
+                  },
+                },
+              },
+            },
+            headers: {
+              'x-correlation-id': { description: 'ID de correlação', schema: { type: 'string' } },
+            },
+          },
+          '401': { description: 'Não autorizado', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+          '429': { description: 'Rate limit excedido', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+        },
+      },
+    },
+    '/guru/v1/activities/apostilas': {
+      get: {
+        operationId: 'getGuruActivitiesApostilasV1',
+        summary: 'Guru v1 - Atividades de apostilas/conteúdos',
+        description: 'Lista as atividades recentes relacionadas a apostilas e outros conteúdos.',
+        tags: ['Guru'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'limit', in: 'query', description: 'Quantidade máxima de atividades', schema: { type: 'integer', minimum: 1, maximum: 50, default: 10 } },
+          { $ref: '#/components/parameters/CorrelationId' },
+        ],
+        responses: {
+          '200': {
+            description: 'OK',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: { type: 'array', items: { $ref: '#/components/schemas/GuruActivity' } },
+                  },
+                },
+              },
+            },
+            headers: {
+              'x-correlation-id': { description: 'ID de correlação', schema: { type: 'string' } },
+            },
+          },
+          '401': { description: 'Não autorizado', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+          '429': { description: 'Rate limit excedido', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+        },
+      },
+    },
+    // Caminhos legados mantidos como deprecated
+    '/dashboard/enhanced-stats': {
+      get: {
+        operationId: 'getLegacyEnhancedStats',
+        deprecated: true,
+        summary: 'LEGACY - Estatísticas aprimoradas do dashboard',
+        description: 'Alias legado; utilize /guru/v1/dashboard/enhanced-stats',
+        tags: ['Dashboard'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'OK',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: { $ref: '#/components/schemas/GuruEnhancedStats' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/dashboard/activities': {
+      get: {
+        operationId: 'getLegacyActivities',
+        deprecated: true,
+        summary: 'LEGACY - Atividades recentes',
+        description: 'Alias legado; utilize /guru/v1/dashboard/activities',
+        tags: ['Dashboard'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'limit',
+            in: 'query',
+            description: 'Quantidade máxima de atividades',
+            schema: { type: 'integer', minimum: 1, maximum: 50, default: 10 },
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'OK',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: {
+                      type: 'array',
+                      items: { $ref: '#/components/schemas/GuruActivity' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
     '/auth/login': {
       post: {
+        operationId: 'postAuthLogin',
         summary: 'Autenticar usuário',
         description: 'Realiza login do usuário com email e senha',
         tags: ['Autenticação'],
@@ -169,6 +453,7 @@ export const openApiConfig: OpenAPIV3.Document = {
     },
     '/auth/register': {
       post: {
+        operationId: 'postAuthRegister',
         summary: 'Registrar novo usuário',
         description: 'Cria uma nova conta de usuário',
         tags: ['Autenticação'],
@@ -259,6 +544,7 @@ export const openApiConfig: OpenAPIV3.Document = {
     },
     '/auth/forgot-password': {
       post: {
+        operationId: 'postAuthForgotPassword',
         summary: 'Solicitar redefinição de senha',
         description: 'Envia um email para redefinição de senha do usuário',
         tags: ['Autenticação'],
@@ -316,6 +602,7 @@ export const openApiConfig: OpenAPIV3.Document = {
     },
     '/auth/reset-password': {
       post: {
+        operationId: 'postAuthResetPassword',
         summary: 'Redefinir senha',
         description: 'Permite redefinir a senha do usuário usando token enviado por email',
         tags: ['Autenticação'],
@@ -371,6 +658,7 @@ export const openApiConfig: OpenAPIV3.Document = {
     },
     '/auth/verify-reset-token': {
       post: {
+        operationId: 'postAuthVerifyResetToken',
         summary: 'Verificar token de redefinição',
         description: 'Verifica se o token de redefinição de senha é válido',
         tags: ['Autenticação'],
@@ -422,8 +710,9 @@ export const openApiConfig: OpenAPIV3.Document = {
         },
       },
     },
-    // rota '/apostilas' removida
+    '/apostilas': {
       get: {
+        operationId: 'getApostilas',
         summary: 'Listar apostilas',
         description: 'Retorna lista de apostilas disponíveis com filtros opcionais',
         tags: ['Apostilas'],
@@ -519,6 +808,7 @@ export const openApiConfig: OpenAPIV3.Document = {
         },
       },
       post: {
+        operationId: 'postApostilas',
         summary: 'Criar nova apostila',
         description: 'Cria uma nova apostila no sistema',
         tags: ['Apostilas'],
@@ -634,6 +924,7 @@ export const openApiConfig: OpenAPIV3.Document = {
     },
     '/apostilas/{id}': {
       get: {
+        operationId: 'getApostilaById',
         summary: 'Buscar apostila por ID',
         description: 'Retorna detalhes completos de uma apostila específica',
         tags: ['Apostilas'],
@@ -702,6 +993,7 @@ export const openApiConfig: OpenAPIV3.Document = {
         },
       },
       put: {
+        operationId: 'putApostilaById',
         summary: 'Atualizar apostila',
         description: 'Atualiza uma apostila existente',
         tags: ['Apostilas'],
@@ -762,6 +1054,7 @@ export const openApiConfig: OpenAPIV3.Document = {
         },
       },
       delete: {
+        operationId: 'deleteApostilaById',
         summary: 'Excluir apostila',
         description: 'Remove uma apostila do sistema',
         tags: ['Apostilas'],
@@ -803,6 +1096,7 @@ export const openApiConfig: OpenAPIV3.Document = {
     },
     '/flashcards': {
       get: {
+        operationId: 'getFlashcards',
         summary: 'Listar flashcards',
         description: 'Retorna lista de flashcards com filtros opcionais',
         tags: ['Flashcards'],
@@ -907,6 +1201,7 @@ export const openApiConfig: OpenAPIV3.Document = {
         },
       },
       post: {
+        operationId: 'postFlashcards',
         summary: 'Criar novo flashcard',
         description: 'Cria um novo flashcard no sistema',
         tags: ['Flashcards'],
@@ -1031,6 +1326,7 @@ export const openApiConfig: OpenAPIV3.Document = {
     },
     '/flashcards/progress': {
       get: {
+        operationId: 'getFlashcardsProgress',
         summary: 'Obter progresso dos flashcards',
         description: 'Retorna estatísticas de progresso dos flashcards do usuário',
         tags: ['Flashcards'],
@@ -1107,6 +1403,7 @@ export const openApiConfig: OpenAPIV3.Document = {
         },
       },
       post: {
+        operationId: 'postFlashcardsProgress',
         summary: 'Registrar progresso do flashcard',
         description: 'Registra o resultado de uma revisão de flashcard',
         tags: ['Flashcards'],
@@ -1190,6 +1487,7 @@ export const openApiConfig: OpenAPIV3.Document = {
     },
     '/simulados': {
       get: {
+        operationId: 'getSimulados',
         summary: 'Listar simulados',
         description: 'Retorna lista de simulados disponíveis com filtros opcionais',
         tags: ['Simulados'],
@@ -1287,6 +1585,7 @@ export const openApiConfig: OpenAPIV3.Document = {
         },
       },
       post: {
+        operationId: 'postSimulados',
         summary: 'Criar novo simulado',
         description: 'Cria um novo simulado no sistema',
         tags: ['Simulados'],
@@ -1364,18 +1663,11 @@ export const openApiConfig: OpenAPIV3.Document = {
                     nivel: 'intermediario',
                     tempoLimite: 3600,
                     questoes: [
-                      {
-                        enunciado: 'Qual é o princípio fundamental da República Federativa do Brasil?',
-                        alternativas: [
-                          'A soberania',
-                          'A cidadania',
-                          'A dignidade da pessoa humana',
-                          'O pluralismo político',
-                        ],
-                        respostaCorreta: 2,
-                        explicacao: 'A dignidade da pessoa humana é o fundamento da República',
-                        nivel: 'medio',
-                      },
+                      { enunciado: 'Questão 1...', alternativas: ['A', 'B', 'C'], respostaCorreta: 1, nivel: 'medio' },
+                      { enunciado: 'Questão 2...', alternativas: ['A', 'B', 'C'], respostaCorreta: 2, nivel: 'medio' },
+                      { enunciado: 'Questão 3...', alternativas: ['A', 'B', 'C'], respostaCorreta: 0, nivel: 'facil' },
+                      { enunciado: 'Questão 4...', alternativas: ['A', 'B', 'C'], respostaCorreta: 2, nivel: 'dificil' },
+                      { enunciado: 'Questão 5...', alternativas: ['A', 'B', 'C'], respostaCorreta: 1, nivel: 'medio' },
                     ],
                   },
                 },
@@ -1428,6 +1720,7 @@ export const openApiConfig: OpenAPIV3.Document = {
     },
     '/simulados/{id}': {
       get: {
+        operationId: 'getSimuladoById',
         summary: 'Buscar simulado por ID',
         description: 'Retorna detalhes completos de um simulado específico',
         tags: ['Simulados'],
@@ -1498,6 +1791,7 @@ export const openApiConfig: OpenAPIV3.Document = {
     },
     '/simulados/create': {
       post: {
+        operationId: 'postSimuladosCreate',
         summary: 'Criar simulado personalizado',
         description: 'Cria um simulado personalizado com questões selecionadas',
         tags: ['Simulados'],
@@ -1542,7 +1836,7 @@ export const openApiConfig: OpenAPIV3.Document = {
                   value: {
                     titulo: 'Meu Simulado Personalizado',
                     description: 'Simulado criado com questões selecionadas',
-                    questoesIds: ['questao-1', 'questao-2', 'questao-3'],
+                    questoesIds: ['questao-1', 'questao-2', 'questao-3', 'questao-4', 'questao-5'],
                     tempoLimite: 1800,
                   },
                 },
@@ -1571,6 +1865,7 @@ export const openApiConfig: OpenAPIV3.Document = {
     },
     '/estatisticas': {
       get: {
+        operationId: 'getEstatisticas',
         summary: 'Obter estatísticas gerais',
         description: 'Retorna estatísticas gerais do usuário',
         tags: ['Estatísticas'],
@@ -1651,6 +1946,7 @@ export const openApiConfig: OpenAPIV3.Document = {
     },
     '/plano-estudos': {
       get: {
+        operationId: 'getPlanoEstudos',
         summary: 'Listar planos de estudo',
         description: 'Retorna lista de planos de estudo do usuário',
         tags: ['Plano de Estudos'],
@@ -1720,6 +2016,7 @@ export const openApiConfig: OpenAPIV3.Document = {
         },
       },
       post: {
+        operationId: 'postPlanoEstudos',
         summary: 'Criar plano de estudo',
         description: 'Cria um novo plano de estudo personalizado',
         tags: ['Plano de Estudos'],
@@ -1852,6 +2149,7 @@ export const openApiConfig: OpenAPIV3.Document = {
     },
     '/plano-estudos/{id}': {
       get: {
+        operationId: 'getPlanoEstudosById',
         summary: 'Buscar plano de estudo por ID',
         description: 'Retorna detalhes completos de um plano de estudo',
         tags: ['Plano de Estudos'],
@@ -1928,6 +2226,7 @@ export const openApiConfig: OpenAPIV3.Document = {
         },
       },
       put: {
+        operationId: 'putPlanoEstudosById',
         summary: 'Atualizar plano de estudo',
         description: 'Atualiza um plano de estudo existente',
         tags: ['Plano de Estudos'],
@@ -1997,6 +2296,7 @@ export const openApiConfig: OpenAPIV3.Document = {
         },
       },
       delete: {
+        operationId: 'deletePlanoEstudosById',
         summary: 'Excluir plano de estudo',
         description: 'Remove um plano de estudo do sistema',
         tags: ['Plano de Estudos'],
@@ -2038,6 +2338,7 @@ export const openApiConfig: OpenAPIV3.Document = {
     },
     '/questoes-semanais': {
       get: {
+        operationId: 'getQuestoesSemanais',
         summary: 'Listar questões semanais',
         description: 'Retorna lista de questões semanais disponíveis',
         tags: ['Questões Semanais'],
@@ -2112,6 +2413,7 @@ export const openApiConfig: OpenAPIV3.Document = {
         },
       },
       post: {
+        operationId: 'postQuestoesSemanais',
         summary: 'Criar questão semanal',
         description: 'Cria uma nova questão semanal',
         tags: ['Questões Semanais'],
@@ -2253,6 +2555,7 @@ export const openApiConfig: OpenAPIV3.Document = {
     },
     '/mapa-assuntos': {
       get: {
+        operationId: 'getMapaAssuntos',
         summary: 'Listar mapa de assuntos',
         description: 'Retorna o mapa de assuntos organizados por disciplina',
         tags: ['Mapa de Assuntos'],
@@ -2339,6 +2642,7 @@ export const openApiConfig: OpenAPIV3.Document = {
     },
     '/mapa-assuntos/{id}': {
       get: {
+        operationId: 'getMapaAssuntosById',
         summary: 'Buscar assunto por ID',
         description: 'Retorna detalhes completos de um assunto específico',
         tags: ['Mapa de Assuntos'],
@@ -2419,6 +2723,7 @@ export const openApiConfig: OpenAPIV3.Document = {
         },
       },
       put: {
+        operationId: 'putMapaAssuntosById',
         summary: 'Atualizar status do assunto',
         description: 'Atualiza o status de estudo de um assunto',
         tags: ['Mapa de Assuntos'],
@@ -2500,6 +2805,7 @@ export const openApiConfig: OpenAPIV3.Document = {
     },
     '/dashboard': {
       get: {
+        operationId: 'getDashboard',
         summary: 'Obter dados do dashboard',
         description: 'Retorna dados consolidados para o dashboard do usuário',
         tags: ['Dashboard'],
@@ -2593,6 +2899,7 @@ export const openApiConfig: OpenAPIV3.Document = {
     },
     '/admin/clear-cache': {
       post: {
+        operationId: 'postAdminClearCache',
         summary: 'Limpar cache do sistema',
         description: 'Limpa o cache do sistema (apenas administradores)',
         tags: ['Admin'],
@@ -2667,6 +2974,7 @@ export const openApiConfig: OpenAPIV3.Document = {
     },
     '/admin/database-usage': {
       get: {
+        operationId: 'getAdminDatabaseUsage',
         summary: 'Obter estatísticas de uso do banco',
         description: 'Retorna estatísticas de uso do banco de dados (apenas administradores)',
         tags: ['Admin'],
@@ -2727,6 +3035,7 @@ export const openApiConfig: OpenAPIV3.Document = {
     },
     '/admin/validate-schema': {
       post: {
+        operationId: 'postAdminValidateSchema',
         summary: 'Validar schema do banco',
         description: 'Valida a integridade do schema do banco de dados (apenas administradores)',
         tags: ['Admin'],
@@ -2777,6 +3086,7 @@ export const openApiConfig: OpenAPIV3.Document = {
     },
     '/concursos': {
       get: {
+        operationId: 'getConcursos',
         summary: 'Listar concursos',
         description: 'Lista todos os concursos com filtros e paginação',
         tags: ['Concursos'],
@@ -2830,6 +3140,7 @@ export const openApiConfig: OpenAPIV3.Document = {
         },
       },
       post: {
+        operationId: 'postConcursos',
         summary: 'Criar concurso',
         description: 'Cria um novo concurso (requer autenticação)',
         tags: ['Concursos'],
@@ -2872,6 +3183,7 @@ export const openApiConfig: OpenAPIV3.Document = {
     },
     '/concursos/{id}': {
       get: {
+        operationId: 'getConcursoById',
         summary: 'Obter concurso por ID',
         description: 'Retorna os detalhes de um concurso específico',
         tags: ['Concursos'],
@@ -2904,6 +3216,7 @@ export const openApiConfig: OpenAPIV3.Document = {
         },
       },
       put: {
+        operationId: 'putConcursoById',
         summary: 'Atualizar concurso',
         description: 'Atualiza um concurso existente (requer autenticação)',
         tags: ['Concursos'],
@@ -2961,6 +3274,7 @@ export const openApiConfig: OpenAPIV3.Document = {
         },
       },
       delete: {
+        operationId: 'deleteConcursoById',
         summary: 'Excluir concurso',
         description: 'Exclui um concurso (requer autenticação)',
         tags: ['Concursos'],
@@ -3010,6 +3324,7 @@ export const openApiConfig: OpenAPIV3.Document = {
     },
     '/user': {
       get: {
+        operationId: 'getUser',
         summary: 'Obter dados do usuário',
         description: 'Retorna os dados do usuário autenticado',
         tags: ['Usuário'],
@@ -3036,6 +3351,7 @@ export const openApiConfig: OpenAPIV3.Document = {
     },
     '/user/concurso-preference': {
       get: {
+        operationId: 'getUserConcursoPreference',
         summary: 'Obter preferência de concurso',
         description: 'Retorna a preferência de concurso do usuário',
         tags: ['Usuário'],
@@ -3072,6 +3388,7 @@ export const openApiConfig: OpenAPIV3.Document = {
         },
       },
       post: {
+        operationId: 'postUserConcursoPreference',
         summary: 'Criar preferência de concurso',
         description: 'Cria uma preferência de concurso para o usuário',
         tags: ['Usuário'],
@@ -3127,6 +3444,7 @@ export const openApiConfig: OpenAPIV3.Document = {
         },
       },
       put: {
+        operationId: 'putUserConcursoPreference',
         summary: 'Atualizar preferência de concurso',
         description: 'Atualiza a preferência de concurso do usuário',
         tags: ['Usuário'],
@@ -3184,6 +3502,7 @@ export const openApiConfig: OpenAPIV3.Document = {
     },
     '/conteudo/filtrado': {
       get: {
+        operationId: 'getConteudoFiltrado',
         summary: 'Obter conteúdo filtrado',
         description: 'Retorna conteúdo filtrado por parâmetros',
         tags: ['Conteúdo'],
@@ -3224,6 +3543,7 @@ export const openApiConfig: OpenAPIV3.Document = {
     },
     '/weak-points': {
       get: {
+        operationId: 'getWeakPoints',
         summary: 'Obter pontos fracos',
         description: 'Retorna os pontos fracos do usuário',
         tags: ['Pontos Fracos'],
@@ -3265,6 +3585,7 @@ export const openApiConfig: OpenAPIV3.Document = {
     },
     '/categoria-disciplinas': {
       get: {
+        operationId: 'getCategoriaDisciplinas',
         summary: 'Listar categorias de disciplinas',
         description: 'Retorna todas as categorias de disciplinas',
         tags: ['Categorias'],
@@ -3298,6 +3619,7 @@ export const openApiConfig: OpenAPIV3.Document = {
     },
     '/concurso-categorias': {
       get: {
+        operationId: 'getConcursoCategorias',
         summary: 'Listar categorias de concurso',
         description: 'Retorna todas as categorias de concurso',
         tags: ['Categorias'],
@@ -3331,12 +3653,97 @@ export const openApiConfig: OpenAPIV3.Document = {
     },
   },
   components: {
+    parameters: {
+      CorrelationId: {
+        name: 'x-correlation-id',
+        in: 'header',
+        required: false,
+        description: 'ID de correlação para rastreamento ponta a ponta',
+        schema: { type: 'string' },
+      },
+    },
     schemas: {
       Error: ErrorSchema,
       Concurso: ConcursoSchema,
       ConcursoInput: ConcursoInputSchema,
       User: UserSchema,
-      // ... outros schemas ...
+      GuruEnhancedStats: {
+        type: 'object',
+        properties: {
+          totalSimulados: { type: 'integer', example: 5 },
+          totalQuestoes: { type: 'integer', example: 120 },
+          totalStudyTime: { type: 'integer', example: 540 },
+          averageScore: { type: 'number', example: 72.5 },
+          accuracyRate: { type: 'number', example: 80.2 },
+          approvalProbability: { type: 'number', example: 68.3 },
+          studyStreak: { type: 'integer', example: 4 },
+          weeklyProgress: {
+            type: 'object',
+            properties: {
+              simulados: { type: 'integer', example: 2 },
+              questoes: { type: 'integer', example: 45 },
+              studyTime: { type: 'integer', example: 180 },
+              scoreImprovement: { type: 'number', example: 3.4 },
+            },
+          },
+          disciplinaStats: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                disciplina: { type: 'string', example: 'Português' },
+                total_questions: { type: 'integer', example: 50 },
+                resposta_corretas: { type: 'integer', example: 40 },
+                accuracy_rate: { type: 'number', example: 80.0 },
+                trend: { type: 'string', example: 'up' },
+                color: { type: 'string', example: '#3B82F6' },
+              },
+            },
+          },
+          performanceHistory: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                date: { type: 'string', format: 'date' },
+                score: { type: 'number' },
+                timeSpent: { type: 'integer' },
+              },
+            },
+          },
+          goalProgress: {
+            type: 'object',
+            properties: {
+              targetScore: { type: 'number' },
+              currentScore: { type: 'number' },
+              targetDate: { type: 'string', format: 'date' },
+              daysRemaining: { type: 'integer' },
+              onTrack: { type: 'boolean' },
+            },
+          },
+          competitiveRanking: {
+            type: 'object',
+            properties: {
+              position: { type: 'integer' },
+              totalusuarios: { type: 'integer' },
+              percentile: { type: 'number' },
+            },
+          },
+        },
+      },
+      GuruActivity: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          type: { type: 'string', example: 'simulado' },
+          titulo: { type: 'string' },
+          descricao: { type: 'string' },
+          time: { type: 'string' },
+          created_at: { type: 'string', format: 'date-time' },
+          score: { type: 'number', nullable: true },
+          improvement: { type: 'number', nullable: true },
+        },
+      },
     },
     securitySchemes: {
       bearerAuth: {
@@ -3347,71 +3754,27 @@ export const openApiConfig: OpenAPIV3.Document = {
     },
   },
   tags: [
-    {
-      name: 'Autenticação',
-      description: 'Endpoints relacionados à autenticação de usuários',
-    },
-    {
-      name: 'Concursos',
-      description: 'Endpoints relacionados ao gerenciamento de concursos',
-    },
-    {
-      name: 'Usuário',
-      description: 'Endpoints relacionados aos dados do usuário',
-    },
-    {
-      name: 'Conteúdo',
-      description: 'Endpoints relacionados ao conteúdo filtrado',
-    },
-    {
-      name: 'Pontos Fracos',
-      description: 'Endpoints relacionados aos pontos fracos do usuário',
-    },
-    {
-      name: 'Categorias',
-      description: 'Endpoints relacionados às categorias',
-    },
-    {
-      name: 'Apostilas',
-      description: 'Endpoints relacionados ao gerenciamento de apostilas',
-    },
-    {
-      name: 'Flashcards',
-      description: 'Endpoints relacionados ao gerenciamento de flashcards',
-    },
-    {
-      name: 'Simulados',
-      description: 'Endpoints relacionados ao gerenciamento de simulados',
-    },
-    {
-      name: 'Estatísticas',
-      description: 'Endpoints relacionados à obtenção de estatísticas',
-    },
-    {
-      name: 'Plano de Estudos',
-      description: 'Endpoints relacionados ao gerenciamento de planos de estudo',
-    },
-    {
-      name: 'Questões Semanais',
-      description: 'Endpoints relacionados ao gerenciamento de questões semanais',
-    },
-    {
-      name: 'Mapa de Assuntos',
-      description: 'Endpoints relacionados ao mapa de assuntos e progresso',
-    },
-    {
-      name: 'Dashboard',
-      description: 'Endpoints relacionados ao dashboard do usuário',
-    },
-    {
-      name: 'Admin',
-      description: 'Endpoints administrativos para gerenciamento do sistema',
-    },
+    { name: 'Autenticação', description: 'Endpoints relacionados à autenticação de usuários' },
+    { name: 'Concursos', description: 'Endpoints relacionados ao gerenciamento de concursos' },
+    { name: 'Usuário', description: 'Endpoints relacionados aos dados do usuário' },
+    { name: 'Conteúdo', description: 'Endpoints relacionados ao conteúdo filtrado' },
+    { name: 'Pontos Fracos', description: 'Endpoints relacionados aos pontos fracos do usuário' },
+    { name: 'Categorias', description: 'Endpoints relacionados às categorias' },
+    { name: 'Apostilas', description: 'Endpoints relacionados ao gerenciamento de apostilas' },
+    { name: 'Flashcards', description: 'Endpoints relacionados ao gerenciamento de flashcards' },
+    { name: 'Simulados', description: 'Endpoints relacionados ao gerenciamento de simulados' },
+    { name: 'Estatísticas', description: 'Endpoints relacionados à obtenção de estatísticas' },
+    { name: 'Plano de Estudos', description: 'Endpoints relacionados ao gerenciamento de planos de estudo' },
+    { name: 'Questões Semanais', description: 'Endpoints relacionados ao gerenciamento de questões semanais' },
+    { name: 'Mapa de Assuntos', description: 'Endpoints relacionados ao mapa de assuntos e progresso' },
+    { name: 'Dashboard', description: 'Endpoints relacionados ao dashboard do usuário' },
+    { name: 'Admin', description: 'Endpoints administrativos para gerenciamento do sistema' },
+    { name: 'Guru', description: 'Endpoints do módulo Guru da Aprovação' },
   ],
 };
 
-export function generateOpenAPISpec(): OpenAPIV3.Document {
-  return openApiConfig;
+export function generateOpenAPISpec(): any {
+  return openApiConfig as any;
 }
 
 export default openApiConfig;

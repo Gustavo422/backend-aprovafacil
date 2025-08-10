@@ -12,9 +12,9 @@ export class LogService implements ILogService {
   }
 
   async info(mensagem: string, detalhes?: unknown): Promise<void> {
-    await this.logarEvento('INFO', mensagem, detalhes);
-     
-    console.log(`[INFO] ${this.contexto}: ${mensagem}`, detalhes ?? '');
+    const safe = this.sanitizeDetails(detalhes);
+    await this.logarEvento('INFO', mensagem, safe);
+    console.log(`[INFO] ${this.contexto}: ${mensagem}`, safe ?? '');
   }
 
   async erro(mensagem: string, erro?: Error, detalhes?: unknown): Promise<void> {
@@ -24,23 +24,22 @@ export class LogService implements ILogService {
       name: erro?.name,
       message: erro?.message,
     };
-    
-    await this.logarEvento('ERROR', mensagem, detalhesCompletos);
-     
-    console.error(`[ERROR] ${this.contexto}: ${mensagem}`, erro, detalhes ?? '');
+    const safe = this.sanitizeDetails(detalhesCompletos);
+    await this.logarEvento('ERROR', mensagem, safe);
+    console.error(`[ERROR] ${this.contexto}: ${mensagem}`, erro, safe ?? '');
   }
 
   async aviso(mensagem: string, detalhes?: unknown): Promise<void> {
-    await this.logarEvento('WARN', mensagem, detalhes);
-     
-    console.warn(`[WARN] ${this.contexto}: ${mensagem}`, detalhes ?? '');
+    const safe = this.sanitizeDetails(detalhes);
+    await this.logarEvento('WARN', mensagem, safe);
+    console.warn(`[WARN] ${this.contexto}: ${mensagem}`, safe ?? '');
   }
 
   async debug(mensagem: string, detalhes?: unknown): Promise<void> {
     if (process.env.NODE_ENV === 'development') {
-      await this.logarEvento('DEBUG', mensagem, detalhes);
-       
-      console.debug(`[DEBUG] ${this.contexto}: ${mensagem}`, detalhes ?? '');
+      const safe = this.sanitizeDetails(detalhes);
+      await this.logarEvento('DEBUG', mensagem, safe);
+      console.debug(`[DEBUG] ${this.contexto}: ${mensagem}`, safe ?? '');
     }
   }
 
@@ -75,13 +74,14 @@ export class LogService implements ILogService {
 
   private async logarEvento(nivel: string, mensagem: string, detalhes?: unknown): Promise<void> {
     try {
+      const safe = this.sanitizeDetails(detalhes);
       const { error } = await this.supabase
         .from('historico_logs')
         .insert({
           nivel,
           servico: this.contexto,
           mensagem,
-          detalhes: detalhes ? JSON.stringify(detalhes) : null,
+          detalhes: safe ? JSON.stringify(safe) : null,
           criado_em: new Date().toISOString(),
         });
 
@@ -121,9 +121,9 @@ export class LogService implements ILogService {
     const mensagem = `Performance ${operacao}: ${tempoExecucao}ms`;
     
     if (nivel === 'WARN') {
-      await this.aviso(mensagem, detalhes);
+      await this.aviso(mensagem, this.sanitizeDetails(detalhes));
     } else {
-      await this.info(mensagem, detalhes);
+      await this.info(mensagem, this.sanitizeDetails(detalhes));
     }
   }
 
@@ -343,6 +343,72 @@ export class LogService implements ILogService {
         ultimo_log: null,
       };
     }
+  }
+
+  // Sanitização de PII e segredos em estruturas arbitrárias
+  private sanitizeDetails(input: unknown, depth = 0, seen = new WeakSet<object>()): unknown {
+    if (input == null) return input;
+    if (depth > 4) return '[Truncated]';
+
+    const sensitiveKeyPatterns = [
+      /authorization/i,
+      /cookie/i,
+      /set-cookie/i,
+      /token/i,
+      /senha/i,
+      /password/i,
+      /secret/i,
+      /access.?token/i,
+      /refresh.?token/i,
+      /bearer/i,
+    ];
+
+    const piiKeyPatterns = [
+      /email/i,
+      /nome/i,
+      /name/i,
+      /cpf/i,
+    ];
+
+    const maskEmail = (value: string): string => {
+      const [local = '', domain = ''] = String(value).split('@');
+      if (!local || !domain) return '[masked]';
+      const safeUser = local.length <= 2
+        ? '*'.repeat(local.length)
+        : local.slice(0, 2) + '*'.repeat(local.length - 2);
+      return `${safeUser}@${domain}`;
+    };
+
+    const safeString = (s: string): string => (s.length > 2048 ? `${s.slice(0, 2048)}…[truncated]` : s);
+
+    if (typeof input === 'string') return safeString(input);
+    if (typeof input !== 'object') return input;
+
+    const obj = input as Record<string, unknown> | unknown[];
+    if (seen.has(obj as object)) return '[Circular]';
+    seen.add(obj as object);
+
+    if (Array.isArray(obj)) {
+      return obj.slice(0, 50).map((v) => this.sanitizeDetails(v, depth + 1, seen));
+    }
+
+    const out: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj)) {
+      const isSensitive = sensitiveKeyPatterns.some((re) => re.test(key));
+      if (isSensitive) {
+        out[key] = '[redacted]';
+        continue;
+      }
+
+      const isPii = piiKeyPatterns.some((re) => re.test(key));
+      if (isPii && typeof value === 'string') {
+        out[key] = maskEmail(value);
+        continue;
+      }
+
+      out[key] = this.sanitizeDetails(value, depth + 1, seen);
+    }
+    return out;
   }
 }
 

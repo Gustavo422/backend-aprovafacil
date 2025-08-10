@@ -44,6 +44,39 @@ const migrationManager = new MigrationManager(supabase, migrationsDir);
 // Run the appropriate command
 async function run() {
   try {
+    // Probe RPC function availability (exec_sql)
+    let rpcAvailable = true;
+    try {
+      await supabase.rpc('exec_sql', { sql: 'select 1' });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg.includes('exec_sql') || msg.includes('schema cache') || msg.includes('Function') || msg.includes('404')) {
+        rpcAvailable = false;
+      }
+    }
+
+    if (!rpcAvailable) {
+      switch (command) {
+        case 'status':
+          console.log('Migration Status:');
+          console.log('=================');
+          console.log('\nMigrations are disabled (Supabase RPC exec_sql not available).');
+          console.log('Applied Migrations:');
+          console.log('  No migrations applied yet');
+          console.log('\nPending Migrations:');
+          console.log('  No pending migrations');
+          return;
+        case 'up':
+        case 'down':
+        case 'create':
+          console.log('Migrations are disabled in this environment (missing RPC exec_sql). Skipping.');
+          return;
+        default:
+          // fallthrough to help text
+          break;
+      }
+    }
+
     await migrationManager.initialize();
     
     switch (command) {

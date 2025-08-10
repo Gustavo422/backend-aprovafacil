@@ -35,6 +35,7 @@ interface SchemaValidationResult {
 class SchemaValidator {
   private readonly supabase: any;
   private readonly essentialTables: string[];
+  private readonly schemaReferencePath: string;
   private readonly tableColumns: Map<string, TableInfo[]> = new Map();
 
   constructor() {
@@ -43,10 +44,13 @@ class SchemaValidator {
     this.supabase = createClient(supabaseUrl, supabaseKey);
     
     this.essentialTables = [
-      'usuarios', 'concursos', 'categorias', 'disciplinas',
-      'simulados', 'questoes', 'flashcards', 'apostilas',
-      'plano_estudos', 'questoes_semanais', 'mapa_assuntos'
+      'usuarios', 'concursos', 'categorias_concursos',
+      'simulados', 'questoes_semanais', 'cartoes_memorizacao', 'apostilas',
+      'conteudo_apostila', 'progresso_usuario_simulado', 'respostas_questoes_semanais',
+      'progresso_usuario_flashcard', 'progresso_usuario_apostila', 'progresso_usuario_mapa_assuntos',
+      'preferencias_usuario_concurso'
     ];
+    this.schemaReferencePath = join(PROJECT_ROOT, '..', 'z_sqls', 'schema', 'tables', 'schema_public.sql');
   }
 
   private async getTableSchema(): Promise<void> {
@@ -108,6 +112,95 @@ class SchemaValidator {
     }
 
     return results;
+  }
+
+  private compareWithReference(): SchemaValidationResult[] {
+    const results: SchemaValidationResult[] = [];
+    try {
+      if (!existsSync(this.schemaReferencePath)) {
+        return [{
+          table: 'schema_reference',
+          status: 'warning',
+          message: 'Arquivo de referência schema_public.sql não encontrado'
+        }];
+      }
+      const refSql = readFileSync(this.schemaReferencePath, 'utf-8');
+      // Extração simples de nomes de tabelas no arquivo de referência
+      const tableRegex = /CREATE\s+TABLE\s+public\.([a-zA-Z0-9_]+)/gi;
+      const referenceTables: string[] = [];
+      let match: RegExpExecArray | null;
+      // eslint-disable-next-line no-cond-assign
+      while ((match = tableRegex.exec(refSql)) !== null) {
+        const tableName = match[1];
+        if (typeof tableName === 'string' && tableName.length > 0) {
+          referenceTables.push(tableName);
+        }
+      }
+      const existingTables = Array.from(this.tableColumns.keys());
+
+      // Tabelas faltando vs extras
+      const missingInDb = referenceTables.filter(t => !existingTables.includes(t));
+      const extraInDb = existingTables.filter(t => !referenceTables.includes(t));
+
+      if (missingInDb.length > 0) {
+        results.push({
+          table: 'schema_drift',
+          status: 'warning',
+          message: `Tabelas presentes na referência mas ausentes no DB: ${missingInDb.join(', ')}`
+        });
+      }
+      if (extraInDb.length > 0) {
+        results.push({
+          table: 'schema_drift',
+          status: 'warning',
+          message: `Tabelas extras no DB não listadas na referência: ${extraInDb.join(', ')}`
+        });
+      }
+
+      // Checagem focal nas tabelas do módulo guru
+      const guruTables = [
+        'progresso_usuario_simulado',
+        'respostas_questoes_semanais',
+        'progresso_usuario_flashcard',
+        'progresso_usuario_apostila',
+        'progresso_usuario_mapa_assuntos',
+        'conteudo_apostila',
+        'simulados',
+        'cartoes_memorizacao'
+      ];
+      for (const table of guruTables) {
+        const dbCols = (this.tableColumns.get(table) || []).map(c => c.column_name).sort();
+        // Extrair colunas da referência por parsing simples
+        const tableBlockRegex = new RegExp(`CREATE\\s+TABLE\\s+public\\.${table}\\s*\\(([^;]+?)\\);`, 'is');
+        const blockMatch = tableBlockRegex.exec(refSql);
+        if (!blockMatch) {
+          results.push({ table, status: 'warning', message: 'Tabela não encontrada na referência' });
+          continue;
+        }
+        const block = String(blockMatch[1] ?? '');
+        const colsRaw = Array.from(block.matchAll(/\n\s*([a-zA-Z0-9_]+)\s+[a-zA-Z]/g)).map(m => m[1]);
+        const colsInRef = colsRaw.filter((n): n is string => typeof n === 'string' && n !== 'CONSTRAINT');
+        const missingCols = colsInRef.filter((c) => !dbCols.includes(c));
+        const extraCols = dbCols.filter((c) => !colsInRef.includes(c));
+        if (missingCols.length > 0 || extraCols.length > 0) {
+          results.push({
+            table,
+            status: 'warning',
+            message: `Possível drift de colunas. Faltando no DB: ${missingCols.join(', ') || '-'}; Extras no DB: ${extraCols.join(', ') || '-'}`
+          });
+        } else {
+          results.push({ table, status: 'success', message: 'Estrutura alinhada com referência' });
+        }
+      }
+
+      return results;
+    } catch (error) {
+      return [{
+        table: 'schema_reference',
+        status: 'warning',
+        message: `Falha ao comparar com referência: ${error instanceof Error ? error.message : String(error)}`
+      }];
+    }
   }
 
   private validateSingleTable(tableName: string, columns: TableInfo[]): SchemaValidationResult {
@@ -279,22 +372,38 @@ class SchemaValidator {
     console.log('🗄️ Validando schema do banco de dados...\n');
 
     try {
-      // Obter estrutura do banco
-      await this.getTableSchema();
-
       const results: SchemaValidationResult[] = [];
 
-      // Validar tabelas essenciais
-      const essentialResults = this.validateEssentialTables();
-      results.push(...essentialResults);
+      let introspectionOk = false;
+      try {
+        // Tentar obter estrutura do banco (introspecção)
+        await this.getTableSchema();
+        introspectionOk = true;
+      } catch (e) {
+        results.push({
+          table: 'db_introspection',
+          status: 'warning',
+          message: 'Introspecção do DB indisponível (executando em modo referência apenas)'
+        });
+      }
 
-      // Validar estrutura das tabelas
-      const structureResults = this.validateTableStructure();
-      results.push(...structureResults);
+      if (introspectionOk) {
+        // Validar tabelas essenciais
+        const essentialResults = this.validateEssentialTables();
+        results.push(...essentialResults);
 
-      // Validar chaves estrangeiras
-      const fkResults = await this.validateForeignKeys();
-      results.push(...fkResults);
+        // Validar estrutura das tabelas
+        const structureResults = this.validateTableStructure();
+        results.push(...structureResults);
+
+        // Validar chaves estrangeiras
+        const fkResults = await this.validateForeignKeys();
+        results.push(...fkResults);
+      }
+
+      // Comparar com referência de schema (read-only)
+      const refResults = this.compareWithReference();
+      results.push(...refResults);
 
       return results;
 

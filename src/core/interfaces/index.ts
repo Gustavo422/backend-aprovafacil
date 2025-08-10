@@ -191,7 +191,7 @@ export interface IPlanoEstudoService extends IBaseService<PlanoEstudo> {
   atualizarProgresso(usuarioId: string, itemId: string, concluido: boolean): Promise<ApiResponse<boolean>>;
 }
 
-// Interface para o Guru da Aprovação
+// (Legado) Interface para o Guru da Aprovação — mantida apenas para compatibilidade de tipos até remoção total
 export interface IGuruAprovacaoService {
   calcularMetricas(usuarioId: string): Promise<ApiResponse<MetricasGuruAprovacao>>;
   obterPrognostico(usuarioId: string): Promise<ApiResponse<{

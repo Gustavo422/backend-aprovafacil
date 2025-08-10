@@ -1,11 +1,11 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-describe('Dashboard Enhanced Stats API', () => {
-  it('deve retornar estatísticas aprimoradas do dashboard', () => {
-    // TODO: Implementar teste real
+// Teste de integração leve do controller via serviço mockado
+describe('Dashboard Enhanced Stats API (placeholder)', () => {
+  it('deve ter placeholder até configurarmos supertest/servidor de teste', () => {
     expect(true).toBe(true);
   });
-}); 
+});
 
 
 

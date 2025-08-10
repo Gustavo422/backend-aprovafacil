@@ -17,7 +17,6 @@ Object.assign(process.env, {
 
 console.log('📊 Sistema de Debug Ativado:');
 console.log('  • Logs do Supabase: app:supabase');
-console.log('  • Logs do Frontend: app:frontend');
 console.log('  • Logs do Backend: app:backend');
 console.log('  • Todos os logs: app:*\n');
 
@@ -63,34 +62,22 @@ function runCommand(command: string, args: string[], cwd: string, name: string) 
 // Iniciar backend
 const backendProcess = runCommand('npm', ['run', 'dev'], '.', 'Backend');
 
-// Aguardar um pouco antes de iniciar o frontend
-setTimeout(() => {
-  console.log('\n🌐 Iniciando Frontend em modo DEBUG...\n');
-  
-  // Iniciar frontend
-  const frontendProcess = runCommand('npm', ['run', 'dev:debug'], '../frontend', 'Frontend');
+// Gerenciar encerramento somente do backend
+process.on('SIGINT', () => {
+  console.log('\n🛑 Encerrando backend...');
+  backendProcess.kill('SIGINT');
+  process.exit(0);
+});
 
-  // Gerenciar encerramento
-  process.on('SIGINT', () => {
-    console.log('\n🛑 Encerrando aplicação...');
-    backendProcess.kill('SIGINT');
-    frontendProcess.kill('SIGINT');
-    process.exit(0);
-  });
-
-  process.on('SIGTERM', () => {
-    console.log('\n🛑 Encerrando aplicação...');
-    backendProcess.kill('SIGTERM');
-    frontendProcess.kill('SIGTERM');
-    process.exit(0);
-  });
-
-}, 2000);
+process.on('SIGTERM', () => {
+  console.log('\n🛑 Encerrando backend...');
+  backendProcess.kill('SIGTERM');
+  process.exit(0);
+});
 
 console.log('\n📋 Comandos úteis:');
 console.log('  • Ctrl+C: Encerrar aplicação');
 console.log('  • Backend: http://localhost:5000');
-console.log('  • Frontend: http://localhost:3000');
 console.log('  • Health Check: http://localhost:5000/api/health');
 console.log('  • Admin Panel: http://localhost:5000/api/admin/estatisticas\n');
 

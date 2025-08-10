@@ -5,6 +5,7 @@ import cors from 'cors';
 import compression from 'compression';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
+import { apiVersionRewriteMiddleware, apiDeprecationHeadersMiddleware } from './middleware/api-versioning.middleware.js';
 
 // Importar configurações e serviços
 import { validateEnvironment } from './config/environment.js';
@@ -16,13 +17,14 @@ import { CacheManager } from './core/utils/cache-manager.js';
 import cacheConfig from './config/cache.config.js';
 import { UsuarioRepository } from './modules/usuarios/usuario.repository.js';
 import { UsuarioService } from './modules/usuarios/usuario.service.js';
-import { GuruAprovacaoService } from './modules/guru-aprovacao/guru-aprovacao.service.js';
+// Legacy GuruAprovacaoService removido após migração para módulo guru
 import { AdminService } from './modules/admin/admin.service.js';
 import { EnhancedAuthService } from './auth/enhanced-auth.service.js';
 import { AuthServiceAdapter } from './auth/auth-service-adapter.js';
 import { createAdminRoutes } from './routes/admin.routes.js';
 import type { Usuario } from './shared/types/index.js';
 import { debugRequestMiddleware } from './core/utils/debug-logger.js';
+import { createRequestLoggerMiddleware, getEnhancedLoggingService, ConsoleTransport, LogLevel } from './lib/logger.js';
 import { 
   optimizedAuthMiddleware,
 } from './middleware/optimized-auth.middleware.js';
@@ -47,11 +49,13 @@ import tokenDebugRoutes from './api/auth/token-debug/route.js';
 import * as dashboardEnhancedStatsRoutes from './api/dashboard/enhanced-stats/route.js';
 import * as dashboardActivitiesRoutes from './api/dashboard/activities/route.js';
 import * as dashboardStatsRoutes from './api/dashboard/stats/route.js';
+import * as guruActivitiesAuxRoutes from './api/guru/activities/route.js';
 import * as conteudoFiltradoRoutes from './api/conteudo/filtrado/route.js';
 import * as verifyTokenRoutes from './api/auth/verify-token/route.js';
 import * as concursosRoutes from './api/concursos/route.js';
 import { healthCheckHandler } from './api/health/route.js';
 import { listCategoriasHandler, getCategoriaByIdHandler } from './api/categorias/route.js';
+import { guruFeatureFlagMiddleware } from './middleware/guru-feature-flag.middleware.js';
 
 // Tipo para request autenticada
 interface RequestComUsuario extends Request {
@@ -79,7 +83,7 @@ class AprovaFacilApp {
   private enhancedAuthService!: EnhancedAuthService;
   private authService!: AuthServiceAdapter;
   private usuarioService!: UsuarioService;
-  private guruAprovacaoService!: GuruAprovacaoService;
+  // private guruAprovacaoService!: unknown;
   private adminService!: AdminService;
   private readonly supabase: SupabaseClient;
 
@@ -124,12 +128,7 @@ class AprovaFacilApp {
       usuarioRepository,
       this.authService,
     );
-    this.guruAprovacaoService = new GuruAprovacaoService(
-      usuarioRepository,
-      this.logService,
-      this.cacheManager.getCacheService(),
-      this.supabase,
-    );
+    // Serviço legado do Guru removido; nova orquestração via controllers/services de `modules/guru`
     this.adminService = new AdminService(
       this.logService,
       this.cacheManager.getCacheService(),
@@ -143,6 +142,13 @@ class AprovaFacilApp {
   }
 
   private initializeMiddlewares(): void {
+    // Inicializar transport do logger aprimorado para console
+    try {
+      const els = getEnhancedLoggingService();
+      els.addTransport(new ConsoleTransport({ minLevel: LogLevel.INFO }));
+    } catch (e) {
+      console.warn('Falha ao inicializar EnhancedLoggingService, seguindo sem transport dedicado:', e);
+    }
     // CORS
     this.app.use(cors({
       origin: process.env.FRONTEND_URL ?? '*',
@@ -179,6 +185,15 @@ class AprovaFacilApp {
       },
     }));
 
+    // Observabilidade mínima: logs estruturados com requestId/correlationId e tempo de resposta
+    this.app.use(createRequestLoggerMiddleware({
+      logBody: false,
+      logHeaders: false,
+      logResponseBody: false,
+      logResponseTime: true,
+      skip: (req) => (req.originalUrl ?? req.url).startsWith('/api/health'),
+    }));
+
     // Body parsing
     this.app.use(express.json({ limit: '10mb' }));
     this.app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -187,6 +202,10 @@ class AprovaFacilApp {
     
     // Debug middleware
     this.app.use(debugRequestMiddleware);
+
+    // Versionamento e depreciação
+    this.app.use(apiDeprecationHeadersMiddleware);
+    this.app.use(apiVersionRewriteMiddleware);
 
     // Middleware global de filtro de concurso (inclui autenticação automática)
     this.app.use('/api', globalConcursoFilterMiddleware); // eslint-disable-line @typescript-eslint/no-misused-promises
@@ -459,57 +478,7 @@ class AprovaFacilApp {
       })().catch(next);
     });
 
-    // Rotas do Guru da Aprovação
-    this.app.get('/api/protected/guru/metricas', (req, res, next) => {
-      (async () => {
-        try {
-          const usuarioId = (req as RequestComUsuario).usuario.id;
-          const resultado = await this.guruAprovacaoService.calcularMetricas(usuarioId);
-          res.json(resultado);
-        } catch (error) {
-          next(error);
-        }
-      })().catch(next);
-    });
-
-    this.app.get('/api/protected/guru/prognostico', (req, res, next) => {
-      (async () => {
-        try {
-          const usuarioId = (req as RequestComUsuario).usuario.id;
-          const resultado = await this.guruAprovacaoService.obterPrognostico(usuarioId);
-          res.json(resultado);
-        } catch (error) {
-          next(error);
-        }
-      })().catch(next);
-    });
-
-    this.app.get('/api/protected/guru/analise-detalhada', (req, res, next) => {
-      (async () => {
-        try {
-          const usuarioId = (req as RequestComUsuario).usuario.id;
-          const resultado = await this.guruAprovacaoService.obterAnaliseDetalhada(usuarioId);
-          res.json(resultado);
-        } catch (error) {
-          next(error);
-        }
-      })().catch(next);
-    });
-
-    this.app.post('/api/protected/guru/atualizar', (req, res, next) => {
-      (async () => {
-        try {
-          const usuarioId = (req as RequestComUsuario).usuario.id;
-          await this.guruAprovacaoService.atualizarMetricas(usuarioId);
-          res.json({
-            success: true,
-            message: 'Métricas atualizadas com sucesso',
-          });
-        } catch (error) {
-          next(error);
-        }
-      })().catch(next);
-    });
+    // Rotas legadas do Guru removidas em favor do novo módulo `modules/guru` (controllers e rotas versionadas)
 
     // Rotas administrativas completas - TODOS OS INSERTS ESTÃO AQUI
     this.app.use('/api/admin', createAdminRoutes());
@@ -619,7 +588,7 @@ class AprovaFacilApp {
     // Endpoint especial para criar o primeiro admin (sem autenticação)
     // REMOVIDO POR SOLICITAÇÃO
 
-    // Registrar rotas da pasta api
+    // Registrar rotas da pasta api (não versionadas – com headers de depreciação)
     this.app.use('/api/simulados', simuladosRoutes.router);
     this.app.use('/api/flashcards', flashcardsRoutes.router);
     this.app.use('/api/questoes-semanais', questoesSemanaisRoutes.router);
@@ -639,6 +608,33 @@ class AprovaFacilApp {
     this.app.use('/api/dashboard/stats', dashboardStatsRoutes.router);
     this.app.use('/api/conteudo/filtrado', conteudoFiltradoRoutes.router);
 
+    // Rotas versionadas (v1)
+    this.app.use('/api/v1/simulados', simuladosRoutes.router);
+    this.app.use('/api/v1/flashcards', flashcardsRoutes.router);
+    this.app.use('/api/v1/questoes-semanais', questoesSemanaisRoutes.router);
+    this.app.use('/api/v1/plano-estudos', planoEstudosRoutes.router);
+    this.app.use('/api/v1/mapa-assuntos', mapaAssuntosRoutes.router);
+    this.app.use('/api/v1/concurso-categorias', concursoCategoriasRoutes.router);
+    this.app.use('/api/v1/categoria-disciplinas', categoriaDisciplinasRoutes.router);
+    this.app.use('/api/v1/estatisticas', estatisticasRoutes.router);
+    this.app.use('/api/v1/concursos', concursosRoutes.router);
+    this.app.use('/api/v1/user', userRoutes as Router);  
+    this.app.use('/api/v1/user/concurso-preference', userConcursoPreferenceRoutes);
+    this.app.use('/api/v1/user/auth-test', userAuthTestRoutes);
+    this.app.use('/api/v1/auth/token-debug', tokenDebugRoutes);
+    this.app.use('/api/v1/auth/verify-token', verifyTokenRoutes.router);
+    this.app.use('/api/v1/dashboard/enhanced-stats', dashboardEnhancedStatsRoutes.router);
+    this.app.use('/api/v1/dashboard/activities', dashboardActivitiesRoutes.router);
+    this.app.use('/api/v1/dashboard/stats', dashboardStatsRoutes.router);
+    this.app.use('/api/v1/conteudo/filtrado', conteudoFiltradoRoutes.router);
+
+    // Aliases versionados específicos do módulo Guru (mantendo compatibilidade)
+    // Com feature flag para suportar rollout/rollback rápidos
+    this.app.use('/api/guru/v1', guruFeatureFlagMiddleware);
+    this.app.use('/api/guru/v1/dashboard/enhanced-stats', dashboardEnhancedStatsRoutes.router);
+    this.app.use('/api/guru/v1/dashboard/activities', dashboardActivitiesRoutes.router);
+    this.app.use('/api/guru/v1/activities', guruActivitiesAuxRoutes.router);
+
     // Rotas adicionais
     this.app.get('/api/health', healthCheckHandler); // eslint-disable-line @typescript-eslint/no-misused-promises
     this.app.get('/api/categorias', listCategoriasHandler); // eslint-disable-line @typescript-eslint/no-misused-promises
@@ -656,11 +652,20 @@ class AprovaFacilApp {
 
   private initializeErrorHandling(): void {
     this.app.use((error: Error, req: Request, res: Response, _next: NextFunction) => { // eslint-disable-line @typescript-eslint/no-unused-vars
+      const correlationId = req.get('x-correlation-id') ?? undefined;
+      if (correlationId) res.setHeader('x-correlation-id', correlationId);
+      const requestIdHeader = res.getHeader('x-request-id');
+      const requestId = Array.isArray(requestIdHeader)
+        ? (requestIdHeader[0] as string)
+        : (requestIdHeader as string | undefined);
+
       this.logService.erro('Erro na aplicação', error, {
         url: req.url,
         method: req.method,
         ip: req.ip,
         userAgent: req.get('User-Agent'),
+        requestId,
+        correlationId,
       }).catch((logError) => {
         console.error('Erro ao logar erro da aplicação:', logError);
       });
@@ -668,6 +673,9 @@ class AprovaFacilApp {
         success: false,
         error: error.message,
         codigo: 'ERRO_INTERNO',
+        code: 'INTERNAL_ERROR',
+        requestId,
+        correlationId,
       });
     });
   }

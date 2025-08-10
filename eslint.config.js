@@ -130,7 +130,22 @@ export default defineConfig([
       "sort-imports": "off",
       "sort-keys": "off",
       "sort-vars": "off",
-      "unicode-bom": "error"
+      "unicode-bom": "error",
+      // Boundary enforcement para o módulo guru
+      "no-restricted-imports": ["error", {
+        "paths": [],
+        "patterns": [
+          {
+            "group": [
+              "../modules/guru/**",
+              "./modules/guru/**",
+              "modules/guru/**"
+            ],
+            "message": "Importações do módulo 'guru' só são permitidas a partir de arquivos dentro de 'backend/src/modules/guru' ou rotas/controllers diretamente relacionadas. Use DTOs/serviços públicos se necessário.",
+            "caseSensitive": false
+          }
+        ]
+      }]
     }
   },
 

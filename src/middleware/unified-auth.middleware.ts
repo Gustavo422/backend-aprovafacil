@@ -18,12 +18,13 @@ interface AuthenticatedRequest extends Request {
  * Substitui todos os middlewares de autenticação existentes
  */
 export const unifiedAuthMiddleware = async (
-  req: AuthenticatedRequest,
+  req: Request,
   res: Response,
   next: NextFunction,
 ): Promise<void> => {
+  const typedReq = req as AuthenticatedRequest;
   try {
-    const authHeader = req.headers.authorization;
+    const authHeader = typedReq.headers.authorization;
     if (!authHeader?.startsWith('Bearer ')) {
       res.status(401).json({
         success: false,
@@ -43,7 +44,7 @@ export const unifiedAuthMiddleware = async (
       return;
     }
 
-    req.user = {
+    typedReq.user = {
       id: user.id,
       email: user.email ?? '',
       role: user.user_metadata?.role ?? 'user',
