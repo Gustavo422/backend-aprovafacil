@@ -22,7 +22,8 @@ const getConteudoFiltradoHandler = async (req: Request, res: Response) => {
     // Parâmetros opcionais
     const disciplina = req.query['disciplina'] as string;
     const dificuldade = req.query['dificuldade'] as string;
-    const isPublic = req.query['is_public'] as string;
+    const isPublic = req.query['is_public'] as string; // legacy
+    const publico = req.query['publico'] as string; // preferido
     const page = parseInt(req.query['page'] as string ?? '1', 10);
     const limit = parseInt(req.query['limit'] as string ?? '20', 10);
 
@@ -55,8 +56,11 @@ const getConteudoFiltradoHandler = async (req: Request, res: Response) => {
       .eq('concurso_id', concurso_id)
       .is('deleted_at', null);
 
-    if (isPublic !== undefined) {
-      simuladosQuery = simuladosQuery.eq('is_public', isPublic === 'true');
+    if (publico !== undefined) {
+      simuladosQuery = simuladosQuery.eq('publico', publico === 'true');
+    } else if (isPublic !== undefined) {
+      // compatibilidade
+      simuladosQuery = simuladosQuery.eq('publico', isPublic === 'true');
     }
 
     const { data: simulados, error: simuladosError } = await simuladosQuery

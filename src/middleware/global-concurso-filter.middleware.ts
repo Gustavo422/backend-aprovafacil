@@ -18,14 +18,16 @@ const debug = (message: string, ...optionalParams: unknown[]): void => {
 
 /**
  * Verifica se uma rota específica precisa de filtro de concurso
- * @param path - O caminho da rota a ser verificado
+ * Considera rotas montadas em base path (ex.: /api) usando originalUrl/baseUrl+path
+ * @param pathOrUrl - Caminho ou URL original da requisição
  * @returns true se a rota precisar de filtro de concurso, false caso contrário
  */
-const needsConcursoFilter = (path: string): boolean => {
+export const needsConcursoFilter = (pathOrUrl: string): boolean => {
   // Rotas que precisam do filtro de concurso
   const concursoRoutes = [
     '/api/apostilas',
     '/api/simulados',
+    '/api/v1/simulados',
     '/api/questoes',
     '/api/flashcards',
     '/api/progresso',
@@ -33,7 +35,19 @@ const needsConcursoFilter = (path: string): boolean => {
     '/api/dashboard',
   ];
 
-  return concursoRoutes.some(route => path.startsWith(route));
+  const candidate = pathOrUrl || '';
+  return concursoRoutes.some(route => candidate.startsWith(route));
+};
+
+/**
+ * Resolve o caminho relevante da requisição para checagem de rota
+ */
+export const resolveRequestPath = (req: Request): string => {
+  // Preferir originalUrl (inclui base), fallback para baseUrl+path
+  const original = (req.originalUrl ?? '').split('?')[0];
+  if (original) return original;
+  const combined = `${req.baseUrl ?? ''}${req.path ?? ''}`;
+  return combined || req.path || '';
 };
 
 // Interface para request com usuário autenticado
@@ -133,23 +147,23 @@ export const globalConcursoFilterMiddleware = async (
     debug('Usuário autenticado:', { userId: req.user.id, email: req.user.email });
 
     // Verificar se a rota precisa do filtro de concurso
-    const path = req.path;
-    const needsFilter = needsConcursoFilter(path);
+    const pathForCheck = resolveRequestPath(req);
+    const needsFilter = needsConcursoFilter(pathForCheck);
 
     debug('Verificando necessidade de filtro:', { 
-      path,
+      path: pathForCheck,
       needsFilter,
     });
 
     if (!needsFilter) {
-      const msg = `Rota ${path} não precisa de filtro de concurso`;
+      const msg = `Rota ${pathForCheck} não precisa de filtro de concurso`;
       logger.debug(msg);
       debug(msg);
       next();
       return;
     }
 
-    debug(`Rota ${path} requer filtro de concurso`);
+    debug(`Rota ${pathForCheck} requer filtro de concurso`);
 
     // Obter o concurso ativo do usuário
     debug(`Buscando concurso ativo para usuário ${req.user?.id}`);
@@ -218,8 +232,8 @@ export const checkConcursoAccessMiddleware = async (
 ): Promise<void> => {
   try {
     // Verificar se a rota realmente precisa de concurso antes de aplicar a checagem
-    const path = req.path;
-    const needsFilter = needsConcursoFilter(path);
+    const pathForCheck = resolveRequestPath(req);
+    const needsFilter = needsConcursoFilter(pathForCheck);
 
     if (!needsFilter) {
       // Rota não requer contexto de concurso – seguir o fluxo normalmente

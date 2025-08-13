@@ -3,10 +3,10 @@ export interface SimuladoDTO {
   id: string;
   titulo: string;
   descricao?: string;
-  num_questoes: number;
+  numero_questoes: number; // snake_case alinhado ao DB
   tempo_minutos: number;
   dificuldade: string;
-  is_public: boolean;
+  publico: boolean;
   ativo: boolean;
   data_inicio?: string;
   data_fim?: string;
@@ -22,10 +22,10 @@ export interface SimuladoDTO {
 export interface CreateSimuladoDTO {
   titulo: string;
   descricao?: string;
-  num_questoes?: number;
+  numero_questoes?: number;
   tempo_minutos?: number;
   dificuldade?: string;
-  is_public?: boolean;
+  publico?: boolean;
   ativo?: boolean;
   data_inicio?: string;
   data_fim?: string;
@@ -38,10 +38,10 @@ export interface CreateSimuladoDTO {
 export interface UpdateSimuladoDTO {
   titulo?: string;
   descricao?: string;
-  num_questoes?: number;
+  numero_questoes?: number;
   tempo_minutos?: number;
   dificuldade?: string;
-  is_public?: boolean;
+  publico?: boolean;
   ativo?: boolean;
   data_inicio?: string;
   data_fim?: string;
@@ -67,7 +67,7 @@ export interface SimuladoWithRelationsDTO extends SimuladoDTO {
     ano?: number;
     banca?: string;
   };
-  simulado_questoes?: SimuladoQuestaoDTO[];
+  questoes_simulado?: SimuladoQuestaoDTO[];
 }
 
 // DTO para questão de simulado
@@ -202,25 +202,31 @@ export interface SimuladoWithQuestoesDTO extends SimuladoWithRelationsDTO {
 }
 
 // DTOs adicionais para compatibilidade com código existente
+/**
+ * @deprecated Use CreateSimuladoDTO (snake_case) e aceite legados só na entrada do handler.
+ */
 export interface CreateSimuladoDto {
   titulo: string;
   descricao?: string;
   concurso_id: string;
   categoria_disciplina_id: string;
-  tempo_limite?: number; // em minutos
-  total_questoes?: number;
+  tempo_limite?: number; // em minutos (deprecated) -> tempo_minutos
+  total_questoes?: number; // deprecated -> numero_questoes
   ativo?: boolean;
   metadata?: Record<string, unknown>;
 }
 
+/**
+ * @deprecated Use UpdateSimuladoDTO (snake_case) e aceite legados só na entrada do handler.
+ */
 export interface UpdateSimuladoDto {
   id: string;
   titulo?: string;
   descricao?: string;
   concurso_id?: string;
   categoria_disciplina_id?: string;
-  tempo_limite?: number;
-  total_questoes?: number;
+  tempo_limite?: number; // deprecated -> tempo_minutos
+  total_questoes?: number; // deprecated -> numero_questoes
   ativo?: boolean;
   metadata?: Record<string, unknown>;
 }
@@ -259,14 +265,17 @@ export interface SimuladoQuestaoIdDto {
   id: string;
 }
 
+/**
+ * @deprecated Resposta antiga; prefira SimuladoWithRelationsDTO com campos snake_case.
+ */
 export interface SimuladoResponseDto {
   id: string;
   titulo: string;
   descricao?: string;
   concurso_id: string;
   categoria_disciplina_id: string;
-  tempo_limite?: number;
-  total_questoes?: number;
+  tempo_limite?: number; // deprecated
+  total_questoes?: number; // deprecated
   ativo: boolean;
   metadata?: Record<string, unknown>;
   criado_em: string;
@@ -288,6 +297,9 @@ export interface SimuladoResponseDto {
   };
 }
 
+/**
+ * @deprecated Resposta antiga; prefira SimuladoQuestaoDTO com campos snake_case.
+ */
 export interface SimuladoQuestaoResponseDto {
   id: string;
   simulado_id: string;

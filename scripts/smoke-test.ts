@@ -32,6 +32,13 @@ class SmokeTester {
   private async getTestToken(): Promise<string> {
     if (this.backendAccessToken) return this.backendAccessToken;
 
+    // Permitir bypass via variável de ambiente (token já obtido)
+    const preset = process.env.SMOKE_ACCESS_TOKEN || process.env.SMOKE_JWT;
+    if (preset && preset.trim().length > 0) {
+      this.backendAccessToken = preset.trim();
+      return this.backendAccessToken;
+    }
+
     const email = process.env.SMOKE_EMAIL || 'test@aprovafacil.com';
     const password = process.env.SMOKE_PASSWORD || 'Test123!@#';
 
@@ -49,7 +56,8 @@ class SmokeTester {
     const body = await resp.json().catch(() => ({}));
     const token = body?.accessToken as string | undefined;
     if (!token) {
-      throw new Error('Login backend não retornou accessToken.');
+      const detail = body?.error || body?.message || JSON.stringify(body);
+      throw new Error(`Login backend não retornou accessToken. Detalhes: ${detail}`);
     }
     this.backendAccessToken = token;
     return token;
@@ -80,7 +88,12 @@ class SmokeTester {
 
       const responseTime = Date.now() - startTime;
 
-      if (response.ok || response.status === options.expectedStatus) {
+      const expected = options.expectedStatus as number | number[] | undefined;
+      const expectedMatch = Array.isArray(expected)
+        ? expected.includes(response.status)
+        : (typeof expected === 'number' ? response.status === expected : false);
+
+      if (response.ok || expectedMatch) {
         return {
           route: path,
           method,
@@ -133,6 +146,11 @@ class SmokeTester {
       // Guru da Aprovação (aliases estáveis)
       { method: 'GET', path: '/api/guru/v1/dashboard/enhanced-stats', expectedStatus: 200, requireAuth: true },
       { method: 'GET', path: '/api/guru/v1/dashboard/activities', expectedStatus: 200, requireAuth: true },
+
+      // Simulados - v1 (pode depender de concurso ativo). Considerar 200/304/400 como sucesso.
+      { method: 'GET', path: '/api/v1/simulados', expectedStatus: [200, 304, 400], requireAuth: true },
+      // Slug/detalhe pode retornar 200/304/400/404 dependendo de seed e concurso
+      { method: 'GET', path: '/api/v1/simulados/slug/exemplo', expectedStatus: [200, 304, 400, 404], requireAuth: true },
     ];
 
     const results: SmokeTestResult[] = [];
@@ -231,7 +249,7 @@ const isMain = (() => {
 })();
 
 if (isMain) {
-  // eslint-disable-next-line @typescript-eslint/no-floating-promises
+   
   main();
 }
 

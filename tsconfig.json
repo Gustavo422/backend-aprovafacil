@@ -10,7 +10,7 @@
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "allowJs": true,
-    "checkJs": false,
+    "checkJs": true,
     
     // Output Configuration
     "declaration": true,

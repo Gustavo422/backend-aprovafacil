@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* eslint-disable no-console */
+ 
 // Exporta o OpenAPI gerado em runtime para um arquivo estático openapi.json na raiz do backend
 const { join } = require('path');
 const { writeFileSync } = require('fs');
@@ -15,9 +15,9 @@ const { pathToFileURL } = require('url');
     if (!preferDist) {
       try {
         // Transpilar on-the-fly com ts-node
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
+         
         require('ts-node').register({ transpileOnly: true, esm: true, compilerOptions: { module: 'CommonJS' } });
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
+         
         mod = require('../src/core/documentation/openapi.ts');
       } catch (e) {
         // fallback para build

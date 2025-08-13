@@ -8,6 +8,8 @@ interface GuruFeatureFlagsConfig {
   canaryPercent: number; // 0 a 100
 }
 
+// Removido: configuração de rollout para Simulados (unificado em v1)
+
 function parseRolloutStrategy(value: string | undefined): RolloutStrategy {
   const normalized = (value ?? 'on').toLowerCase().trim();
   if (normalized === 'off' || normalized === '0' || normalized === 'false') return 'off';
@@ -26,6 +28,8 @@ export const guruFeatureFlags: GuruFeatureFlagsConfig = {
   guruNewModule: parseRolloutStrategy(process.env.GURU_NEW_MODULE_FLAG),
   canaryPercent: clampPercent(parseInt(process.env.GURU_NEW_MODULE_CANARY_PERCENT ?? '0', 10)),
 };
+
+// Simulados agora usam apenas v1; sem flags/canário
 
 export function isGuruNewModuleEnabled(): boolean {
   return guruFeatureFlags.guruNewModule === 'on' || guruFeatureFlags.guruNewModule === 'canary';
@@ -55,5 +59,7 @@ function simpleHash(input: string): number {
   }
   return Math.abs(hash >>> 0);
 }
+
+// (helpers para Simulados removidos)
 
 

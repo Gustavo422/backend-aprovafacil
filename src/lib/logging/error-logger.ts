@@ -68,13 +68,16 @@ export class ErrorLogger {
    * @param context Additional context
    */
   logError(error: Error, message?: string, context?: Record<string, unknown>): void {
-    // Create error context
+    // Create error context (sanitize URL and message, avoid PII in querystring)
+    const safeUrl = typeof (context?.url) === 'string' ? (context?.url as string).split('?')[0] : context?.url;
+    const safeMessage = String(message ?? error.message ?? '').slice(0, 2048);
+
     const errorContext = {
       ...this.context,
-      ...context,
+      ...(context ? { ...context, url: safeUrl } : {}),
       error: {
         name: error.name,
-        message: error.message,
+        message: safeMessage,
       },
     };
     
@@ -112,7 +115,7 @@ export class ErrorLogger {
     }
     
     // Log the error
-    this.logger.error(message ?? error.message, errorContext, error);
+    this.logger.error(safeMessage, errorContext, error);
   }
   
   /**

@@ -7,12 +7,44 @@ import type {
 } from '../../core/interfaces/index.js';
 import type { ApiResponse } from '../../shared/types/index.js';
 import type { SupabaseClient, PostgrestSingleResponse, PostgrestResponse } from '@supabase/supabase-js';
+import type { AdminContext } from './context.js';
+import ContestsAdminService from './services/content/contests.service.js';
+import SimuladosAdminService from './services/content/simulados.service.js';
+import WeeklyQuestionsAdminService from './services/content/weekly-questions.service.js';
+import FlashcardsAdminService from './services/content/flashcards.service.js';
+import ApostilasAdminService from './services/content/apostilas.service.js';
+import MapaAssuntosAdminService from './services/content/mapa-assuntos.service.js';
+import UsersAdminService from './services/users.service.js';
+import LogsAdminService from './services/logs.service.js';
+import CacheAdminService from './services/cache-config.service.js';
+import MetricsAdminService from './services/metrics.service.js';
+import HealthTestsAdminService from './services/health-tests.service.js';
+import BackupAdminService from './services/backup.service.js';
+import ImportExportAdminService from './services/import-export.service.js';
+import ValidationAdminService from './services/validation.service.js';
 
 export class AdminService implements IAdminService {
   private readonly logService: ILogService;
   private readonly cacheService: ICacheService;
   private readonly usuarioRepository: IUsuarioRepository;
   private readonly supabase: SupabaseClient;
+  private readonly ctx: AdminContext;
+
+  // Sub-serviços
+  private readonly contests: ContestsAdminService;
+  private readonly simulados: SimuladosAdminService;
+  private readonly weekly: WeeklyQuestionsAdminService;
+  private readonly flashcards: FlashcardsAdminService;
+  private readonly apostilas: ApostilasAdminService;
+  private readonly mapaAssuntos: MapaAssuntosAdminService;
+  private readonly users: UsersAdminService;
+  private readonly logs: LogsAdminService;
+  private readonly cacheAdmin: CacheAdminService;
+  private readonly metrics: MetricsAdminService;
+  private readonly health: HealthTestsAdminService;
+  private readonly backup: BackupAdminService;
+  private readonly io: ImportExportAdminService;
+  private readonly validation: ValidationAdminService;
 
   // Tipos auxiliares usados nas respostas do Supabase
   // Apenas os campos acessados são tipados para evitar uso de `any`
@@ -180,63 +212,31 @@ export class AdminService implements IAdminService {
     this.cacheService = cacheService;
     this.usuarioRepository = usuarioRepository;
     this.supabase = supabase;
+    this.ctx = { logService, cacheService, usuarioRepository, supabase };
+
+    // Inicialização dos sub-serviços
+    this.contests = new ContestsAdminService(this.ctx);
+    this.simulados = new SimuladosAdminService(this.ctx);
+    this.weekly = new WeeklyQuestionsAdminService(this.ctx);
+    this.flashcards = new FlashcardsAdminService(this.ctx);
+    this.apostilas = new ApostilasAdminService(this.ctx);
+    this.mapaAssuntos = new MapaAssuntosAdminService(this.ctx);
+    this.users = new UsersAdminService(this.ctx);
+    this.logs = new LogsAdminService(this.ctx);
+    this.cacheAdmin = new CacheAdminService(this.ctx);
+    this.metrics = new MetricsAdminService(this.ctx);
+    this.health = new HealthTestsAdminService(this.ctx);
+    this.backup = new BackupAdminService(this.ctx);
+    this.io = new ImportExportAdminService(this.ctx);
+    this.validation = new ValidationAdminService();
   }
 
   async obterEstatisticasSistema(): Promise<ApiResponse<unknown>> {
-    try {
-      await this.logService.logarInicioOperacao('obterEstatisticasSistema');
-
-      const estatisticas = {
-        usuarios: await this.obterEstatisticasUsuarios(),
-        concursos: await this.obterEstatisticasConcursos(),
-        simulados: await this.obterEstatisticasSimulados(),
-        questoes_semanais: await this.obterEstatisticasQuestoesSemanais(),
-        flashcards: await this.obterEstatisticasFlashcards(),
-        apostilas: await this.obterEstatisticasApostilas(),
-        sistema: await this.obterEstatisticasSistemaGeral(),
-        performance: await this.obterEstatisticasPerformance(),
-      };
-
-      await this.logService.logarFimOperacao('obterEstatisticasSistema', true);
-
-      return {
-        success: true,
-        data: estatisticas,
-        message: 'Estatísticas do sistema obtidas',
-      };
-    } catch (error) {
-      await this.logService.erro('Erro ao obter estatísticas do sistema', error as Error);
-      throw error;
-    }
+    return this.metrics.obterEstatisticasSistema();
   }
 
   async gerenciarUsuarios(): Promise<ApiResponse<unknown>> {
-    try {
-      await this.logService.logarInicioOperacao('gerenciarUsuarios');
-
-      const usuarios = await this.usuarioRepository.buscarTodos({ limit: 100 });
-      const usuariosAtivos = await this.usuarioRepository.buscarUsuariosAtivos();
-      const usuariosPrimeiroLogin = await this.usuarioRepository.obterUsuariosComPrimeiroLogin();
-
-      const gerenciamento = {
-        total_usuarios: usuarios.data?.length ?? 0,
-        usuarios_ativos: usuariosAtivos.length,
-        usuarios_primeiro_login: usuariosPrimeiroLogin.length,
-        usuarios_recentes: usuarios.data?.slice(0, 10) ?? [], // 10 mais recentes
-        estatisticas_por_mes: await this.obterEstatisticasUsuariosPorMes(),
-      };
-
-      await this.logService.logarFimOperacao('gerenciarUsuarios', true);
-
-      return {
-        success: true,
-        data: gerenciamento,
-        message: 'Dados de gerenciamento de usuários obtidos',
-      };
-    } catch (error) {
-      await this.logService.erro('Erro ao gerenciar usuários', error as Error);
-      throw error;
-    }
+    return this.users.gerenciarUsuarios();
   }
 
   async gerenciarConteudo(): Promise<ApiResponse<unknown>> {
@@ -266,112 +266,19 @@ export class AdminService implements IAdminService {
   }
 
   async executarTestes(): Promise<ApiResponse<unknown>> {
-    try {
-      await this.logService.logarInicioOperacao('executarTestes');
-
-      const resultados = {
-        conexao_banco: await this.testarConexaoBanco(),
-        cache: await this.testarCache(),
-        logs: await this.testarLogs(),
-        apis: await this.testarAPIs(),
-        integridade_dados: await this.testarIntegridadeDados(),
-      };
-
-      const todosPassaram = Object.values(resultados).every(teste => teste.sucesso);
-
-      await this.logService.logarFimOperacao('executarTestes', todosPassaram);
-
-      return {
-        success: true,
-        data: {
-          status_geral: todosPassaram ? 'PASSOU' : 'FALHOU',
-          resultados,
-          executado_em: new Date().toISOString(),
-        },
-        message: 'Testes executados',
-      };
-    } catch (error) {
-      await this.logService.erro('Erro ao executar testes', error as Error);
-      throw error;
-    }
+    return this.health.executarTestes();
   }
 
   async limparCache(): Promise<ApiResponse<boolean>> {
-    try {
-      await this.logService.logarInicioOperacao('limparCacheAdmin');
-
-      // Limpar cache em memória e persistente
-      await this.cacheService.limpar();
-
-      // Limpar cache expirado do banco
-      const registrosRemovidos = await this.cacheService.limparCacheExpiradoBanco();
-
-      await this.logService.info('Cache limpo pelo administrador', { 
-        registros_removidos: registrosRemovidos, 
-      });
-      await this.logService.logarFimOperacao('limparCacheAdmin', true);
-
-      return {
-        success: true,
-        data: true,
-        message: `Cache limpo com sucesso. ${registrosRemovidos} registros expirados removidos.`,
-      };
-    } catch (error) {
-      await this.logService.erro('Erro ao limpar cache', error as Error);
-      throw error;
-    }
+    return this.cacheAdmin.limparCache();
   }
 
   async obterLogs(filtro?: unknown): Promise<ApiResponse<unknown>> {
-    try {
-      await this.logService.logarInicioOperacao('obterLogsAdmin', { filtro });
-
-      const logs = await this.logService.obterLogs(filtro);
-      const estatisticasLogs = await this.logService.obterEstatisticasLogs();
-
-      const resultado = {
-        logs: logs.logs,
-        total: logs.total,
-        estatisticas: estatisticasLogs,
-        filtros_aplicados: filtro ?? {},
-      };
-
-      await this.logService.logarFimOperacao('obterLogsAdmin', true);
-
-      return {
-        success: true,
-        data: resultado,
-        message: 'Logs obtidos',
-      };
-    } catch (error) {
-      await this.logService.erro('Erro ao obter logs', error as Error, { filtro });
-      throw error;
-    }
+    return this.logs.obterLogs(filtro);
   }
 
   async obterMetricas(): Promise<ApiResponse<unknown>> {
-    try {
-      await this.logService.logarInicioOperacao('obterMetricasAdmin');
-
-      const metricas = {
-        cache: await this.cacheService.obterEstatisticas(),
-        banco_dados: await this.obterMetricasBancoDados(),
-        performance: await this.obterMetricasPerformance(),
-        uso_recursos: await this.obterMetricasUsoRecursos(),
-        atividade_usuarios: await this.obterMetricasAtividadeUsuarios(),
-      };
-
-      await this.logService.logarFimOperacao('obterMetricasAdmin', true);
-
-      return {
-        success: true,
-        data: metricas,
-        message: 'Métricas obtidas',
-      };
-    } catch (error) {
-      await this.logService.erro('Erro ao obter métricas', error as Error);
-      throw error;
-    }
+    return this.metrics.obterMetricas();
   }
 
   // Métodos específicos para criação de conteúdo
@@ -385,43 +292,7 @@ export class AdminService implements IAdminService {
     nivel_dificuldade: 'facil' | 'medio' | 'dificil';
     multiplicador_questoes: number;
   }): Promise<ApiResponse<unknown>> {
-    try {
-      await this.logService.logarInicioOperacao('criarConcurso', { nome: dados.nome });
-
-      // Gerar slug
-      const slug = this.gerarSlug(dados.nome);
-
-      const { data, error } = await this.supabase
-        .from('concursos')
-        .insert({
-          ...dados,
-          slug,
-          criado_em: new Date().toISOString(),
-          atualizado_em: new Date().toISOString(),
-        })
-        .select()
-        .single();
-
-      if (error) {
-        throw error;
-      }
-
-      if (!data) {
-        throw new Error('Falha ao criar concurso: dados não retornados');
-      }
-
-      await this.logService.logarCriacaoConteudo('concurso', String(data.id));
-      await this.logService.logarFimOperacao('criarConcurso', true);
-
-      return {
-        success: true,
-        data,
-        message: 'Concurso criado com sucesso',
-      };
-    } catch (error) {
-      await this.logService.erro('Erro ao criar concurso', error as Error, { dados });
-      throw error;
-    }
+    return this.contests.criarConcurso(dados);
   }
 
   async criarSimulado(dados: {
@@ -441,79 +312,7 @@ export class AdminService implements IAdminService {
       dificuldade?: string;
     }>;
   }): Promise<ApiResponse<unknown>> {
-    try {
-      await this.logService.logarInicioOperacao('criarSimulado', { titulo: dados.titulo });
-
-      // Gerar slug
-      const slug = this.gerarSlug(dados.titulo);
-
-      // Criar simulado
-      const { data: simulado, error: erroSimulado } = await this.supabase
-        .from('simulados')
-        .insert({
-          titulo: dados.titulo,
-          slug,
-          descricao: dados.descricao,
-          concurso_id: dados.concurso_id,
-          numero_questoes: dados.numero_questoes,
-          tempo_minutos: dados.tempo_minutos,
-          dificuldade: dados.dificuldade,
-          criado_em: new Date().toISOString(),
-          atualizado_em: new Date().toISOString(),
-        })
-        .select()
-        .single();
-
-      if (erroSimulado) {
-        throw erroSimulado;
-      }
-
-      if (!simulado) {
-        throw new Error('Erro ao criar simulado');
-      }
-
-      // Criar questões
-      if (dados.questoes && dados.questoes.length > 0) {
-        const questoesFormatadas = dados.questoes.map((questao, index) => ({
-          simulado_id: simulado.id,
-          numero_questao: index + 1,
-          enunciado: questao.enunciado,
-          alternativas: questao.alternativas,
-          resposta_correta: questao.resposta_correta,
-          explicacao: questao.explicacao,
-          disciplina: questao.disciplina,
-          assunto: questao.assunto,
-          dificuldade: questao.dificuldade ?? dados.dificuldade,
-          ordem: index + 1,
-          criado_em: new Date().toISOString(),
-          atualizado_em: new Date().toISOString(),
-        }));
-
-        const { error: erroQuestoes } = await this.supabase
-          .from('questoes_simulado')
-          .insert(questoesFormatadas);
-
-        if (erroQuestoes) {
-          // Reverter criação do simulado
-          if (simulado.id) {
-            await this.supabase.from('simulados').delete().eq('id', simulado.id);
-          }
-          throw erroQuestoes;
-        }
-      }
-
-      await this.logService.logarCriacaoConteudo('simulado', String(simulado.id));
-      await this.logService.logarFimOperacao('criarSimulado', true);
-
-      return {
-        success: true,
-        data: simulado,
-        message: 'Simulado criado com sucesso',
-      };
-    } catch (error) {
-      await this.logService.erro('Erro ao criar simulado', error as Error, { dados });
-      throw error;
-    }
+    return this.simulados.criarSimulado(dados);
   }
 
   async criarQuestoesSemana(dados: {
@@ -533,39 +332,7 @@ export class AdminService implements IAdminService {
     disciplina?: string;
     assunto?: string;
   }): Promise<ApiResponse<unknown>> {
-    try {
-      await this.logService.logarInicioOperacao('criarQuestoesSemana', { 
-        titulo: dados.titulo,
-        semana: dados.numero_semana,
-        ano: dados.ano,
-      });
-
-      const { data, error } = await this.supabase
-        .from('questoes_semanais')
-        .insert({
-          ...dados,
-          questoes: dados.questoes,
-          criado_em: new Date().toISOString(),
-        })
-        .select()
-        .single();
-
-      if (error) {
-        throw error;
-      }
-
-      await this.logService.logarCriacaoConteudo('questoes_semanais', String(data.id));
-      await this.logService.logarFimOperacao('criarQuestoesSemana', true);
-
-      return {
-        success: true,
-        data,
-        message: 'Questões semanais criadas com sucesso',
-      };
-    } catch (error) {
-      await this.logService.erro('Erro ao criar questões semanais', error as Error, { dados });
-      throw error;
-    }
+    return this.weekly.criarQuestoesSemana(dados);
   }
 
   async criarFlashcards(dados: {
@@ -578,40 +345,7 @@ export class AdminService implements IAdminService {
       subtema?: string;
     }>;
   }): Promise<ApiResponse<unknown>> {
-    try {
-      await this.logService.logarInicioOperacao('criarFlashcards', { 
-        concurso_id: dados.concurso_id,
-        quantidade: dados.flashcards.length,
-      });
-
-      const flashcardsFormatados = dados.flashcards.map(flashcard => ({
-        ...flashcard,
-        concurso_id: dados.concurso_id,
-        criado_em: new Date().toISOString(),
-        atualizado_em: new Date().toISOString(),
-      }));
-
-      const { data, error } = await this.supabase
-        .from('cartoes_memorizacao')
-        .insert(flashcardsFormatados)
-        .select();
-
-      if (error) {
-        throw error;
-      }
-
-      await this.logService.logarCriacaoConteudo('flashcards', String((data ?? []).length));
-      await this.logService.logarFimOperacao('criarFlashcards', true);
-
-      return {
-        success: true,
-        data,
-        message: `${data?.length ?? 0} flashcards criados com sucesso`,
-      };
-    } catch (error) {
-      await this.logService.erro('Erro ao criar flashcards', error as Error, { dados });
-      throw error;
-    }
+    return this.flashcards.criarFlashcards(dados);
   }
 
   async criarApostila(dados: {
@@ -624,70 +358,7 @@ export class AdminService implements IAdminService {
       conteudo_json: unknown;
     }>;
   }): Promise<ApiResponse<unknown>> {
-    try {
-      await this.logService.logarInicioOperacao('criarApostila', { titulo: dados.titulo });
-
-      // Gerar slug
-      const slug = this.gerarSlug(dados.titulo);
-
-      // Criar apostila
-      const { data: apostila, error: erroApostila } = await this.supabase
-        .from('apostilas')
-        .insert({
-          titulo: dados.titulo,
-          slug,
-          descricao: dados.descricao,
-          concurso_id: dados.concurso_id,
-          criado_em: new Date().toISOString(),
-          atualizado_em: new Date().toISOString(),
-        })
-        .select()
-        .single();
-
-      if (erroApostila) {
-        throw erroApostila;
-      }
-
-      if (!apostila) {
-        throw new Error('Erro ao criar apostila');
-      }
-
-      // Criar conteúdo da apostila
-      if (dados.conteudo && dados.conteudo.length > 0) {
-        const conteudoFormatado = dados.conteudo.map(modulo => ({
-          apostila_id: apostila.id,
-          concurso_id: dados.concurso_id,
-          numero_modulo: modulo.numero_modulo,
-          titulo: modulo.titulo,
-          conteudo_json: modulo.conteudo_json,
-          criado_em: new Date().toISOString(),
-        }));
-
-        const { error: erroConteudo } = await this.supabase
-          .from('conteudo_apostila')
-          .insert(conteudoFormatado);
-
-        if (erroConteudo) {
-          // Reverter criação da apostila
-          if (apostila?.id) {
-            await this.supabase.from('apostilas').delete().eq('id', apostila.id);
-          }
-          throw erroConteudo;
-        }
-      }
-
-      await this.logService.logarCriacaoConteudo('apostila', String(apostila.id));
-      await this.logService.logarFimOperacao('criarApostila', true);
-
-      return {
-        success: true,
-        data: apostila,
-        message: 'Apostila criada com sucesso',
-      };
-    } catch (error) {
-      await this.logService.erro('Erro ao criar apostila', error as Error, { dados });
-      throw error;
-    }
+    return this.apostilas.criarApostila(dados);
   }
 
   // Métodos privados auxiliares
@@ -1042,14 +713,15 @@ export class AdminService implements IAdminService {
     }
   }
 
+  // Mantido por compatibilidade com métodos internos legados; novos serviços usam util em utils/slug
   private gerarSlug(texto: string): string {
     return texto
       .toLowerCase()
       .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '') // Remove acentos
-      .replace(/[^a-z0-9\s-]/g, '') // Remove caracteres especiais
-      .replace(/\s+/g, '-') // Substitui espaços por hífens
-      .replace(/-+/g, '-') // Remove hífens duplicados
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
       .trim();
   }
 
@@ -1062,465 +734,71 @@ export class AdminService implements IAdminService {
     icone?: string;
     cor?: string;
     ordem?: number;
-  }): Promise<ApiResponse<unknown>> {
-    try {
-      await this.logService.logarInicioOperacao('criarCategoriasConcursos', { nome: dados.nome });
+  }): Promise<ApiResponse<unknown>> { return this.contests.criarCategoriasConcursos(dados); }
 
-      const slug = this.gerarSlug(dados.nome);
+  async listarCategoriasConcursos(filtro?: { ativo?: boolean }): Promise<ApiResponse<unknown>> { return this.contests.listarCategoriasConcursos(filtro); }
 
-      const { data, error } = await this.supabase
-        .from('categorias_concursos')
-        .insert({
-          ...dados,
-          slug,
-          ativo: true,
-          criado_em: new Date().toISOString(),
-          atualizado_em: new Date().toISOString(),
-        })
-        .select()
-        .single();
+  async atualizarCategoriasConcursos(id: string, dados: { nome?: string; descricao?: string; icone?: string; cor?: string; ordem?: number; ativo?: boolean }): Promise<ApiResponse<unknown>> { return this.contests.atualizarCategoriasConcursos(id, dados); }
 
-      if (error) throw error;
-
-      await this.logService.logarCriacaoConteudo('categoria_concurso', String(data.id));
-      return { success: true, data, message: 'Categoria de concurso criada com sucesso' };
-    } catch (error) {
-      await this.logService.erro('Erro ao criar categoria de concurso', error as Error, { dados });
-      throw error;
-    }
-  }
-
-  async listarCategoriasConcursos(filtro?: { ativo?: boolean }): Promise<ApiResponse<unknown>> {
-    try {
-      let query = this.supabase
-        .from('categorias_concursos')
-        .select('*');
-      if (filtro?.ativo !== undefined) {
-        query = query.eq('ativo', filtro.ativo);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-
-      return { success: true, data, message: 'Categorias listadas' };
-    } catch (error) {
-      await this.logService.erro('Erro ao listar categorias', error as Error);
-      throw error;
-    }
-  }
-
-  async atualizarCategoriasConcursos(id: string, dados: { nome?: string; descricao?: string; icone?: string; cor?: string; ordem?: number; ativo?: boolean }): Promise<ApiResponse<unknown>> {
-    try {
-      const { data, error } = await this.supabase
-        .from('categorias_concursos')
-        .update({ ...dados, atualizado_em: new Date().toISOString() })
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return { success: true, data, message: 'Categoria atualizada' };
-    } catch (error) {
-      await this.logService.erro('Erro ao atualizar categoria', error as Error, { id, dados });
-      throw error;
-    }
-  }
-
-  async excluirCategoriasConcursos(id: string): Promise<ApiResponse<boolean>> {
-    try {
-      const { error } = await this.supabase
-        .from('categorias_concursos')
-        .update({ ativo: false, atualizado_em: new Date().toISOString() })
-        .eq('id', id);
-
-      if (error) throw error;
-      return { success: true, data: true, message: 'Categoria excluída' };
-    } catch (error) {
-      await this.logService.erro('Erro ao excluir categoria', error as Error, { id });
-      throw error;
-    }
-  }
+  async excluirCategoriasConcursos(id: string): Promise<ApiResponse<boolean>> { return this.contests.excluirCategoriasConcursos(id); }
 
   // GESTÃO DE DISCIPLINAS POR CATEGORIA
-  async criarDisciplinasCategoria(dados: {
-    categoria_id: string;
-    nome: string;
-    descricao?: string;
-    cor?: string;
-    ordem?: number;
-  }): Promise<ApiResponse<unknown>> {
-    try {
-      const { data, error } = await this.supabase
-        .from('disciplinas_categoria')
-        .insert({
-          ...dados,
-          ativo: true,
-          criado_em: new Date().toISOString(),
-          atualizado_em: new Date().toISOString(),
-        })
-        .select()
-        .single();
+  async criarDisciplinasCategoria(dados: { categoria_id: string; nome: string; descricao?: string; cor?: string; ordem?: number; }): Promise<ApiResponse<unknown>> { return this.contests.criarDisciplinasCategoria(dados); }
 
-      if (error) throw error;
-      await this.logService.logarCriacaoConteudo('disciplina', String(data.id));
-      return { success: true, data, message: 'Disciplina criada' };
-    } catch (error) {
-      await this.logService.erro('Erro ao criar disciplina', error as Error, { dados });
-      throw error;
-    }
-  }
+  async listarDisciplinasCategoria(filtro?: { categoria_id?: string; ativo?: boolean }): Promise<ApiResponse<unknown>> { return this.contests.listarDisciplinasCategoria(filtro); }
 
-  async listarDisciplinasCategoria(filtro?: { categoria_id?: string; ativo?: boolean }): Promise<ApiResponse<unknown>> {
-    try {
-      let query = this.supabase
-        .from('disciplinas_categoria')
-        .select('*');
-      if (filtro?.categoria_id) {
-        query = query.eq('categoria_id', filtro.categoria_id);
-      }
-      if (filtro?.ativo !== undefined) {
-        query = query.eq('ativo', filtro.ativo);
-      }
+  async atualizarDisciplinasCategoria(id: string, dados: { categoria_id?: string; nome?: string; descricao?: string; cor?: string; ordem?: number; ativo?: boolean }): Promise<ApiResponse<unknown>> { return this.contests.atualizarDisciplinasCategoria(id, dados); }
 
-      const { data, error } = await query;
-      if (error) throw error;
-
-      return { success: true, data, message: 'Disciplinas listadas' };
-    } catch (error) {
-      await this.logService.erro('Erro ao listar disciplinas', error as Error);
-      throw error;
-    }
-  }
-
-  async atualizarDisciplinasCategoria(id: string, dados: { categoria_id?: string; nome?: string; descricao?: string; cor?: string; ordem?: number; ativo?: boolean }): Promise<ApiResponse<unknown>> {
-    try {
-      const { data, error } = await this.supabase
-        .from('disciplinas_categoria')
-        .update({ ...dados, atualizado_em: new Date().toISOString() })
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return { success: true, data, message: 'Disciplina atualizada' };
-    } catch (error) {
-      await this.logService.erro('Erro ao atualizar disciplina', error as Error, { id, dados });
-      throw error;
-    }
-  }
-
-  async excluirDisciplinasCategoria(id: string): Promise<ApiResponse<boolean>> {
-    try {
-      const { error } = await this.supabase
-        .from('disciplinas_categoria')
-        .update({ ativo: false, atualizado_em: new Date().toISOString() })
-        .eq('id', id);
-
-      if (error) throw error;
-      return { success: true, data: true, message: 'Disciplina excluída' };
-    } catch (error) {
-      await this.logService.erro('Erro ao excluir disciplina', error as Error, { id });
-      throw error;
-    }
-  }
+  async excluirDisciplinasCategoria(id: string): Promise<ApiResponse<boolean>> { return this.contests.excluirDisciplinasCategoria(id); }
 
   // GESTÃO EXPANDIDA DE CONCURSOS
-  async listarConcursos(filtro?: { categoria_id?: string; ativo?: boolean }): Promise<ApiResponse<unknown>> {
-    try {
-      let query = this.supabase
-        .from('concursos')
-        .select('*');
-      if (filtro?.categoria_id) {
-        query = query.eq('categoria_id', filtro.categoria_id);
-      }
-      if (filtro?.ativo !== undefined) {
-        query = query.eq('ativo', filtro.ativo);
-      }
+  async listarConcursos(filtro?: { categoria_id?: string; ativo?: boolean }): Promise<ApiResponse<unknown>> { return this.contests.listarConcursos(filtro); }
 
-      const { data, error } = await query;
-      if (error) throw error;
+  async atualizarConcurso(id: string, dados: { nome?: string; descricao?: string; categoria_id?: string; ano?: number; banca?: string; nivel_dificuldade?: 'facil' | 'medio' | 'dificil'; multiplicador_questoes?: number; ativo?: boolean }): Promise<ApiResponse<unknown>> { return this.contests.atualizarConcurso(id, dados); }
 
-      return { success: true, data, message: 'Concursos listados' };
-    } catch (error) {
-      await this.logService.erro('Erro ao listar concursos', error as Error);
-      throw error;
-    }
-  }
-
-  async atualizarConcurso(id: string, dados: { nome?: string; descricao?: string; categoria_id?: string; ano?: number; banca?: string; nivel_dificuldade?: 'facil' | 'medio' | 'dificil'; multiplicador_questoes?: number; ativo?: boolean }): Promise<ApiResponse<unknown>> {
-    try {
-      const { data, error } = await this.supabase
-        .from('concursos')
-        .update({ ...dados, atualizado_em: new Date().toISOString() })
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return { success: true, data, message: 'Concurso atualizado' };
-    } catch (error) {
-      await this.logService.erro('Erro ao atualizar concurso', error as Error, { id, dados });
-      throw error;
-    }
-  }
-
-  async excluirConcurso(id: string): Promise<ApiResponse<boolean>> {
-    try {
-      const { error } = await this.supabase
-        .from('concursos')
-        .update({ ativo: false, atualizado_em: new Date().toISOString() })
-        .eq('id', id);
-
-      if (error) throw error;
-      return { success: true, data: true, message: 'Concurso excluído' };
-    } catch (error) {
-      await this.logService.erro('Erro ao excluir concurso', error as Error, { id });
-      throw error;
-    }
-  }
+  async excluirConcurso(id: string): Promise<ApiResponse<boolean>> { return this.contests.excluirConcurso(id); }
 
   // GESTÃO EXPANDIDA DE SIMULADOS
   async listarSimulados(filtro?: { concurso_id?: string; ativo?: boolean }): Promise<ApiResponse<unknown>> {
-    try {
-      let query = this.supabase
-        .from('simulados')
-        .select('*');
-      if (filtro?.concurso_id) {
-        query = query.eq('concurso_id', filtro.concurso_id);
-      }
-      if (filtro?.ativo !== undefined) {
-        query = query.eq('ativo', filtro.ativo);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-
-      return { success: true, data, message: 'Simulados listados' };
-    } catch (error) {
-      await this.logService.erro('Erro ao listar simulados', error as Error);
-      throw error;
-    }
+    return this.simulados.listarSimulados(filtro);
   }
 
   async obterSimulado(id: string): Promise<ApiResponse<unknown>> {
-    try {
-      const { data, error } = await this.supabase
-        .from('simulados')
-        .select(`
-          *,
-          concursos (nome, slug),
-          questoes_simulado (*)
-        `)
-        .eq('id', id)
-        .single();
-
-      if (error) throw error;
-      return { success: true, data, message: 'Simulado obtido' };
-    } catch (error) {
-      await this.logService.erro('Erro ao obter simulado', error as Error, { id });
-      throw error;
-    }
+    return this.simulados.obterSimulado(id);
   }
 
   async atualizarSimulado(id: string, dados: { titulo?: string; descricao?: string; concurso_id?: string; numero_questoes?: number; tempo_minutos?: number; dificuldade?: 'facil' | 'medio' | 'dificil'; ativo?: boolean }): Promise<ApiResponse<unknown>> {
-    try {
-      const { data, error } = await this.supabase
-        .from('simulados')
-        .update({ ...dados, atualizado_em: new Date().toISOString() })
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return { success: true, data, message: 'Simulado atualizado' };
-    } catch (error) {
-      await this.logService.erro('Erro ao atualizar simulado', error as Error, { id, dados });
-      throw error;
-    }
+    return this.simulados.atualizarSimulado(id, dados);
   }
 
   async excluirSimulado(id: string): Promise<ApiResponse<boolean>> {
-    try {
-      const { error } = await this.supabase
-        .from('simulados')
-        .update({ ativo: false, atualizado_em: new Date().toISOString() })
-        .eq('id', id);
-
-      if (error) throw error;
-      return { success: true, data: true, message: 'Simulado excluído' };
-    } catch (error) {
-      await this.logService.erro('Erro ao excluir simulado', error as Error, { id });
-      throw error;
-    }
+    return this.simulados.excluirSimulado(id);
   }
 
   // GESTÃO DE QUESTÕES DE SIMULADOS
-  async adicionarQuestoesSimulado(simuladoId: string, questoes: Array<{
-    numero_questao: number;
-    enunciado: string;
-    alternativas: string[];
-    resposta_correta: string;
-    explicacao?: string;
-    disciplina?: string;
-    assunto?: string;
-    dificuldade?: string;
-    ordem?: number;
-  }>): Promise<ApiResponse<unknown>> {
-    try {
-      const questoesFormatadas = questoes.map((questao, index) => ({
-        simulado_id: simuladoId,
-        numero_questao: questao.numero_questao ?? index + 1,
-        enunciado: questao.enunciado,
-        alternativas: questao.alternativas,
-        resposta_correta: questao.resposta_correta,
-        explicacao: questao.explicacao,
-        disciplina: questao.disciplina,
-        assunto: questao.assunto,
-        dificuldade: questao.dificuldade,
-        ordem: questao.ordem ?? index + 1,
-        criado_em: new Date().toISOString(),
-        atualizado_em: new Date().toISOString(),
-      }));
-
-      const { data, error } = await this.supabase
-        .from('questoes_simulado')
-        .insert(questoesFormatadas)
-        .select();
-
-      if (error) throw error;
-      return { success: true, data, message: `${data.length} questões adicionadas` };
-    } catch (error) {
-      await this.logService.erro('Erro ao adicionar questões', error as Error, { simuladoId });
-      throw error;
-    }
+  async adicionarQuestoesSimulado(simuladoId: string, questoes: Array<{ numero_questao: number; enunciado: string; alternativas: string[]; resposta_correta: string; explicacao?: string; disciplina?: string; assunto?: string; dificuldade?: string; ordem?: number }>): Promise<ApiResponse<unknown>> {
+    return this.simulados.adicionarQuestoesSimulado(simuladoId, questoes);
   }
 
   async listarQuestoesSimulado(simuladoId: string, filtro?: { dificuldade?: string; disciplina?: string }): Promise<ApiResponse<unknown>> {
-    try {
-      let query = this.supabase
-        .from('questoes_simulado')
-        .select('*')
-        .eq('simulado_id', simuladoId)
-        .order('ordem', { ascending: true });
-
-      if (filtro?.dificuldade) {
-        query = query.eq('dificuldade', filtro.dificuldade);
-      }
-
-      if (filtro?.disciplina) {
-        query = query.eq('disciplina', filtro.disciplina);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-
-      return { success: true, data, message: 'Questões listadas' };
-    } catch (error) {
-      await this.logService.erro('Erro ao listar questões', error as Error, { simuladoId });
-      throw error;
-    }
+    return this.simulados.listarQuestoesSimulado(simuladoId, filtro);
   }
 
-  async atualizarQuestaoSimulado(id: string, dados: {
-    enunciado?: string;
-    alternativas?: string[];
-    resposta_correta?: string;
-    explicacao?: string;
-    disciplina?: string;
-    assunto?: string;
-    dificuldade?: string;
-    ordem?: number;
-  }): Promise<ApiResponse<unknown>> {
-    try {
-      const { data, error } = await this.supabase
-        .from('questoes_simulado')
-        .update({ ...dados, atualizado_em: new Date().toISOString() })
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return { success: true, data, message: 'Questão atualizada' };
-    } catch (error) {
-      await this.logService.erro('Erro ao atualizar questão', error as Error, { id, dados });
-      throw error;
-    }
+  async atualizarQuestaoSimulado(id: string, dados: { enunciado?: string; alternativas?: string[]; resposta_correta?: string; explicacao?: string; disciplina?: string; assunto?: string; dificuldade?: string; ordem?: number }): Promise<ApiResponse<unknown>> {
+    return this.simulados.atualizarQuestaoSimulado(id, dados);
   }
 
   async excluirQuestaoSimulado(id: string): Promise<ApiResponse<boolean>> {
-    try {
-      const { error } = await this.supabase
-        .from('questoes_simulado')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-      return { success: true, data: true, message: 'Questão excluída' };
-    } catch (error) {
-      await this.logService.erro('Erro ao excluir questão', error as Error, { id });
-      throw error;
-    }
+    return this.simulados.excluirQuestaoSimulado(id);
   }
 
   // GESTÃO EXPANDIDA DE QUESTÕES SEMANAIS
   async listarQuestoesSemana(filtro?: { concurso_id?: string; ano?: number; numero_semana?: number; disciplina?: string; assunto?: string }): Promise<ApiResponse<unknown>> {
-    try {
-      let query = this.supabase
-        .from('questoes_semanais')
-        .select(`
-          *,
-          concursos (nome, slug)
-        `)
-        .order('ano', { ascending: false })
-        .order('numero_semana', { ascending: false });
-
-      if (filtro?.concurso_id) {
-        query = query.eq('concurso_id', filtro.concurso_id);
-      }
-
-      if (filtro?.ano) {
-        query = query.eq('ano', filtro.ano);
-      }
-
-      if (filtro?.numero_semana) {
-        query = query.eq('numero_semana', filtro.numero_semana);
-      }
-
-      if (filtro?.disciplina) {
-        query = query.eq('disciplina', filtro.disciplina);
-      }
-
-      if (filtro?.assunto) {
-        query = query.eq('assunto', filtro.assunto);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-
-      return { success: true, data, message: 'Questões semanais listadas' };
-    } catch (error) {
-      await this.logService.erro('Erro ao listar questões semanais', error as Error);
-      throw error;
-    }
+    return this.weekly.listarQuestoesSemana(filtro);
   }
 
   async obterQuestoesSemana(id: string): Promise<ApiResponse<unknown>> {
-    try {
-      const { data, error } = await this.supabase
-        .from('questoes_semanais')
-        .select(`
-          *,
-          concursos (nome, slug)
-        `)
-        .eq('id', id)
-        .single();
-
-      if (error) throw error;
-      return { success: true, data, message: 'Questões semanais obtidas' };
-    } catch (error) {
-      await this.logService.erro('Erro ao obter questões semanais', error as Error, { id });
-      throw error;
-    }
+    return this.weekly.obterQuestoesSemana(id);
   }
 
   async atualizarQuestoesSemana(id: string, dados: {
@@ -1540,278 +818,43 @@ export class AdminService implements IAdminService {
     disciplina?: string;
     assunto?: string;
   }): Promise<ApiResponse<unknown>> {
-    try {
-      const { data, error } = await this.supabase
-        .from('questoes_semanais')
-        .update({ ...dados, atualizado_em: new Date().toISOString() })
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return { success: true, data, message: 'Questões semanais atualizadas' };
-    } catch (error) {
-      await this.logService.erro('Erro ao atualizar questões semanais', error as Error, { id, dados });
-      throw error;
-    }
+    return this.weekly.atualizarQuestoesSemana(id, dados);
   }
 
   async excluirQuestoesSemana(id: string): Promise<ApiResponse<boolean>> {
-    try {
-      const { error } = await this.supabase
-        .from('questoes_semanais')
-        .update({ ativo: false, atualizado_em: new Date().toISOString() })
-        .eq('id', id);
-
-      if (error) throw error;
-      return { success: true, data: true, message: 'Questões semanais excluídas' };
-    } catch (error) {
-      await this.logService.erro('Erro ao excluir questões semanais', error as Error, { id });
-      throw error;
-    }
+    return this.weekly.excluirQuestoesSemana(id);
   }
 
   // GESTÃO EXPANDIDA DE FLASHCARDS
   async listarFlashcards(filtro?: { concurso_id?: string; disciplina?: string; tema?: string; subtema?: string }): Promise<ApiResponse<unknown>> {
-    try {
-      let query = this.supabase
-        .from('cartoes_memorizacao')
-        .select(`
-          *,
-          concursos (nome, slug)
-        `)
-        .order('criado_em', { ascending: false });
-
-      if (filtro?.concurso_id) {
-        query = query.eq('concurso_id', filtro.concurso_id);
-      }
-
-      if (filtro?.disciplina) {
-        query = query.eq('disciplina', filtro.disciplina);
-      }
-
-      if (filtro?.tema) {
-        query = query.eq('tema', filtro.tema);
-      }
-
-      if (filtro?.subtema) {
-        query = query.eq('subtema', filtro.subtema);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-
-      return { success: true, data, message: 'Flashcards listados' };
-    } catch (error) {
-      await this.logService.erro('Erro ao listar flashcards', error as Error);
-      throw error;
-    }
+    return this.flashcards.listarFlashcards(filtro);
   }
 
-  async obterFlashcard(id: string): Promise<ApiResponse<unknown>> {
-    try {
-      const { data, error } = await this.supabase
-        .from('cartoes_memorizacao')
-        .select(`
-          *,
-          concursos (nome, slug)
-        `)
-        .eq('id', id)
-        .single();
+  async obterFlashcard(id: string): Promise<ApiResponse<unknown>> { return this.flashcards.obterFlashcard(id); }
 
-      if (error) throw error;
-      return { success: true, data, message: 'Flashcard obtido' };
-    } catch (error) {
-      await this.logService.erro('Erro ao obter flashcard', error as Error, { id });
-      throw error;
-    }
-  }
+  async atualizarFlashcard(id: string, dados: { concurso_id?: string; frente?: string; verso?: string; disciplina?: string; tema?: string; subtema?: string }): Promise<ApiResponse<unknown>> { return this.flashcards.atualizarFlashcard(id, dados); }
 
-  async atualizarFlashcard(id: string, dados: {
-    concurso_id?: string;
-    frente?: string;
-    verso?: string;
-    disciplina?: string;
-    tema?: string;
-    subtema?: string;
-  }): Promise<ApiResponse<unknown>> {
-    try {
-      const { data, error } = await this.supabase
-        .from('cartoes_memorizacao')
-        .update({ ...dados, atualizado_em: new Date().toISOString() })
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return { success: true, data, message: 'Flashcard atualizado' };
-    } catch (error) {
-      await this.logService.erro('Erro ao atualizar flashcard', error as Error, { id, dados });
-      throw error;
-    }
-  }
-
-  async excluirFlashcard(id: string): Promise<ApiResponse<boolean>> {
-    try {
-      const { error } = await this.supabase
-        .from('cartoes_memorizacao')
-        .update({ ativo: false, atualizado_em: new Date().toISOString() })
-        .eq('id', id);
-
-      if (error) throw error;
-      return { success: true, data: true, message: 'Flashcard excluído' };
-    } catch (error) {
-      await this.logService.erro('Erro ao excluir flashcard', error as Error, { id });
-      throw error;
-    }
-  }
+  async excluirFlashcard(id: string): Promise<ApiResponse<boolean>> { return this.flashcards.excluirFlashcard(id); }
 
   // GESTÃO EXPANDIDA DE APOSTILAS
   async listarApostilas(filtro?: { concurso_id?: string; ativo?: boolean }): Promise<ApiResponse<unknown>> {
-    try {
-      let query = this.supabase
-        .from('apostilas')
-        .select('*');
-      if (filtro?.concurso_id) {
-        query = query.eq('concurso_id', filtro.concurso_id);
-      }
-      if (filtro?.ativo !== undefined) {
-        query = query.eq('ativo', filtro.ativo);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-
-      return { success: true, data, message: 'Apostilas listadas' };
-    } catch (error) {
-      await this.logService.erro('Erro ao listar apostilas', error as Error);
-      throw error;
-    }
+    return this.apostilas.listarApostilas(filtro);
   }
 
-  async obterApostila(id: string): Promise<ApiResponse<unknown>> {
-    try {
-      const { data, error } = await this.supabase
-        .from('apostilas')
-        .select(`
-          *,
-          concursos (nome, slug),
-          conteudo_apostila (*)
-        `)
-        .eq('id', id)
-        .single();
+  async obterApostila(id: string): Promise<ApiResponse<unknown>> { return this.apostilas.obterApostila(id); }
 
-      if (error) throw error;
-      return { success: true, data, message: 'Apostila obtida' };
-    } catch (error) {
-      await this.logService.erro('Erro ao obter apostila', error as Error, { id });
-      throw error;
-    }
-  }
+  async atualizarApostila(id: string, dados: Record<string, unknown>): Promise<ApiResponse<unknown>> { return this.apostilas.atualizarApostila(id, dados); }
 
-  async atualizarApostila(id: string, dados: Record<string, unknown>): Promise<ApiResponse<unknown>> {
-    try {
-      const { data, error } = await this.supabase
-        .from('apostilas')
-        .update({ ...dados, atualizado_em: new Date().toISOString() })
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return { success: true, data, message: 'Apostila atualizada' };
-    } catch (error) {
-      await this.logService.erro('Erro ao atualizar apostila', error as Error, { id, dados });
-      throw error;
-    }
-  }
-
-  async excluirApostila(id: string): Promise<ApiResponse<boolean>> {
-    try {
-      const { error } = await this.supabase
-        .from('apostilas')
-        .update({ ativo: false, atualizado_em: new Date().toISOString() })
-        .eq('id', id);
-
-      if (error) throw error;
-      return { success: true, data: true, message: 'Apostila excluída' };
-    } catch (error) {
-      await this.logService.erro('Erro ao excluir apostila', error as Error, { id });
-      throw error;
-    }
-  }
+  async excluirApostila(id: string): Promise<ApiResponse<boolean>> { return this.apostilas.excluirApostila(id); }
 
   // GESTÃO DE CONTEÚDO DE APOSTILAS
-  async adicionarConteudoApostila(apostilaId: string, conteudo: Array<{ numero_modulo: number; titulo: string; conteudo_json: unknown }>): Promise<ApiResponse<unknown>> {
-    try {
-      const conteudoFormatado = conteudo.map(modulo => ({
-        apostila_id: apostilaId,
-        numero_modulo: modulo.numero_modulo,
-        titulo: modulo.titulo,
-        conteudo_json: modulo.conteudo_json,
-        criado_em: new Date().toISOString(),
-      }));
+  async adicionarConteudoApostila(apostilaId: string, conteudo: Array<{ numero_modulo: number; titulo: string; conteudo_json: unknown }>): Promise<ApiResponse<unknown>> { return this.apostilas.adicionarConteudoApostila(apostilaId, conteudo); }
 
-      const { data, error } = await this.supabase
-        .from('conteudo_apostila')
-        .insert(conteudoFormatado)
-        .select();
+  async listarConteudoApostila(apostilaId: string): Promise<ApiResponse<unknown>> { return this.apostilas.listarConteudoApostila(apostilaId); }
 
-      if (error) throw error;
-      return { success: true, data, message: `${data.length} módulos adicionados` };
-    } catch (error) {
-      await this.logService.erro('Erro ao adicionar conteúdo', error as Error, { apostilaId });
-      throw error;
-    }
-  }
+  async atualizarConteudoApostila(id: string, dados: Record<string, unknown>): Promise<ApiResponse<unknown>> { return this.apostilas.atualizarConteudoApostila(id, dados); }
 
-  async listarConteudoApostila(apostilaId: string): Promise<ApiResponse<unknown>> {
-    try {
-      const { data, error } = await this.supabase
-        .from('conteudo_apostila')
-        .select('*')
-        .eq('apostila_id', apostilaId)
-        .order('numero_modulo', { ascending: true });
-
-      if (error) throw error;
-      return { success: true, data, message: 'Conteúdo listado' };
-    } catch (error) {
-      await this.logService.erro('Erro ao listar conteúdo', error as Error, { apostilaId });
-      throw error;
-    }
-  }
-
-  async atualizarConteudoApostila(id: string, dados: Record<string, unknown>): Promise<ApiResponse<unknown>> {
-    try {
-      const { data, error } = await this.supabase
-        .from('conteudo_apostila')
-        .update({ ...dados, atualizado_em: new Date().toISOString() })
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return { success: true, data, message: 'Conteúdo atualizado' };
-    } catch (error) {
-      await this.logService.erro('Erro ao atualizar conteúdo', error as Error, { id, dados });
-      throw error;
-    }
-  }
-
-  async excluirConteudoApostila(id: string): Promise<ApiResponse<boolean>> {
-    try {
-      const { error } = await this.supabase
-        .from('conteudo_apostila')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-      return { success: true, data: true, message: 'Conteúdo excluído' };
-    } catch (error) {
-      await this.logService.erro('Erro ao excluir conteúdo', error as Error, { id });
-      throw error;
-    }
-  }
+  async excluirConteudoApostila(id: string): Promise<ApiResponse<boolean>> { return this.apostilas.excluirConteudoApostila(id); }
 
   // GESTÃO DE MAPA DE ASSUNTOS
   async criarMapaAssuntos(dados: {
@@ -1821,176 +864,26 @@ export class AdminService implements IAdminService {
     subassunto?: string;
     peso?: number;
     dificuldade?: string;
-  }): Promise<ApiResponse<unknown>> {
-    try {
-      const { data, error } = await this.supabase
-        .from('mapa_assuntos')
-        .insert({
-          ...dados,
-          ativo: true,
-          criado_em: new Date().toISOString(),
-          atualizado_em: new Date().toISOString(),
-        })
-        .select()
-        .single();
+  }): Promise<ApiResponse<unknown>> { return this.mapaAssuntos.criarMapaAssuntos(dados); }
 
-      if (error) throw error;
-      await this.logService.logarCriacaoConteudo('mapa_assuntos', String(data.id));
-      return { success: true, data, message: 'Mapa de assuntos criado' };
-    } catch (error) {
-      await this.logService.erro('Erro ao criar mapa de assuntos', error as Error, { dados });
-      throw error;
-    }
-  }
+  async listarMapaAssuntos(): Promise<ApiResponse<unknown>> { return this.mapaAssuntos.listarMapaAssuntos(); }
 
-  async listarMapaAssuntos(): Promise<ApiResponse<unknown>> {
-    try {
-      const query = this.supabase
-        .from('mapa_assuntos')
-        .select(`
-          *,
-          concursos (nome, slug)
-        `)
-        .order('disciplina', { ascending: true })
-        .order('assunto', { ascending: true });
+  async atualizarMapaAssuntos(id: string, dados: { concurso_id?: string; disciplina?: string; assunto?: string; subassunto?: string; peso?: number; dificuldade?: string }): Promise<ApiResponse<unknown>> { return this.mapaAssuntos.atualizarMapaAssuntos(id, dados); }
 
-      const { data, error } = await query;
-      if (error) throw error;
-
-      return { success: true, data, message: 'Mapa de assuntos listado' };
-    } catch (error) {
-      await this.logService.erro('Erro ao listar mapa de assuntos', error as Error);
-      throw error;
-    }
-  }
-
-  async atualizarMapaAssuntos(id: string, dados: { concurso_id?: string; disciplina?: string; assunto?: string; subassunto?: string; peso?: number; dificuldade?: string }): Promise<ApiResponse<unknown>> {
-    try {
-      const { data, error } = await this.supabase
-        .from('mapa_assuntos')
-        .update({ ...dados, atualizado_em: new Date().toISOString() })
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return { success: true, data, message: 'Mapa de assuntos atualizado' };
-    } catch (error) {
-      await this.logService.erro('Erro ao atualizar mapa de assuntos', error as Error, { id, dados });
-      throw error;
-    }
-  }
-
-  async excluirMapaAssuntos(id: string): Promise<ApiResponse<boolean>> {
-    try {
-      const { error } = await this.supabase
-        .from('mapa_assuntos')
-        .update({ ativo: false, atualizado_em: new Date().toISOString() })
-        .eq('id', id);
-
-      if (error) throw error;
-      return { success: true, data: true, message: 'Mapa de assuntos excluído' };
-    } catch (error) {
-      await this.logService.erro('Erro ao excluir mapa de assuntos', error as Error, { id });
-      throw error;
-    }
-  }
+  async excluirMapaAssuntos(id: string): Promise<ApiResponse<boolean>> { return this.mapaAssuntos.excluirMapaAssuntos(id); }
 
   // GESTÃO ADMINISTRATIVA DE USUÁRIOS
   async listarUsuarios(filtro?: { ativo?: boolean; primeiro_login?: boolean; search?: string }): Promise<ApiResponse<unknown>> {
-    try {
-      const query = this.supabase
-        .from('usuarios')
-        .select('id, nome, email, ativo, primeiro_login, criado_em, ultimo_login')
-        .order('criado_em', { ascending: false });
-
-      if (filtro?.ativo !== undefined) {
-        query.eq('ativo', filtro.ativo);
-      }
-
-      if (filtro?.primeiro_login !== undefined) {
-        query.eq('primeiro_login', filtro.primeiro_login);
-      }
-
-      if (filtro?.search) {
-        query.or(`nome.ilike.%${filtro.search}%,email.ilike.%${filtro.search}%`);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-
-      return { success: true, data, message: 'Usuários listados' };
-    } catch (error) {
-      await this.logService.erro('Erro ao listar usuários', error as Error);
-      throw error;
-    }
+    return this.users.listarUsuarios(filtro);
   }
 
-  async obterUsuario(id: string): Promise<ApiResponse<unknown>> {
-    try {
-      const { data, error } = await this.supabase
-        .from('usuarios')
-        .select('id, nome, email, ativo, primeiro_login, criado_em, ultimo_login, tempo_estudo_minutos, total_questoes_respondidas, total_acertos, pontuacao_media')
-        .eq('id', id)
-        .single();
+  async obterUsuario(id: string): Promise<ApiResponse<unknown>> { return this.users.obterUsuario(id); }
 
-      if (error) throw error;
-      return { success: true, data, message: 'Usuário obtido' };
-    } catch (error) {
-      await this.logService.erro('Erro ao obter usuário', error as Error, { id });
-      throw error;
-    }
-  }
+  async atualizarUsuario(id: string, dados: Record<string, unknown>): Promise<ApiResponse<unknown>> { return this.users.atualizarUsuario(id, dados); }
 
-  async atualizarUsuario(id: string, dados: Record<string, unknown>): Promise<ApiResponse<unknown>> {
-    try {
-      // Remover campos que não devem ser atualizados via admin
-      const dadosPermitidos = dados;
+  async ativarUsuario(id: string): Promise<ApiResponse<boolean>> { return this.users.ativarUsuario(id); }
 
-      const { data, error } = await this.supabase
-        .from('usuarios')
-        .update({ ...dadosPermitidos, atualizado_em: new Date().toISOString() })
-        .eq('id', id)
-        .select('id, nome, email, ativo, primeiro_login, criado_em, ultimo_login')
-        .single();
-
-      if (error) throw error;
-      return { success: true, data, message: 'Usuário atualizado' };
-    } catch (error) {
-      await this.logService.erro('Erro ao atualizar usuário', error as Error, { id, dados });
-      throw error;
-    }
-  }
-
-  async ativarUsuario(id: string): Promise<ApiResponse<boolean>> {
-    try {
-      const { error } = await this.supabase
-        .from('usuarios')
-        .update({ ativo: true, atualizado_em: new Date().toISOString() })
-        .eq('id', id);
-
-      if (error) throw error;
-      return { success: true, data: true, message: 'Usuário ativado' };
-    } catch (error) {
-      await this.logService.erro('Erro ao ativar usuário', error as Error, { id });
-      throw error;
-    }
-  }
-
-  async desativarUsuario(id: string): Promise<ApiResponse<boolean>> {
-    try {
-      const { error } = await this.supabase
-        .from('usuarios')
-        .update({ ativo: false, atualizado_em: new Date().toISOString() })
-        .eq('id', id);
-
-      if (error) throw error;
-      return { success: true, data: true, message: 'Usuário desativado' };
-    } catch (error) {
-      await this.logService.erro('Erro ao desativar usuário', error as Error, { id });
-      throw error;
-    }
-  }
+  async desativarUsuario(id: string): Promise<ApiResponse<boolean>> { return this.users.desativarUsuario(id); }
 
   // GESTÃO DE CONFIGURAÇÕES DE CACHE
   async criarConfiguracaoCache(dados: {
@@ -2075,56 +968,11 @@ export class AdminService implements IAdminService {
   async importarDadosLote(tipo: 'flashcards', dados: Array<{ concurso_id: string; flashcards: Array<{ frente: string; verso: string; disciplina: string; tema: string; subtema?: string }> }>): Promise<ApiResponse<unknown>>;
   async importarDadosLote(tipo: 'apostilas', dados: Array<{ titulo: string; descricao?: string; concurso_id: string; conteudo: Array<{ numero_modulo: number; titulo: string; conteudo_json: unknown }> }>): Promise<ApiResponse<unknown>>;
   async importarDadosLote(tipo: string, dados: unknown[]): Promise<ApiResponse<unknown>> {
-    try {
-      await this.logService.logarInicioOperacao('importarDadosLote', { tipo, quantidade: dados.length });
-      let resultado: unknown;
-      switch (tipo) {
-      case 'concursos':
-        resultado = await this.importarConcursosLote(dados as Array<{ nome: string; descricao?: string; categoria_id: string; ano?: number; banca?: string; nivel_dificuldade?: string; multiplicador_questoes?: number }>);
-        break;
-      case 'simulados':
-        resultado = await this.importarSimuladosLote(dados as Array<{ titulo: string; descricao?: string; concurso_id: string; numero_questoes: number; tempo_minutos: number; dificuldade: string }>);
-        break;
-      case 'flashcards':
-        resultado = await this.importarFlashcardsLote(dados as Array<{ concurso_id: string; flashcards: Array<{ frente: string; verso: string; disciplina: string; tema: string; subtema?: string }> }>);
-        break;
-      case 'apostilas':
-        resultado = await this.importarApostilasLote(dados as Array<{ titulo: string; descricao?: string; concurso_id: string; conteudo: Array<{ numero_modulo: number; titulo: string; conteudo_json: unknown }> }>);
-        break;
-      default:
-        throw new Error(`Tipo de importação não suportado: ${tipo}`);
-      }
-      await this.logService.logarFimOperacao('importarDadosLote', true);
-      return { success: true, data: resultado, message: `Importação de ${tipo} concluída` };
-    } catch (error) {
-      await this.logService.erro('Erro na importação em lote', error as Error, { tipo });
-      throw error;
-    }
+    return this.io.importarDadosLote(tipo as never, dados);
   }
 
-  async exportarDados(tipo: string): Promise<ApiResponse<unknown>> {
-    try {
-      let dados: unknown;
-
-      switch (tipo) {
-      case 'concursos':
-        dados = await this.exportarConcursos();
-        break;
-      case 'simulados':
-        dados = await this.exportarSimulados();
-        break;
-      case 'usuarios':
-        dados = await this.exportarUsuarios();
-        break;
-      default:
-        throw new Error(`Tipo de exportação não suportado: ${tipo}`);
-      }
-
-      return { success: true, data: dados, message: `Exportação de ${tipo} concluída` };
-    } catch (error) {
-      await this.logService.erro('Erro na exportação', error as Error, { tipo });
-      throw error;
-    }
+  async exportarDados(tipo: 'concursos' | 'simulados' | 'usuarios'): Promise<ApiResponse<unknown>> {
+    return this.io.exportarDados(tipo);
   }
 
   // VALIDAÇÃO DE DADOS JSON
@@ -2517,7 +1365,7 @@ export class AdminService implements IAdminService {
   private async exportarSimulados(): Promise<unknown> {
     const { data, error } = await this.supabase
       .from('simulados')
-      .select('*');
+      .select('id, titulo, slug, descricao, concurso_id, numero_questoes, tempo_minutos, dificuldade, publico, ativo, criado_em, atualizado_em');
     if (error) throw error;
     return data;
   }

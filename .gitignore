@@ -4,10 +4,14 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+.eslintcache
+.cache/
+node_modules/.cache/
 
 # Build
 build/
 dist/
+**/.vite/
 
 # Environment
 .env
@@ -30,7 +34,20 @@ Desktop.ini
 
 # Test/coverage
 coverage/
+.nyc_output/
 *.lcov
+junit.xml
+jest-junit.xml
+playwright-report/
+test-results/
+*.tsbuildinfo
 
 # Outros
 .kiro/ 
+tsconfig.tsbuildinfo
+openapi.json
+openapi.yaml
+*.d.ts.map
+*.map
+src/**/*.d.ts
+src/**/*.map

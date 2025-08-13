@@ -131,6 +131,8 @@ export default defineConfig([
       "sort-keys": "off",
       "sort-vars": "off",
       "unicode-bom": "error",
+      // Naming convention: enforce snake_case for DTO properties within simulados module
+      // Regra específica para snake_case será aplicada via override de arquivos do módulo simulados
       // Boundary enforcement para o módulo guru
       "no-restricted-imports": ["error", {
         "paths": [],
@@ -144,8 +146,21 @@ export default defineConfig([
             "message": "Importações do módulo 'guru' só são permitidas a partir de arquivos dentro de 'backend/src/modules/guru' ou rotas/controllers diretamente relacionadas. Use DTOs/serviços públicos se necessário.",
             "caseSensitive": false
           }
+          ,
+          {
+            "group": [
+              "../modules/simulados/**",
+              "./modules/simulados/**",
+              "modules/simulados/**"
+            ],
+            "message": "Importações do módulo 'simulados' só são permitidas a partir de arquivos dentro de 'backend/src/modules/simulados' ou rotas/controllers diretamente relacionadas. Use DTOs/serviços públicos se necessário.",
+            "caseSensitive": false
+          }
         ]
       }]
+      ,
+      // Nomenclatura: dentro do módulo simulados reforçamos snake_case em DTOs/contratos públicos
+      // Regra aplicada por override abaixo para focar apenas em arquivos daquele boundary
     }
   },
 
@@ -274,6 +289,25 @@ export default defineConfig([
     }
   },
 
+  // Enforce snake_case on DTOs dentro do módulo simulados
+  {
+    files: ["src/modules/simulados/**/*.ts"],
+    rules: {
+      "@typescript-eslint/naming-convention": [
+        "warn",
+        {
+          selector: "property",
+          format: ["snake_case", "UPPER_CASE"],
+          filter: {
+            // Permitir campos padrão de envelope/infra
+            regex: "^(success|error|code|message|data|items|total|page|limit|headers|Authorization|ETag|Last-Modified|X-Request-Id|X-Server-Duration)$",
+            match: false
+          }
+        }
+      ]
+    }
+  },
+
   // Configuração para React (se houver arquivos JSX/TSX)
   {
     files: ["**/*.{jsx,tsx}"],
@@ -369,6 +403,27 @@ export default defineConfig([
       // Em scripts permitimos variáveis não utilizadas como aviso
       "@typescript-eslint/no-unused-vars": "off",
       "no-unused-vars": "warn"
+    }
+  }
+  ,
+  // Enforce snake_case em nomes de propriedades ONLY dentro do boundary de simulados (DTOs/contratos)
+  {
+    files: [
+      "src/modules/simulados/**/*.ts"
+    ],
+    rules: {
+      "@typescript-eslint/naming-convention": [
+        "error",
+        {
+          "selector": [
+            "property",
+            "objectLiteralProperty"
+          ],
+          "format": ["snake_case"],
+          "leadingUnderscore": "allow",
+          "trailingUnderscore": "allow"
+        }
+      ]
     }
   }
   ,

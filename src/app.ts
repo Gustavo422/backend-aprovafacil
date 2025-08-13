@@ -34,7 +34,7 @@ import {
 } from './middleware/global-concurso-filter.middleware.js';
 
 // Importar rotas da pasta api
-import * as simuladosRoutes from './api/simulados/route.js';
+import { router as simuladosRoutes, v1Router as simuladosV1Routes } from './api/simulados/route.js';
 import * as flashcardsRoutes from './api/flashcards/route.js';
 import * as questoesSemanaisRoutes from './api/questoes-semanais/route.js';
 import * as planoEstudosRoutes from './api/plano-estudos/route.js';
@@ -589,7 +589,7 @@ class AprovaFacilApp {
     // REMOVIDO POR SOLICITAÇÃO
 
     // Registrar rotas da pasta api (não versionadas – com headers de depreciação)
-    this.app.use('/api/simulados', simuladosRoutes.router);
+    this.app.use('/api/simulados', simuladosRoutes);
     this.app.use('/api/flashcards', flashcardsRoutes.router);
     this.app.use('/api/questoes-semanais', questoesSemanaisRoutes.router);
     this.app.use('/api/plano-estudos', planoEstudosRoutes.router);
@@ -609,7 +609,7 @@ class AprovaFacilApp {
     this.app.use('/api/conteudo/filtrado', conteudoFiltradoRoutes.router);
 
     // Rotas versionadas (v1)
-    this.app.use('/api/v1/simulados', simuladosRoutes.router);
+    this.app.use('/api/v1/simulados', simuladosV1Routes);
     this.app.use('/api/v1/flashcards', flashcardsRoutes.router);
     this.app.use('/api/v1/questoes-semanais', questoesSemanaisRoutes.router);
     this.app.use('/api/v1/plano-estudos', planoEstudosRoutes.router);
@@ -631,6 +631,8 @@ class AprovaFacilApp {
     // Aliases versionados específicos do módulo Guru (mantendo compatibilidade)
     // Com feature flag para suportar rollout/rollback rápidos
     this.app.use('/api/guru/v1', guruFeatureFlagMiddleware);
+    // Removido alias de rollout para Simulados: um único caminho oficial via v1
+
     this.app.use('/api/guru/v1/dashboard/enhanced-stats', dashboardEnhancedStatsRoutes.router);
     this.app.use('/api/guru/v1/dashboard/activities', dashboardActivitiesRoutes.router);
     this.app.use('/api/guru/v1/activities', guruActivitiesAuxRoutes.router);

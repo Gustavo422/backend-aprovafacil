@@ -1,4 +1,4 @@
-/* eslint-disable no-template-curly-in-string */
+ 
 module.exports = function (plop) {
   plop.setGenerator('module', {
     description: 'Gera scaffolding para module: controller/service/repository/dto',

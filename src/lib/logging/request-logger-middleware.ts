@@ -41,6 +41,12 @@ export interface RequestLoggerOptions {
    * Skip logging for certain requests
    */
   skip?: (req: Request) => boolean;
+
+  /**
+   * Sampling rate for info logs (0.0 - 1.0). Errors (>=400) are always logged.
+   * Defaults to env LOG_SAMPLING_RATE or 1.0
+   */
+  sampleRate?: number;
 }
 
 /**
@@ -58,6 +64,9 @@ export function createRequestLoggerMiddleware(options: RequestLoggerOptions = {}
     logResponseTime: true,
     excludeHeaders: ['authorization', 'cookie', 'set-cookie', 'x-supabase-api-key', 'x-api-key'],
     skip: () => false,
+    sampleRate: Number.isFinite(parseFloat(process.env.LOG_SAMPLING_RATE ?? '1'))
+      ? Math.max(0, Math.min(1, parseFloat(process.env.LOG_SAMPLING_RATE ?? '1')))
+      : 1,
     ...options,
   };
   
@@ -79,13 +88,24 @@ export function createRequestLoggerMiddleware(options: RequestLoggerOptions = {}
     // Get start time
     const startTime = Date.now();
     
+    // Recognize feature by URL (sanitize URL: drop query string to avoid PII leakage)
+    const rawUrl = (req.originalUrl ?? req.url ?? '');
+    const [safePath] = rawUrl.split('?');
+    const urlPath = safePath ?? '';
+    const feature = urlPath.startsWith('/api/v1/simulados') || urlPath.startsWith('/api/simulados')
+      ? 'simulados'
+      : undefined;
+    if (feature && !res.getHeader('x-feature')) res.setHeader('x-feature', feature);
+
     // Create request context
     const context = {
       requestId,
       correlationId,
       method: req.method,
-      url: req.originalUrl ?? req.url,
+      url: urlPath,
       ip: req.ip ?? req.socket.remoteAddress,
+      usuarioId: (req as unknown as { user?: { id?: string } }).user?.id,
+      feature,
     };
     
     // Add headers if enabled
@@ -105,8 +125,13 @@ export function createRequestLoggerMiddleware(options: RequestLoggerOptions = {}
       Object.assign(context, { body: req.body });
     }
     
-    // Log request
-    opts.logger.info(`${req.method} ${req.originalUrl ?? req.url}`, context);
+    // Decide sampling for info logs (errors always logged)
+    const shouldLogInfo = Math.random() < (opts.sampleRate ?? 1);
+
+    // Log request (sampled)
+    if (shouldLogInfo) {
+      opts.logger.info(`${req.method} ${urlPath}`, context);
+    }
     
     // Override res.end to log response
     const originalEnd = res.end;
@@ -118,6 +143,7 @@ export function createRequestLoggerMiddleware(options: RequestLoggerOptions = {}
         ...context,
         statusCode: res.statusCode,
         responseTime,
+        durationMs: responseTime,
       };
       
       // Add response body if enabled
@@ -130,18 +156,21 @@ export function createRequestLoggerMiddleware(options: RequestLoggerOptions = {}
         }
       }
       
+      // Attach server duration header
+      try { res.setHeader('X-Server-Duration', String(responseTime)); } catch {}
+
       // Log response
       if (res.statusCode >= 400) {
-        opts.logger.error(`${req.method} ${req.originalUrl ?? req.url} - ${res.statusCode}`, responseContext);
-      } else {
-        opts.logger.info(`${req.method} ${req.originalUrl ?? req.url} - ${res.statusCode}`, responseContext);
+        opts.logger.error(`${req.method} ${urlPath} - ${res.statusCode}`, responseContext);
+      } else if (shouldLogInfo) {
+        opts.logger.info(`${req.method} ${urlPath} - ${res.statusCode}`, responseContext);
       }
       
       // Call original end (normalizando parâmetros)
       if (typeof encoding === 'function') {
         return (originalEnd as unknown as (chunk?: unknown, cb?: () => void) => Response).call(this, chunk, encoding as () => void);
       }
-      return (originalEnd as unknown as (chunk?: unknown, encoding?: BufferEncoding) => Response).call(this, chunk, encoding as BufferEncoding | undefined);
+      return (originalEnd as unknown as (chunk?: unknown, encoding?: BufferEncoding) => Response).call(this, chunk, encoding);
     };
     
     next();

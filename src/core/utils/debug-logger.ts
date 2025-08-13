@@ -280,7 +280,7 @@ export function debugRequestMiddleware(req: Request, res: Response, next: NextFu
     if (typeof encoding === 'function') {
       return originalEnd.call(this, chunk as never, undefined as never);
     }
-    return (originalEnd as unknown as (chunk?: unknown, encoding?: BufferEncoding, cb?: () => void) => Response).call(this, chunk, encoding as BufferEncoding | undefined, cb);
+    return (originalEnd as unknown as (chunk?: unknown, encoding?: BufferEncoding, cb?: () => void) => Response).call(this, chunk, encoding, cb);
     
   };
 

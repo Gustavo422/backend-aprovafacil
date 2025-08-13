@@ -302,11 +302,9 @@ class PreflightChecker {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 1000);
         // Node 18+ possui fetch global
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
         const resp = await fetch(`${baseUrl}/api/health`, { signal: controller.signal }).catch(() => null);
         clearTimeout(timeout);
-        if (!resp || !resp.ok) {
+        if (!resp?.ok) {
           return { 
             message: 'Servidor não está rodando; smoke-test pulado (não crítico nesta etapa)', 
             details: { baseUrl },

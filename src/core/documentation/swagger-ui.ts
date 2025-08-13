@@ -82,7 +82,7 @@ export function serveSwaggerUI(): Response {
 
 export function serveOpenAPISpec(): Response {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+     
     const mod = require('./openapi.js');
     const generateOpenAPISpec = mod?.generateOpenAPISpec as (() => unknown) | undefined;
     if (typeof generateOpenAPISpec !== 'function') {

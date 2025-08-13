@@ -66,8 +66,12 @@ export class MigrationManager {
         }
 
         if (createErrorMessage) {
-          // Fallback: não há como criar via REST (DDL). Informar claramente.
-          throw new Error(`Failed to create migrations table: ${createErrorMessage}`);
+          // Ambiente Supabase comum: RPC exec_sql pode não existir. Não falhar;
+          // seguir sem criar a tabela e tratar como "nenhuma migração aplicada".
+          this.logger.warn(
+            `Migrations table not created (missing exec_sql RPC). Status continuará sem criar tabela. Detalhe: ${createErrorMessage}`
+          );
+          return;
         }
         
         this.logger.info('Migrations table created successfully');
@@ -78,7 +82,9 @@ export class MigrationManager {
       }
     } catch (error) {
       this.logger.error('Failed to initialize migration system:', error);
-      throw error;
+      // Não derrubar o fluxo de status em ausência de RPC/tabela; deixe chamarantes tratarem
+      // esse cenário como sem migrações aplicadas.
+      return Promise.resolve();
     }
   }
 
@@ -137,6 +143,11 @@ export class MigrationManager {
         .order('version', { ascending: true });
       
       if (error) {
+        // Se a tabela não existir, tratar como nenhuma migração aplicada
+        if (error.message?.includes('does not exist')) {
+          this.logger.warn('Migrations table does not exist; treating as no applied migrations');
+          return [] as MigrationRecord[];
+        }
         throw new Error(`Failed to get applied migrations: ${error.message}`);
       }
       

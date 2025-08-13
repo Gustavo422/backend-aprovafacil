@@ -41,6 +41,7 @@ export function apiDeprecationHeadersMiddleware(req: Request, res: Response, nex
     const successor = computeVersionedUrl(req.originalUrl);
     res.setHeader('Deprecation', 'true');
     res.setHeader('Sunset', SUNSET_DATE);
+    // RFC 8288 Link header com rel successor-version apontando para v1 equivalente
     res.setHeader('Link', `<${successor}>; rel="successor-version"`);
   }
   next();

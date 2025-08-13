@@ -129,7 +129,7 @@ class SchemaValidator {
       const tableRegex = /CREATE\s+TABLE\s+public\.([a-zA-Z0-9_]+)/gi;
       const referenceTables: string[] = [];
       let match: RegExpExecArray | null;
-      // eslint-disable-next-line no-cond-assign
+       
       while ((match = tableRegex.exec(refSql)) !== null) {
         const tableName = match[1];
         if (typeof tableName === 'string' && tableName.length > 0) {

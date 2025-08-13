@@ -18,7 +18,7 @@ interface SimuladoQuestao {
 }
 
 interface SimuladoData {
-  simulado_questoes?: SimuladoQuestao[];
+  questoes_simulado?: SimuladoQuestao[];
 }
 
 interface QuestaoSemanalData {
@@ -111,7 +111,7 @@ router.get('/geral', requireAuth, asyncHandler(async (req, res) => {
     // Buscar estatísticas de questões semanais
     const { data: questoesStats, error: questoesError } = await supabase
       .from('respostas_questoes_semanais')
-      .select('*')
+      .select('correta, pontos_ganhos, tempo_gasto_segundos, criado_em')
       .eq('usuario_id', usuarioId);
 
     // Buscar estatísticas de mapa de assuntos
@@ -315,7 +315,7 @@ router.get('/performance', requireAuth, createValidationMiddleware(estatisticasF
         const dia = performancePorDia[data];
         if (dia) {
           dia.simulados.acertos += item.pontuacao ?? 0; // Assuming pontuacao is the correct metric for simulados
-          dia.simulados.erros += 0; // No erros in simulado_questoes
+          dia.simulados.erros += 0; // No erros em questoes_simulado
           dia.simulados.pontuacao += item.pontuacao ?? 0;
           dia.simulados.tempo += item.tempo_gasto_minutos ?? 0;
         }
@@ -384,7 +384,7 @@ router.get('/disciplinas', requireAuth, asyncHandler(async (req, res) => {
         pontuacao,
         tempo_gasto_minutos,
         simulados (
-          simulado_questoes (
+          questoes_simulado (
             disciplina
           )
         )
@@ -445,7 +445,7 @@ router.get('/disciplinas', requireAuth, asyncHandler(async (req, res) => {
 
     // Processar simulados
     simuladosDisciplinas?.forEach(item => {
-      const disciplinasSimulado = (item.simulados as SimuladoData)?.simulado_questoes?.map((q: SimuladoQuestao) => q.disciplina) ?? [];
+      const disciplinasSimulado = (item.simulados as SimuladoData)?.questoes_simulado?.map((q: SimuladoQuestao) => q.disciplina) ?? [];
       const disciplina = disciplinasSimulado[0] ?? 'Sem disciplina';
       
       if (!disciplinas[disciplina]) {
@@ -463,7 +463,7 @@ router.get('/disciplinas', requireAuth, asyncHandler(async (req, res) => {
         questoes: { acertos: 0, total: 0, pontos: 0, tempo: 0 },
       };
       disciplinas[disciplina].simulados.acertos += item.pontuacao ?? 0; // Assuming pontuacao is the correct metric for simulados
-      disciplinas[disciplina].simulados.erros += 0; // No erros in simulado_questoes
+      disciplinas[disciplina].simulados.erros += 0; // No erros em questoes_simulado
       disciplinas[disciplina].simulados.pontuacao += item.pontuacao ?? 0;
       disciplinas[disciplina].simulados.tempo += item.tempo_gasto_minutos ?? 0;
     });
