@@ -45,6 +45,8 @@
     "migrate:down": "tsx scripts/migrate.js down",
     "migrate:status": "tsx scripts/migrate.js status",
     "migrate:create": "tsx scripts/migrate.js create",
+    "types:generate": "supabase gen types typescript --project-id $SUPABASE_PROJECT_ID --schema public > src/types/supabase.ts",
+    "types:generate:local": "supabase gen types typescript --local > src/types/supabase.ts",
     "debug:demo": "node scripts/debug-demo.js",
     "debug:demo:full": "DEBUG=app:backend:* node scripts/debug-demo.js",
     "test:auth": "node scripts/test-unified-auth.js",

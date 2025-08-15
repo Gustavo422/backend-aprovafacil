@@ -53,8 +53,7 @@ const getConteudoFiltradoHandler = async (req: Request, res: Response) => {
                 )
             `)
       .eq('categoria_id', categoria_id)
-      .eq('concurso_id', concurso_id)
-      .is('deleted_at', null);
+      .eq('concurso_id', concurso_id);
 
     if (publico !== undefined) {
       simuladosQuery = simuladosQuery.eq('publico', publico === 'true');
@@ -181,8 +180,7 @@ const getConteudoFiltradoHandler = async (req: Request, res: Response) => {
         .from('simulados')
         .select('*', { count: 'exact', head: true })
         .eq('categoria_id', categoria_id)
-        .eq('concurso_id', concurso_id)
-        .is('deleted_at', null),
+        .eq('concurso_id', concurso_id),
       supabase
         .from('cartoes_memorizacao')
         .select('*', { count: 'exact', head: true })

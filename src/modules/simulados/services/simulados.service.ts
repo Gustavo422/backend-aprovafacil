@@ -99,12 +99,12 @@ export class SimuladosService {
     return page;
   }
 
-  async buscarDetalhePorSlug(slug: string, usuarioId?: string): Promise<SimuladoDetailDTO> {
+  async buscarDetalhePorSlug(slug: string, usuarioId?: string, concursoId?: string): Promise<SimuladoDetailDTO> {
     const cacheKey = `simulados:detail:slug:${slug}${usuarioId ? `:user:${usuarioId}` : ''}`;
     const cached = await this.cache.obter<SimuladoDetailDTO>(cacheKey);
     if (cached) return cached;
 
-    const simulado = await this.repo.buscarPorSlug(slug);
+    const simulado = await this.repo.buscarPorSlug(slug, concursoId);
     if (!simulado) {
       throw new AppError('Simulado não encontrado', 404, { code: 'SIMULADO_NOT_FOUND', details: { slug } });
     }

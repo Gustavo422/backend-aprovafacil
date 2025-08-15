@@ -118,8 +118,8 @@ class AprovaFacilApp {
 
     this.enhancedAuthService = new EnhancedAuthService(this.supabase, {
       jwtSecret: process.env.JWT_SECRET ?? '',
-      accessTokenExpiry: parseInt(process.env.JWT_ACCESS_EXPIRY ?? '2592000', 10), // 25 minutos
-      refreshTokenExpiry: parseInt(process.env.JWT_REFRESH_EXPIRY ?? '7776000', 10), // 7 dias
+      accessTokenExpiry: parseInt(process.env.JWT_ACCESS_EXPIRY ?? '900', 10), // 15 minutos por padrão (seguro)
+      refreshTokenExpiry: parseInt(process.env.JWT_REFRESH_EXPIRY ?? '604800', 10), // 7 dias por padrão
     });
 
     this.authService = new AuthServiceAdapter(this.enhancedAuthService);
@@ -245,8 +245,8 @@ class AprovaFacilApp {
           });
 
           if (resultado.success && resultado.accessToken) {
-            const accessMaxAgeMs = (parseInt(process.env.JWT_ACCESS_EXPIRY ?? '2592000', 10)) * 1000;
-            const refreshMaxAgeMsRemember = (parseInt(process.env.JWT_REFRESH_EXPIRY ?? '7776000', 10)) * 1000;
+            const accessMaxAgeMs = (parseInt(process.env.JWT_ACCESS_EXPIRY ?? '900', 10)) * 1000;
+            const refreshMaxAgeMsRemember = (parseInt(process.env.JWT_REFRESH_EXPIRY ?? '604800', 10)) * 1000;
             // Definir cookies seguros
             res.cookie('accessToken', resultado.accessToken, {
               httpOnly: true,
@@ -328,7 +328,7 @@ class AprovaFacilApp {
           const resultado = await this.enhancedAuthService.refreshToken(refreshToken, ipAddress, userAgent);
           
           if (resultado.success && resultado.accessToken) {
-            const accessMaxAgeMs = (parseInt(process.env.JWT_ACCESS_EXPIRY ?? '2592000', 10)) * 1000;
+            const accessMaxAgeMs = (parseInt(process.env.JWT_ACCESS_EXPIRY ?? '900', 10)) * 1000;
             res.cookie('accessToken', resultado.accessToken, {
               httpOnly: true,
               secure: process.env.NODE_ENV === 'production',
@@ -591,7 +591,7 @@ class AprovaFacilApp {
     // Registrar rotas da pasta api (não versionadas – com headers de depreciação)
     this.app.use('/api/simulados', simuladosRoutes);
     this.app.use('/api/flashcards', flashcardsRoutes.router);
-    this.app.use('/api/questoes-semanais', questoesSemanaisRoutes.router);
+    this.app.use('/api/questoes-semanais', questoesSemanaisRoutes.router); // ⚠️ DEPRECATED - será removida em 2024-06-01
     this.app.use('/api/plano-estudos', planoEstudosRoutes.router);
     this.app.use('/api/mapa-assuntos', mapaAssuntosRoutes.router);
     this.app.use('/api/concurso-categorias', concursoCategoriasRoutes.router);
@@ -611,7 +611,7 @@ class AprovaFacilApp {
     // Rotas versionadas (v1)
     this.app.use('/api/v1/simulados', simuladosV1Routes);
     this.app.use('/api/v1/flashcards', flashcardsRoutes.router);
-    this.app.use('/api/v1/questoes-semanais', questoesSemanaisRoutes.router);
+    this.app.use('/api/v1/questoes-semanais', questoesSemanaisRoutes.router); // ⚠️ DEPRECATED - será removida em 2024-06-01
     this.app.use('/api/v1/plano-estudos', planoEstudosRoutes.router);
     this.app.use('/api/v1/mapa-assuntos', mapaAssuntosRoutes.router);
     this.app.use('/api/v1/concurso-categorias', concursoCategoriasRoutes.router);

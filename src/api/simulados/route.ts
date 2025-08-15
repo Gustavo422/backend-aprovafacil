@@ -284,7 +284,8 @@ export const getSimuladoBySlugHandler = async (req: AuthenticatedRequest, res: R
   try {
     const start = Date.now();
     const { slug } = req.params as { slug: string };
-    const simulado = await simuladosService.buscarDetalhePorSlug(slug, req.user?.id);
+    const concursoId = getConcursoIdFromRequest(req);
+    const simulado = await simuladosService.buscarDetalhePorSlug(slug, req.user?.id, concursoId ?? undefined);
 
     // ETag e Last-Modified para v1
     const reqUrl = (req as Request).originalUrl ?? '';
@@ -329,11 +330,12 @@ export const getQuestoesBySimuladoSlugHandler = async (req: AuthenticatedRequest
   try {
     const start = Date.now();
     const { slug } = req.params as { slug: string };
+    const concursoId = getConcursoIdFromRequest(req);
     const afterParam = req.query?.after as string | undefined;
     const limitParam = req.query?.limit as string | undefined;
     const afterOrdem = afterParam ? Number(afterParam) : undefined;
     const qLimit = limitParam ? Math.min(200, Math.max(1, Number(limitParam))) : undefined;
-    const simuladoId = await simuladosRepo.buscarIdPorSlug(slug);
+    const simuladoId = await simuladosRepo.buscarIdPorSlug(slug, concursoId ?? undefined);
     if (!simuladoId) return res.status(404).json({ success: false, error: 'Simulado não encontrado', code: 'SIMULADO_NOT_FOUND' });
     // Cursor pagination opcional (por ordem)
     const useCursor = typeof afterOrdem === 'number' || typeof qLimit === 'number';
@@ -398,11 +400,13 @@ export const submitSimuladoBySlugHandler = async (req: AuthenticatedRequest, res
       return res.status(401).json({ success: false, error: 'Usuário não autenticado', code: 'UNAUTHORIZED' });
     }
 
-    const { data: simuladoIdData, error: simError } = await supabase
+    const concursoId = getConcursoIdFromRequest(req);
+    let simIdQuery = supabase
       .from('simulados')
       .select('id')
-      .eq('slug', slug)
-      .single() as unknown as { data: { id: string } | null; error: { message: string; code?: string } | null };
+      .eq('slug', slug);
+    if (concursoId) simIdQuery = simIdQuery.eq('concurso_id', concursoId);
+    const { data: simuladoIdData, error: simError } = await simIdQuery.single() as unknown as { data: { id: string } | null; error: { message: string; code?: string } | null };
 
     if (simError || !simuladoIdData) {
       if (simError?.code === 'PGRST116') {
@@ -469,11 +473,13 @@ export const postProgressBySlugHandler = async (req: AuthenticatedRequest, res: 
     const usuarioId = req.user?.id;
     if (!usuarioId) return res.status(401).json({ success: false, error: 'Usuário não autenticado', code: 'UNAUTHORIZED' });
 
-    const { data: simuladoRow, error: simErr } = await supabase
+    const concursoId = getConcursoIdFromRequest(req);
+    let simRowQuery = supabase
       .from('simulados')
       .select('id')
-      .eq('slug', slug)
-      .single();
+      .eq('slug', slug);
+    if (concursoId) simRowQuery = simRowQuery.eq('concurso_id', concursoId);
+    const { data: simuladoRow, error: simErr } = await simRowQuery.single();
     if (simErr || !simuladoRow) return res.status(404).json({ success: false, error: 'Simulado não encontrado', code: 'SIMULADO_NOT_FOUND' });
 
     // Validar e normalizar body
@@ -534,11 +540,13 @@ export const putProgressBySlugHandler = async (req: AuthenticatedRequest, res: R
     const usuarioId = req.user?.id;
     if (!usuarioId) return res.status(401).json({ success: false, error: 'Usuário não autenticado', code: 'UNAUTHORIZED' });
 
-    const { data: simuladoRow, error: simErr } = await supabase
+    const concursoId = getConcursoIdFromRequest(req);
+    let simRowQuery = supabase
       .from('simulados')
       .select('id')
-      .eq('slug', slug)
-      .single();
+      .eq('slug', slug);
+    if (concursoId) simRowQuery = simRowQuery.eq('concurso_id', concursoId);
+    const { data: simuladoRow, error: simErr } = await simRowQuery.single();
     if (simErr || !simuladoRow) return res.status(404).json({ success: false, error: 'Simulado não encontrado', code: 'SIMULADO_NOT_FOUND' });
     const simuladoId = (simuladoRow as any).id as string;
 
@@ -602,11 +610,13 @@ export const getProgressBySlugHandler = async (req: AuthenticatedRequest, res: R
       return res.status(401).json({ success: false, error: 'Usuário não autenticado', code: 'UNAUTHORIZED' });
     }
 
-    const { data: simuladoIdData, error: simError } = await supabase
+    const concursoId = getConcursoIdFromRequest(req);
+    let simIdQuery = supabase
       .from('simulados')
       .select('id')
-      .eq('slug', slug)
-      .single() as unknown as { data: { id: string } | null; error: { message: string; code?: string } | null };
+      .eq('slug', slug);
+    if (concursoId) simIdQuery = simIdQuery.eq('concurso_id', concursoId);
+    const { data: simuladoIdData, error: simError } = await simIdQuery.single() as unknown as { data: { id: string } | null; error: { message: string; code?: string } | null };
 
     if (simError || !simuladoIdData) {
       if (simError?.code === 'PGRST116') {

@@ -73,9 +73,9 @@ export class EnhancedAuthService {
     this.securityService = new LoginSecurityService(supabaseClient);
     
     this.jwtSecret = options.jwtSecret;
-    // Configurar para 1 mês de duração por padrão
-    this.accessTokenExpiry = options.accessTokenExpiry ?? 2592000; // 30 dias por padrão
-    this.refreshTokenExpiry = options.refreshTokenExpiry ?? 7776000; // 90 dias por padrão
+    // Configurar para valores seguros por padrão
+    this.accessTokenExpiry = options.accessTokenExpiry ?? 900; // 15 minutos por padrão
+    this.refreshTokenExpiry = options.refreshTokenExpiry ?? 604800; // 7 dias por padrão
   }
 
   /**

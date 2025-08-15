@@ -180,15 +180,19 @@ export const listFlashcardsHandler = async (req: AuthenticatedRequest, res: Resp
       });
     }
 
-    // Buscar total de registros para paginação
-    let totalCount = 0;
-    if (count === null) {
-      const { count: total } = await supabase
+    // Buscar total de registros para paginação (com mesmos filtros)
+    let totalCount = count ?? null;
+    if (totalCount === null) {
+      let countQuery = supabase
         .from('flashcards')
         .select('*', { count: 'exact', head: true });
+      if (concursoId) countQuery = countQuery.eq('concurso_id', concursoId);
+      if (ativo !== undefined) countQuery = countQuery.eq('ativo', ativo);
+      if (disciplina) countQuery = countQuery.ilike('disciplina', `%${disciplina}%`);
+      if (tema) countQuery = countQuery.ilike('tema', `%${tema}%`);
+      if (subtema) countQuery = countQuery.ilike('subtema', `%${subtema}%`);
+      const { count: total } = await countQuery;
       totalCount = total ?? 0;
-    } else {
-      totalCount = count;
     }
 
     const totalPages = Math.ceil(totalCount / limitNum);
@@ -235,7 +239,7 @@ export const getFlashcardByIdHandler = async (req: AuthenticatedRequest, res: Re
       logger.debug('Filtro de concurso aplicado automaticamente pelo middleware', { concursoId });
     }
 
-    const query = supabase
+    let query = supabase
       .from('flashcards')
       .select(`
         *,
@@ -255,6 +259,9 @@ export const getFlashcardByIdHandler = async (req: AuthenticatedRequest, res: Re
         )
       `)
       .eq('id', id);
+    if (concursoId) {
+      query = query.eq('concurso_id', concursoId);
+    }
 
     const { data: flashcard, error } = await query.single() as { data: Flashcard | null; error: Error | null };
 
@@ -364,12 +371,15 @@ export const updateFlashcardHandler = async (req: AuthenticatedRequest, res: Res
       logger.debug('Filtro de concurso aplicado automaticamente pelo middleware', { concursoId });
     }
 
-    // Verificar se o flashcard existe (o filtro de concurso é aplicado automaticamente)
-    const { data: existingFlashcard, error: checkError } = await supabase
+    // Verificar se o flashcard existe (respeitando concurso)
+    let checkQuery = supabase
       .from('flashcards')
       .select('id')
-      .eq('id', id)
-      .single() as { data: { id: string } | null; error: Error | null };
+      .eq('id', id);
+    if (concursoId) {
+      checkQuery = checkQuery.eq('concurso_id', concursoId);
+    }
+    const { data: existingFlashcard, error: checkError } = await checkQuery.single() as { data: { id: string } | null; error: Error | null };
 
     if (checkError || !existingFlashcard) {
       return res.status(404).json({ 
@@ -378,10 +388,14 @@ export const updateFlashcardHandler = async (req: AuthenticatedRequest, res: Res
       });
     }
 
-    const { data: flashcard, error } = await supabase
+    let updateQuery = supabase
       .from('flashcards')
       .update(updateData)
-      .eq('id', id)
+      .eq('id', id);
+    if (concursoId) {
+      updateQuery = updateQuery.eq('concurso_id', concursoId);
+    }
+    const { data: flashcard, error } = await updateQuery
       .select()
       .single() as { data: Flashcard | null; error: Error | null };
 
@@ -424,12 +438,15 @@ export const deleteFlashcardHandler = async (req: AuthenticatedRequest, res: Res
       logger.debug('Filtro de concurso aplicado automaticamente pelo middleware', { concursoId });
     }
 
-    // Verificar se o flashcard existe (o filtro de concurso é aplicado automaticamente)
-    const { data: existingFlashcard, error: checkError } = await supabase
+    // Verificar se o flashcard existe (respeitando concurso)
+    let delCheckQuery = supabase
       .from('flashcards')
       .select('id')
-      .eq('id', id)
-      .single() as { data: { id: string } | null; error: Error | null };
+      .eq('id', id);
+    if (concursoId) {
+      delCheckQuery = delCheckQuery.eq('concurso_id', concursoId);
+    }
+    const { data: existingFlashcard, error: checkError } = await delCheckQuery.single() as { data: { id: string } | null; error: Error | null };
 
     if (checkError || !existingFlashcard) {
       return res.status(404).json({ 
@@ -438,10 +455,14 @@ export const deleteFlashcardHandler = async (req: AuthenticatedRequest, res: Res
       });
     }
 
-    const { error } = await supabase
+    let delQuery = supabase
       .from('flashcards')
       .delete()
       .eq('id', id);
+    if (concursoId) {
+      delQuery = delQuery.eq('concurso_id', concursoId);
+    }
+    const { error } = await delQuery;
 
     if (error) {
       logger.error('Erro ao deletar flashcard', { error: error.message });
@@ -481,9 +502,13 @@ export const getFlashcardStatsHandler = async (req: AuthenticatedRequest, res: R
       logger.debug('Filtro de concurso aplicado automaticamente pelo middleware', { concursoId });
     }
 
-    const { data: flashcards, error } = await supabase
+    let statsQuery = supabase
       .from('flashcards')
-      .select('disciplina, peso_disciplina') as { data: Pick<Flashcard, 'disciplina' | 'peso_disciplina'>[] | null; error: Error | null };
+      .select('disciplina, peso_disciplina');
+    if (concursoId) {
+      statsQuery = statsQuery.eq('concurso_id', concursoId);
+    }
+    const { data: flashcards, error } = await statsQuery as unknown as { data: Pick<Flashcard, 'disciplina' | 'peso_disciplina'>[] | null; error: Error | null };
 
     if (error) {
       logger.error('Erro ao buscar estatísticas de flashcards', { error: error.message });

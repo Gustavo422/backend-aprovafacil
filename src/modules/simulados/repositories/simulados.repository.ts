@@ -4,10 +4,10 @@ import { toQuestaoSimuladoDTO, toSimuladoDetailDTO, toSimuladoListItemDTO } from
 
 export interface ISimuladosRepository {
   listarSimulados(query: ListarSimuladosQuery): Promise<PaginatedDTO<SimuladoListItemDTO>>;
-  buscarPorSlug(slug: string): Promise<SimuladoDetailDTO | null>;
+  buscarPorSlug(slug: string, concursoId?: string): Promise<SimuladoDetailDTO | null>;
   listarQuestoesPorSimuladoId(simuladoId: string): Promise<QuestaoSimuladoDTO[]>;
   listarQuestoesPorSimuladoIdPaginado(simuladoId: string, afterOrdem?: number, limit?: number): Promise<{ items: QuestaoSimuladoDTO[]; nextCursor?: number | null }>;
-  buscarIdPorSlug(slug: string): Promise<string | null>;
+  buscarIdPorSlug(slug: string, concursoId?: string): Promise<string | null>;
   contarPorDificuldade(concursoId?: string): Promise<Record<string, number>>;
   obterTendencias(concursoId: string): Promise<{ criados_7d: number; atualizados_7d: number }>;
 }
@@ -72,8 +72,8 @@ export class SupabaseSimuladosRepository implements ISimuladosRepository {
     };
   }
 
-  async buscarPorSlug(slug: string): Promise<SimuladoDetailDTO | null> {
-    const { data, error } = await this.supabase
+  async buscarPorSlug(slug: string, concursoId?: string): Promise<SimuladoDetailDTO | null> {
+    let sel = this.supabase
       .from('simulados')
       .select(
         [
@@ -97,10 +97,10 @@ export class SupabaseSimuladosRepository implements ISimuladosRepository {
           'questoes_revision',
           'questoes_atualizado_em',
         ].join(', '),
-      )
-      .eq('slug', slug)
-      .limit(1)
-      .single();
+      );
+    sel = sel.eq('slug', slug);
+    if (concursoId) sel = sel.eq('concurso_id', concursoId);
+    const { data, error } = await sel.limit(1).single();
 
     if (error) {
       if ((error as any).code === 'PGRST116') return null; // not found
@@ -174,13 +174,13 @@ export class SupabaseSimuladosRepository implements ISimuladosRepository {
     return { items, nextCursor };
   }
 
-  async buscarIdPorSlug(slug: string): Promise<string | null> {
-    const { data, error } = await this.supabase
+  async buscarIdPorSlug(slug: string, concursoId?: string): Promise<string | null> {
+    let sel = this.supabase
       .from('simulados')
       .select('id')
-      .eq('slug', slug)
-      .limit(1)
-      .single();
+      .eq('slug', slug);
+    if (concursoId) sel = sel.eq('concurso_id', concursoId);
+    const { data, error } = await sel.limit(1).single();
     if (error) {
       if ((error as any).code === 'PGRST116') return null;
       throw error;

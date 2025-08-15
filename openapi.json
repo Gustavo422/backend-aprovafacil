@@ -20,6 +20,575 @@
     }
   ],
   "paths": {
+    "/v1/simulados": {
+      "get": {
+        "operationId": "listarSimuladosV1",
+        "tags": [
+          "Simulados"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Número da página (>= 1)",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Itens por página (1..100)",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 10
+            }
+          },
+          {
+            "name": "dificuldade",
+            "in": "query",
+            "description": "Filtro por dificuldade",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "concurso_id",
+            "in": "query",
+            "description": "Filtrar por concurso (uuid)",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Busca por título/descrição",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "publico",
+            "in": "query",
+            "description": "Apenas simulados públicos (true/false)",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Status do usuário no simulado",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "finalizado",
+                "em_andamento",
+                "nao_iniciado"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de simulados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "titulo": {
+                                "type": "string"
+                              },
+                              "slug": {
+                                "type": "string"
+                              },
+                              "descricao": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "concurso_id": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "format": "uuid"
+                              },
+                              "categoria_id": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "format": "uuid"
+                              },
+                              "numero_questoes": {
+                                "type": "integer"
+                              },
+                              "tempo_minutos": {
+                                "type": "integer"
+                              },
+                              "dificuldade": {
+                                "type": "string"
+                              },
+                              "disciplinas": {
+                                "type": [
+                                  "object",
+                                  "array",
+                                  "null"
+                                ]
+                              },
+                              "publico": {
+                                "type": "boolean"
+                              },
+                              "ativo": {
+                                "type": "boolean"
+                              },
+                              "atualizado_em": {
+                                "type": "string",
+                                "format": "date-time"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "titulo",
+                              "slug",
+                              "numero_questoes",
+                              "tempo_minutos",
+                              "dificuldade",
+                              "publico",
+                              "ativo",
+                              "atualizado_em"
+                            ]
+                          }
+                        },
+                        "total": {
+                          "type": "integer"
+                        },
+                        "page": {
+                          "type": "integer"
+                        },
+                        "limit": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {
+              "ETag": {
+                "description": "ETag do recurso (lista)",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Last-Modified": {
+                "description": "Timestamp da última modificação",
+                "schema": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "X-Request-Id": {
+                "description": "ID de correlação/requisição",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Server-Duration": {
+                "description": "Duração do processamento no servidor (ms)",
+                "schema": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/simulados/{slug}": {
+      "get": {
+        "operationId": "obterSimuladoPorSlugV1",
+        "tags": [
+          "Simulados"
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detalhe do simulado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "allOf": [
+                        {
+                          "$ref": "#/components/schemas/SimuladoListItem"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "criado_por": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "format": "uuid"
+                            },
+                            "criado_em": {
+                              "type": "string",
+                              "format": "date-time"
+                            }
+                          },
+                          "required": [
+                            "criado_em"
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {
+              "ETag": {
+                "description": "ETag do recurso (detalhe/meta)",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Last-Modified": {
+                "description": "Timestamp da última modificação",
+                "schema": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "X-Request-Id": {
+                "description": "ID de correlação/requisição",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Server-Duration": {
+                "description": "Duração do processamento no servidor (ms)",
+                "schema": {
+                  "type": "number"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Não encontrado"
+          }
+        }
+      }
+    },
+    "/v1/simulados/{slug}/questoes": {
+      "get": {
+        "operationId": "listarQuestoesPorSlugV1",
+        "tags": [
+          "Simulados"
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Questões do simulado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": true
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {
+              "ETag": {
+                "description": "ETag da seção de questões",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Last-Modified": {
+                "description": "Timestamp da última modificação das questões",
+                "schema": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "X-Request-Id": {
+                "description": "ID de correlação/requisição",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Server-Duration": {
+                "description": "Duração do processamento no servidor (ms)",
+                "schema": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/simulados/{slug}/progresso": {
+      "get": {
+        "operationId": "obterProgressoUsuarioV1",
+        "tags": [
+          "Simulados"
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Progresso do usuário",
+            "headers": {
+              "X-Request-Id": {
+                "description": "ID de correlação/requisição",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Server-Duration": {
+                "description": "Duração do processamento no servidor (ms)",
+                "schema": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "criarProgressoUsuarioV1",
+        "tags": [
+          "Simulados"
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "respostas": {
+                    "type": "object",
+                    "additionalProperties": true
+                  },
+                  "pontuacao": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "tempo_gasto_minutos": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "is_concluido": {
+                    "type": "boolean"
+                  },
+                  "concluido_em": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "answers": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "deprecated": true
+                  },
+                  "score": {
+                    "type": "number",
+                    "minimum": 0,
+                    "deprecated": true
+                  },
+                  "timeTaken": {
+                    "type": "number",
+                    "minimum": 0,
+                    "deprecated": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Progresso criado",
+            "headers": {
+              "X-Request-Id": {
+                "description": "ID de correlação/requisição",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Server-Duration": {
+                "description": "Duração do processamento no servidor (ms)",
+                "schema": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "atualizarProgressoUsuarioV1",
+        "tags": [
+          "Simulados"
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "respostas": {
+                    "type": "object",
+                    "additionalProperties": true
+                  },
+                  "pontuacao": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "tempo_gasto_minutos": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "is_concluido": {
+                    "type": "boolean"
+                  },
+                  "concluido_em": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "answers": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "deprecated": true
+                  },
+                  "score": {
+                    "type": "number",
+                    "minimum": 0,
+                    "deprecated": true
+                  },
+                  "timeTaken": {
+                    "type": "number",
+                    "minimum": 0,
+                    "deprecated": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Progresso atualizado",
+            "headers": {
+              "X-Request-Id": {
+                "description": "ID de correlação/requisição",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Server-Duration": {
+                "description": "Duração do processamento no servidor (ms)",
+                "schema": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/guru/v1/dashboard/enhanced-stats": {
       "get": {
         "operationId": "getGuruEnhancedStatsV1",
@@ -2265,7 +2834,7 @@
       "get": {
         "operationId": "getSimulados",
         "summary": "Listar simulados",
-        "description": "Retorna lista de simulados disponíveis com filtros opcionais",
+        "description": "Retorna lista paginada de simulados do concurso ativo (campos em snake_case idênticos ao DB).",
         "tags": [
           "Simulados"
         ],
@@ -2276,66 +2845,53 @@
         ],
         "parameters": [
           {
-            "name": "concurso",
+            "name": "page",
             "in": "query",
-            "description": "Filtrar por concurso",
+            "description": "Página (1-based)",
             "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "disciplina",
-            "in": "query",
-            "description": "Filtrar por disciplina",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "nivel",
-            "in": "query",
-            "description": "Filtrar por nível de dificuldade",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "basico",
-                "intermediario",
-                "avancado"
-              ]
-            }
-          },
-          {
-            "name": "status",
-            "in": "query",
-            "description": "Filtrar por status",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "disponivel",
-                "em_andamento",
-                "concluido"
-              ]
+              "type": "integer",
+              "default": 1,
+              "minimum": 1
             }
           },
           {
             "name": "limit",
             "in": "query",
-            "description": "Número máximo de resultados",
+            "description": "Limite por página",
             "schema": {
               "type": "integer",
-              "default": 20,
+              "default": 10,
               "minimum": 1,
               "maximum": 100
             }
           },
           {
-            "name": "offset",
+            "name": "dificuldade",
             "in": "query",
-            "description": "Número de resultados para pular",
+            "description": "Filtro opcional por dificuldade",
             "schema": {
-              "type": "integer",
-              "default": 0,
-              "minimum": 0
+              "type": "string",
+              "enum": [
+                "facil",
+                "medio",
+                "dificil"
+              ]
+            }
+          },
+          {
+            "name": "publico",
+            "in": "query",
+            "description": "Filtro opcional por visibilidade pública",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Busca textual (título/descrição)",
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -2351,88 +2907,106 @@
                       "type": "boolean",
                       "example": true
                     },
-                    "simulados": {
+                    "data": {
                       "type": "array",
                       "items": {
                         "type": "object",
                         "properties": {
                           "id": {
                             "type": "string",
-                            "example": "simulado-123"
+                            "example": "6f9a6f52-1c5a-4c40-8e75-2f5c7f2b3d21"
                           },
                           "titulo": {
                             "type": "string",
                             "example": "Simulado OAB - Direito Constitucional"
                           },
-                          "description": {
+                          "slug": {
                             "type": "string",
-                            "example": "Simulado completo de Direito Constitucional"
+                            "example": "oab-direito-constitucional"
                           },
-                          "concurso": {
+                          "descricao": {
                             "type": "string",
-                            "example": "OAB"
+                            "nullable": true
                           },
-                          "disciplina": {
+                          "concurso_id": {
                             "type": "string",
-                            "example": "Direito Constitucional"
+                            "nullable": true
                           },
-                          "nivel": {
+                          "categoria_id": {
                             "type": "string",
-                            "example": "intermediario"
+                            "nullable": true
                           },
-                          "totalQuestoes": {
+                          "numero_questoes": {
                             "type": "integer",
                             "example": 50
                           },
-                          "tempoLimite": {
+                          "tempo_minutos": {
                             "type": "integer",
-                            "example": 3600
+                            "example": 60
                           },
-                          "pontuacaoMaxima": {
-                            "type": "integer",
-                            "example": 100
+                          "dificuldade": {
+                            "type": "string",
+                            "example": "medio"
                           },
-                          "dataCriacao": {
+                          "disciplinas": {
+                            "type": "object",
+                            "nullable": true
+                          },
+                          "publico": {
+                            "type": "boolean",
+                            "example": true
+                          },
+                          "ativo": {
+                            "type": "boolean",
+                            "example": true
+                          },
+                          "criado_por": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "criado_em": {
                             "type": "string",
                             "format": "date-time"
                           },
-                          "status": {
+                          "atualizado_em": {
                             "type": "string",
-                            "example": "disponivel"
-                          },
-                          "tentativas": {
-                            "type": "integer",
-                            "example": 0
-                          },
-                          "melhorPontuacao": {
-                            "type": "number",
-                            "example": 0
+                            "format": "date-time"
                           }
                         }
                       }
                     },
-                    "paginacao": {
+                    "pagination": {
                       "type": "object",
                       "properties": {
+                        "page": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "limit": {
+                          "type": "integer",
+                          "example": 10
+                        },
                         "total": {
                           "type": "integer",
                           "example": 25
                         },
-                        "limit": {
+                        "totalPages": {
                           "type": "integer",
-                          "example": 20
-                        },
-                        "offset": {
-                          "type": "integer",
-                          "example": 0
-                        },
-                        "paginas": {
-                          "type": "integer",
-                          "example": 2
+                          "example": 3
                         }
                       }
                     }
                   }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Concurso não configurado ou requisição inválida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
@@ -2452,7 +3026,7 @@
       "post": {
         "operationId": "postSimulados",
         "summary": "Criar novo simulado",
-        "description": "Cria um novo simulado no sistema",
+        "description": "Cria um novo simulado (campos em snake_case). Durante o período de transição, campos legados são aceitos e mapeados.",
         "tags": [
           "Simulados"
         ],
@@ -2468,153 +3042,85 @@
               "schema": {
                 "type": "object",
                 "required": [
-                  "titulo",
-                  "concurso",
-                  "disciplina",
-                  "questoes"
+                  "titulo"
                 ],
                 "properties": {
                   "titulo": {
                     "type": "string",
-                    "minLength": 3,
-                    "maxLength": 200,
-                    "description": "Título do simulado"
+                    "minLength": 1,
+                    "maxLength": 255
                   },
-                  "description": {
+                  "descricao": {
+                    "type": "string"
+                  },
+                  "concurso_id": {
                     "type": "string",
-                    "maxLength": 1000,
-                    "description": "Descrição do simulado"
+                    "format": "uuid"
                   },
-                  "concurso": {
+                  "categoria_id": {
                     "type": "string",
-                    "description": "Concurso relacionado"
+                    "format": "uuid"
                   },
-                  "disciplina": {
-                    "type": "string",
-                    "description": "Disciplina do simulado"
+                  "numero_questoes": {
+                    "type": "integer",
+                    "minimum": 1
                   },
-                  "nivel": {
+                  "tempo_minutos": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "dificuldade": {
                     "type": "string",
                     "enum": [
-                      "basico",
-                      "intermediario",
-                      "avancado"
-                    ],
-                    "default": "intermediario",
-                    "description": "Nível de dificuldade"
+                      "facil",
+                      "medio",
+                      "dificil"
+                    ]
                   },
-                  "tempoLimite": {
+                  "disciplinas": {
+                    "type": "object"
+                  },
+                  "publico": {
+                    "type": "boolean"
+                  },
+                  "ativo": {
+                    "type": "boolean"
+                  },
+                  "tempo_duracao_minutos": {
                     "type": "integer",
-                    "minimum": 300,
-                    "maximum": 14400,
-                    "description": "Tempo limite em segundos"
+                    "deprecated": true,
+                    "description": "Use tempo_minutos"
                   },
-                  "questoes": {
-                    "type": "array",
-                    "minItems": 5,
-                    "maxItems": 200,
-                    "items": {
-                      "type": "object",
-                      "required": [
-                        "enunciado",
-                        "alternativas",
-                        "respostaCorreta"
-                      ],
-                      "properties": {
-                        "enunciado": {
-                          "type": "string",
-                          "minLength": 10
-                        },
-                        "alternativas": {
-                          "type": "array",
-                          "minItems": 2,
-                          "maxItems": 5,
-                          "items": {
-                            "type": "string"
-                          }
-                        },
-                        "respostaCorreta": {
-                          "type": "integer",
-                          "minimum": 0
-                        },
-                        "explicacao": {
-                          "type": "string"
-                        },
-                        "nivel": {
-                          "type": "string",
-                          "enum": [
-                            "facil",
-                            "medio",
-                            "dificil"
-                          ]
-                        }
-                      }
-                    }
+                  "total_questoes": {
+                    "type": "integer",
+                    "deprecated": true,
+                    "description": "Use numero_questoes"
+                  },
+                  "is_public": {
+                    "type": "boolean",
+                    "deprecated": true,
+                    "description": "Use publico"
                   }
                 }
               },
               "examples": {
-                "simulado": {
-                  "summary": "Exemplo de criação de simulado",
+                "snake_case": {
+                  "summary": "Exemplo (preferencial) com snake_case",
                   "value": {
-                    "titulo": "Simulado OAB - Direito Constitucional",
-                    "description": "Simulado completo de Direito Constitucional para OAB",
-                    "concurso": "OAB",
-                    "disciplina": "Direito Constitucional",
-                    "nivel": "intermediario",
-                    "tempoLimite": 3600,
-                    "questoes": [
-                      {
-                        "enunciado": "Questão 1...",
-                        "alternativas": [
-                          "A",
-                          "B",
-                          "C"
-                        ],
-                        "respostaCorreta": 1,
-                        "nivel": "medio"
-                      },
-                      {
-                        "enunciado": "Questão 2...",
-                        "alternativas": [
-                          "A",
-                          "B",
-                          "C"
-                        ],
-                        "respostaCorreta": 2,
-                        "nivel": "medio"
-                      },
-                      {
-                        "enunciado": "Questão 3...",
-                        "alternativas": [
-                          "A",
-                          "B",
-                          "C"
-                        ],
-                        "respostaCorreta": 0,
-                        "nivel": "facil"
-                      },
-                      {
-                        "enunciado": "Questão 4...",
-                        "alternativas": [
-                          "A",
-                          "B",
-                          "C"
-                        ],
-                        "respostaCorreta": 2,
-                        "nivel": "dificil"
-                      },
-                      {
-                        "enunciado": "Questão 5...",
-                        "alternativas": [
-                          "A",
-                          "B",
-                          "C"
-                        ],
-                        "respostaCorreta": 1,
-                        "nivel": "medio"
-                      }
-                    ]
+                    "titulo": "Simulado Polícia Civil",
+                    "numero_questoes": 60,
+                    "tempo_minutos": 90,
+                    "dificuldade": "medio",
+                    "publico": true
+                  }
+                },
+                "legado": {
+                  "summary": "Exemplo legado (deprecated)",
+                  "value": {
+                    "titulo": "Simulado OAB",
+                    "total_questoes": 50,
+                    "tempo_duracao_minutos": 60,
+                    "is_public": true
                   }
                 }
               }
@@ -2633,26 +3139,33 @@
                       "type": "boolean",
                       "example": true
                     },
-                    "message": {
-                      "type": "string",
-                      "example": "Simulado criado com sucesso"
-                    },
-                    "simulado": {
+                    "data": {
                       "type": "object",
                       "properties": {
                         "id": {
                           "type": "string",
-                          "example": "simulado-456"
+                          "example": "6f9a6f52-1c5a-4c40-8e75-2f5c7f2b3d21"
                         },
                         "titulo": {
+                          "type": "string"
+                        },
+                        "slug": {
+                          "type": "string"
+                        },
+                        "numero_questoes": {
+                          "type": "integer"
+                        },
+                        "tempo_minutos": {
+                          "type": "integer"
+                        },
+                        "publico": {
+                          "type": "boolean"
+                        },
+                        "criado_em": {
                           "type": "string",
-                          "example": "Simulado OAB - Direito Constitucional"
+                          "format": "date-time"
                         },
-                        "totalQuestoes": {
-                          "type": "integer",
-                          "example": 1
-                        },
-                        "dataCriacao": {
+                        "atualizado_em": {
                           "type": "string",
                           "format": "date-time"
                         }
@@ -2686,11 +3199,387 @@
         }
       }
     },
+    "/simulados/slug/{slug}": {
+      "get": {
+        "operationId": "getSimuladoBySlug",
+        "summary": "Buscar simulado por slug",
+        "description": "Retorna detalhes completos de um simulado por slug (preferencial).",
+        "tags": [
+          "Simulados"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "description": "Slug do simulado",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detalhes do simulado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "titulo": {
+                          "type": "string"
+                        },
+                        "slug": {
+                          "type": "string"
+                        },
+                        "descricao": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "concurso_id": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "categoria_id": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "numero_questoes": {
+                          "type": "integer"
+                        },
+                        "tempo_minutos": {
+                          "type": "integer"
+                        },
+                        "dificuldade": {
+                          "type": "string"
+                        },
+                        "disciplinas": {
+                          "type": "object",
+                          "nullable": true
+                        },
+                        "publico": {
+                          "type": "boolean"
+                        },
+                        "ativo": {
+                          "type": "boolean"
+                        },
+                        "criado_por": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "criado_em": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "atualizado_em": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "questoes_simulado": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "numero_questao": {
+                                "type": "integer"
+                              },
+                              "enunciado": {
+                                "type": "string"
+                              },
+                              "alternativas": {
+                                "type": "object"
+                              },
+                              "resposta_correta": {
+                                "type": "string"
+                              },
+                              "explicacao": {
+                                "type": "string"
+                              },
+                              "disciplina": {
+                                "type": "string"
+                              },
+                              "assunto": {
+                                "type": "string"
+                              },
+                              "dificuldade": {
+                                "type": "string"
+                              },
+                              "ordem": {
+                                "type": "integer"
+                              },
+                              "peso_disciplina": {
+                                "type": "integer"
+                              },
+                              "criado_em": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "atualizado_em": {
+                                "type": "string",
+                                "format": "date-time"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Simulado não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/simulados/slug/{slug}/questoes": {
+      "get": {
+        "operationId": "getQuestoesBySimuladoSlug",
+        "summary": "Listar questões do simulado por slug",
+        "description": "Retorna as questões de um simulado identificado por slug.",
+        "tags": [
+          "Simulados"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "description": "Slug do simulado",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de questões",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "simulado_id": {
+                            "type": "string"
+                          },
+                          "numero_questao": {
+                            "type": "integer"
+                          },
+                          "enunciado": {
+                            "type": "string"
+                          },
+                          "alternativas": {
+                            "type": "object"
+                          },
+                          "resposta_correta": {
+                            "type": "string"
+                          },
+                          "explicacao": {
+                            "type": "string"
+                          },
+                          "disciplina": {
+                            "type": "string"
+                          },
+                          "assunto": {
+                            "type": "string"
+                          },
+                          "dificuldade": {
+                            "type": "string"
+                          },
+                          "ordem": {
+                            "type": "integer"
+                          },
+                          "peso_disciplina": {
+                            "type": "integer"
+                          },
+                          "ativo": {
+                            "type": "boolean"
+                          },
+                          "criado_em": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "atualizado_em": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Simulado não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/simulados/slug/{slug}/progresso": {
+      "get": {
+        "operationId": "getProgressBySimuladoSlug",
+        "summary": "Buscar progresso do usuário por slug",
+        "description": "Retorna o progresso do usuário autenticado para um simulado identificado por slug.",
+        "tags": [
+          "Simulados"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "description": "Slug do simulado",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Progresso do usuário",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "usuario_id": {
+                            "type": "string"
+                          },
+                          "simulado_id": {
+                            "type": "string"
+                          },
+                          "pontuacao": {
+                            "type": "number"
+                          },
+                          "tempo_gasto_minutos": {
+                            "type": "integer"
+                          },
+                          "respostas": {
+                            "type": "object"
+                          },
+                          "concluido_em": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true
+                          },
+                          "is_concluido": {
+                            "type": "boolean"
+                          },
+                          "criado_em": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "atualizado_em": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autorizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Simulado não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/simulados/{id}": {
       "get": {
         "operationId": "getSimuladoById",
         "summary": "Buscar simulado por ID",
-        "description": "Retorna detalhes completos de um simulado específico",
+        "description": "Retorna detalhes completos de um simulado específico (snake_case). Prefira usar o endpoint por slug.",
+        "deprecated": true,
         "tags": [
           "Simulados"
         ],
@@ -2722,83 +3611,106 @@
                       "type": "boolean",
                       "example": true
                     },
-                    "simulado": {
+                    "data": {
                       "type": "object",
                       "properties": {
                         "id": {
-                          "type": "string",
-                          "example": "simulado-123"
+                          "type": "string"
                         },
                         "titulo": {
+                          "type": "string"
+                        },
+                        "slug": {
+                          "type": "string"
+                        },
+                        "descricao": {
                           "type": "string",
-                          "example": "Simulado OAB - Direito Constitucional"
+                          "nullable": true
                         },
-                        "description": {
+                        "concurso_id": {
                           "type": "string",
-                          "example": "Simulado completo de Direito Constitucional"
+                          "nullable": true
                         },
-                        "concurso": {
+                        "categoria_id": {
                           "type": "string",
-                          "example": "OAB"
+                          "nullable": true
                         },
-                        "disciplina": {
+                        "numero_questoes": {
+                          "type": "integer"
+                        },
+                        "tempo_minutos": {
+                          "type": "integer"
+                        },
+                        "dificuldade": {
+                          "type": "string"
+                        },
+                        "disciplinas": {
+                          "type": "object",
+                          "nullable": true
+                        },
+                        "publico": {
+                          "type": "boolean"
+                        },
+                        "ativo": {
+                          "type": "boolean"
+                        },
+                        "criado_por": {
                           "type": "string",
-                          "example": "Direito Constitucional"
+                          "nullable": true
                         },
-                        "nivel": {
-                          "type": "string",
-                          "example": "intermediario"
-                        },
-                        "totalQuestoes": {
-                          "type": "integer",
-                          "example": 50
-                        },
-                        "tempoLimite": {
-                          "type": "integer",
-                          "example": 3600
-                        },
-                        "pontuacaoMaxima": {
-                          "type": "integer",
-                          "example": 100
-                        },
-                        "dataCriacao": {
+                        "criado_em": {
                           "type": "string",
                           "format": "date-time"
                         },
-                        "status": {
+                        "atualizado_em": {
                           "type": "string",
-                          "example": "disponivel"
+                          "format": "date-time"
                         },
-                        "tentativas": {
-                          "type": "integer",
-                          "example": 0
-                        },
-                        "melhorPontuacao": {
-                          "type": "number",
-                          "example": 0
-                        },
-                        "questoes": {
+                        "questoes_simulado": {
                           "type": "array",
                           "items": {
                             "type": "object",
                             "properties": {
                               "id": {
-                                "type": "string",
-                                "example": "questao-1"
+                                "type": "string"
+                              },
+                              "numero_questao": {
+                                "type": "integer"
                               },
                               "enunciado": {
-                                "type": "string",
-                                "example": "Qual é o princípio fundamental?"
+                                "type": "string"
                               },
                               "alternativas": {
-                                "type": "array",
-                                "items": {
-                                  "type": "string"
-                                }
+                                "type": "object"
                               },
-                              "nivel": {
+                              "resposta_correta": {
+                                "type": "string"
+                              },
+                              "explicacao": {
+                                "type": "string"
+                              },
+                              "disciplina": {
+                                "type": "string"
+                              },
+                              "assunto": {
+                                "type": "string"
+                              },
+                              "dificuldade": {
+                                "type": "string"
+                              },
+                              "ordem": {
+                                "type": "integer"
+                              },
+                              "peso_disciplina": {
+                                "type": "integer"
+                              },
+                              "criado_em": {
                                 "type": "string",
-                                "example": "medio"
+                                "format": "date-time"
+                              },
+                              "atualizado_em": {
+                                "type": "string",
+                                "format": "date-time"
                               }
                             }
                           }
@@ -2867,11 +3779,10 @@
                     },
                     "description": "IDs das questões selecionadas"
                   },
-                  "tempoLimite": {
+                  "tempo_minutos": {
                     "type": "integer",
-                    "minimum": 300,
-                    "maximum": 14400,
-                    "description": "Tempo limite em segundos"
+                    "minimum": 1,
+                    "description": "Tempo do simulado em minutos"
                   }
                 }
               },
@@ -2888,7 +3799,7 @@
                       "questao-4",
                       "questao-5"
                     ],
-                    "tempoLimite": 1800
+                    "tempo_minutos": 30
                   }
                 }
               }

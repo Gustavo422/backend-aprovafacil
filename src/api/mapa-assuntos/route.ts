@@ -137,6 +137,12 @@ router.get('/', requireAuth, (req, res) => {
       `, { count: 'exact' })
       .eq('usuario_id', usuarioId);
 
+    // Aplicar filtro por concurso, se disponível
+    const concursoId = getConcursoIdFromRequest(req);
+    if (concursoId) {
+      query = query.eq('concurso_id', concursoId);
+    }
+
     // Aplicar filtros
     if (status) {
       query = query.eq('status', status);
@@ -148,10 +154,7 @@ router.get('/', requireAuth, (req, res) => {
       query = query.eq('categoria_id', categoria_id);
     }
     // O filtro de concurso é aplicado automaticamente pelo middleware global
-    const concursoId = getConcursoIdFromRequest(req);
-    if (concursoId) {
-      logger.debug('Filtro de concurso aplicado automaticamente pelo middleware', { concursoId });
-    }
+    // Já aplicado acima na query principal
 
     const { data: assuntos, error, count } = await query
       .order('criado_em', { ascending: false })
@@ -197,7 +200,8 @@ router.get('/:id', requireAuth, (req, res) => {
       return;
     }
 
-    const { data: assunto, error } = await supabase
+    const concursoId2 = getConcursoIdFromRequest(req);
+    let byIdQuery = supabase
       .from('mapa_assuntos')
       .select(`
         *,
@@ -217,8 +221,9 @@ router.get('/:id', requireAuth, (req, res) => {
         )
       `)
       .eq('id', id)
-      .eq('usuario_id', usuarioId)
-      .single() as { data: MapaAssunto | null; error: Error | null };
+      .eq('usuario_id', usuarioId);
+    if (concursoId2) byIdQuery = byIdQuery.eq('concurso_id', concursoId2);
+    const { data: assunto, error } = await byIdQuery.single() as { data: MapaAssunto | null; error: Error | null };
 
     if (error) {
       if ((error as unknown as { code?: string }).code === 'PGRST116') {
@@ -289,11 +294,14 @@ router.put('/:id', requireAuth, createValidationMiddleware(updateMapaAssuntoSche
       return;
     }
 
-    const { data: assunto, error } = await supabase
+    const concursoId3 = getConcursoIdFromRequest(req);
+    let updateQuery = supabase
       .from('mapa_assuntos')
       .update(updateData)
       .eq('id', id)
-      .eq('usuario_id', usuarioId)
+      .eq('usuario_id', usuarioId);
+    if (concursoId3) updateQuery = updateQuery.eq('concurso_id', concursoId3);
+    const { data: assunto, error } = await updateQuery
       .select()
       .single() as { data: MapaAssunto | null; error: Error | null };
 
@@ -330,11 +338,14 @@ router.delete('/:id', requireAuth, (req, res) => {
       return;
     }
 
-    const { error } = await supabase
+    const concursoId4 = getConcursoIdFromRequest(req);
+    let delQuery = supabase
       .from('mapa_assuntos')
       .delete()
       .eq('id', id)
       .eq('usuario_id', usuarioId);
+    if (concursoId4) delQuery = delQuery.eq('concurso_id', concursoId4);
+    const { error } = await delQuery;
 
     if (error) {
       if (error.code === 'PGRST116') {
@@ -369,10 +380,13 @@ router.get('/stats/resumo', requireAuth, (req, res) => {
     }
 
     // Buscar estatísticas por status
-    const { data: stats, error } = await supabase
+    const concursoId5 = getConcursoIdFromRequest(req);
+    let statsQuery = supabase
       .from('mapa_assuntos')
       .select('status, progresso_percentual')
-      .eq('usuario_id', usuarioId) as { data: Pick<MapaAssunto, 'status' | 'progresso_percentual'>[] | null; error: Error | null };
+      .eq('usuario_id', usuarioId);
+    if (concursoId5) statsQuery = statsQuery.eq('concurso_id', concursoId5);
+    const { data: stats, error } = await statsQuery as { data: Pick<MapaAssunto, 'status' | 'progresso_percentual'>[] | null; error: Error | null };
 
     if (error) {
       logger.error('Erro ao buscar estatísticas', { error: error.message });

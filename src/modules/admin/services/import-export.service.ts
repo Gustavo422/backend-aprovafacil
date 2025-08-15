@@ -191,7 +191,10 @@ export class ImportExportAdminService {
           .gte('criado_em', dataLimite.toISOString())
           .order('criado_em', { ascending: false })
           .limit(10);
-        if (Array.isArray(data)) atividades.push(...data.map(item => ({ ...item, tipo: tabela })) as never);
+        if (Array.isArray(data)) {
+          const itens = (data as Array<{ id: string; criado_em: string }>).map(item => ({ ...item, tipo: tabela }));
+          atividades.push(...itens);
+        }
       }
       return atividades.sort((a, b) => new Date(b.criado_em).getTime() - new Date(a.criado_em).getTime());
     } catch {
@@ -243,5 +246,3 @@ export class ImportExportAdminService {
 }
 
 export default ImportExportAdminService;
-
-

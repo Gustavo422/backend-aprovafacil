@@ -74,6 +74,36 @@ const ENV_DEFINITIONS: Record<string, EnvDefinition> = {
     description: 'Frontend application URL for CORS',
     category: 'application',
   },
+  // Questões Semanais - Política de desbloqueio
+  QS_UNLOCK_POLICY: {
+    required: false,
+    allowedValues: ['strict', 'accelerated'],
+    fallback: 'strict',
+    description: 'Política de desbloqueio de semanas: strict (por prazo) ou accelerated (por conclusão)',
+    category: 'questoes-semanais',
+  },
+  QS_WEEK_DURATION_DAYS: {
+    required: false,
+    pattern: /^\d+$/,
+    fallback: '7',
+    description: 'Duração padrão de uma semana em dias (para modo strict)',
+    category: 'questoes-semanais',
+  },
+  // Cache e performance
+  CACHE_PROVIDER: {
+    required: false,
+    allowedValues: ['memory', 'redis'],
+    fallback: 'memory',
+    description: 'Provider de cache: memory (local) ou redis (distribuído)',
+    category: 'performance',
+  },
+  CACHE_DEFAULT_TTL: {
+    required: false,
+    pattern: /^\d+$/,
+    fallback: '300',
+    description: 'TTL padrão do cache em segundos',
+    category: 'performance',
+  },
 };
 
 type EnvKey = keyof typeof ENV_DEFINITIONS;

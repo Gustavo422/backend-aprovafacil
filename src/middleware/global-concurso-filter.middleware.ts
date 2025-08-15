@@ -28,6 +28,10 @@ export const needsConcursoFilter = (pathOrUrl: string): boolean => {
     '/api/apostilas',
     '/api/simulados',
     '/api/v1/simulados',
+    '/api/questoes-semanais', // ⚠️ DEPRECATED - será removida em 2024-06-01
+    '/api/v1/questoes-semanais', // ⚠️ DEPRECATED - será removida em 2024-06-01
+    '/api/mapa-assuntos',
+    '/api/v1/mapa-assuntos',
     '/api/questoes',
     '/api/flashcards',
     '/api/progresso',

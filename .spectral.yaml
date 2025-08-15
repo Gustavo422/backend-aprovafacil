@@ -5,14 +5,3 @@ rules:
   info-description: warn
   operation-tags: warn
   oas3-unused-component: warn
-
-
-
-
-
-
-
-
-
-
-
